@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.mapofus.desktop",
-    "productName": "Map of Us",
+    "productName": "我们的回忆",
     "directories": {
       "output": "dist"
     },

@@ -13,7 +13,7 @@ frontend into a Capacitor Android APK.
 6. Set the public domain for the server service, for example:
 
 ```text
-https://map-of-us-api.zeabur.app
+https://our-memories-api.zeabur.app
 ```
 
 Set these variables on the server service:
@@ -26,8 +26,8 @@ JWT_SECRET=<a long random secret, at least 24 chars>
 WEB_ORIGIN=capacitor://localhost,http://localhost,https://localhost
 SEED_ON_START=true
 
-DEFAULT_SPACE_NAME=Map of Us
-DEFAULT_SPACE_SLUG=map-of-us
+DEFAULT_SPACE_NAME=我们的回忆
+DEFAULT_SPACE_SLUG=our-memories
 DEFAULT_USER_1_USERNAME=me
 DEFAULT_USER_1_PASSWORD=<your password>
 DEFAULT_USER_1_DISPLAY_NAME=Me
@@ -39,7 +39,7 @@ S3_ENDPOINT=<S3/R2/OSS endpoint>
 S3_REGION=auto
 S3_ACCESS_KEY_ID=<object storage access key>
 S3_SECRET_ACCESS_KEY=<object storage secret>
-S3_BUCKET=map-of-us
+S3_BUCKET=our-memories
 S3_PUBLIC_BASE_URL=<public bucket base url>
 
 ASTRBOT_BASE_URL=<optional AstrBot base url>
@@ -64,7 +64,7 @@ startup.
 Build the APK with the deployed Zeabur API URL baked into the static frontend:
 
 ```powershell
-$env:NEXT_PUBLIC_API_BASE_URL="https://map-of-us-api.zeabur.app"
+$env:NEXT_PUBLIC_API_BASE_URL="https://our-memories-api.zeabur.app"
 npm run mobile:android:build
 ```
 

@@ -1,5 +1,5 @@
-import { AnniversariesPage } from "@/components/MemoryTools";
+import AnniversaryWall from "@/components/AnniversaryWall";
 
 export default function Anniversaries() {
-  return <AnniversariesPage />;
+  return <AnniversaryWall />;
 }

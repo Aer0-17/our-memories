@@ -7,8 +7,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(24),
   WEB_ORIGIN: z.string().default("http://localhost:3002"),
-  DEFAULT_SPACE_NAME: z.string().default("Map of Us"),
-  DEFAULT_SPACE_SLUG: z.string().default("map-of-us"),
+  DEFAULT_SPACE_NAME: z.string().default("我们的回忆"),
+  DEFAULT_SPACE_SLUG: z.string().default("our-memories"),
   DEFAULT_USER_1_USERNAME: z.string().default("me"),
   DEFAULT_USER_1_PASSWORD: z.string().default("1234"),
   DEFAULT_USER_1_DISPLAY_NAME: z.string().default("Me"),
@@ -19,10 +19,12 @@ const envSchema = z.object({
   S3_REGION: z.string().default("auto"),
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
-  S3_BUCKET: z.string().default("map-of-us"),
+  S3_BUCKET: z.string().default("our-memories"),
   S3_PUBLIC_BASE_URL: z.string().optional(),
   ASTRBOT_BASE_URL: z.string().optional(),
   ASTRBOT_API_KEY: z.string().optional(),
+  WECHAT_MINI_APP_ID: z.string().optional(),
+  WECHAT_MINI_APP_SECRET: z.string().optional(),
 });
 
 export const config = envSchema.parse(process.env);

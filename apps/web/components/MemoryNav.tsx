@@ -14,7 +14,7 @@ import {
   Star,
 } from "lucide-react";
 
-const githubUrl = "https://github.com/qq570850096/map-of-us-template";
+const githubUrl = "https://github.com/qq570850096/our-memories";
 
 export type MemoryNavKey = "map" | "memories" | "trips" | "favorites" | "anniversaries" | "capsule" | "settings";
 
@@ -40,7 +40,7 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
         <div className="mx-auto grid h-14 w-14 place-items-center">
           <Heart className="h-10 w-10 fill-[#F5DCE0] text-[#E8B8C2]" />
         </div>
-        <p className="mt-2 text-lg font-semibold text-[#5A6670]">我们的地图</p>
+        <p className="mt-2 text-lg font-semibold text-[#5A6670]">我们的回忆</p>
         <p className="mt-1 text-xs text-[#5A6670]/52">只属于两个人的回忆</p>
       </div>
 
@@ -77,7 +77,7 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
           <p className="text-xs font-semibold text-[#5A6670]">关于这份地图</p>
         </div>
         <p className="mt-2 text-xs leading-6 text-[#5A6670]/60">
-          一期为私密双人空间，二期可扩展为多空间和订阅制应用。
+          一期为私密双人空间，后续可用开通码扩展给其它情侣。
         </p>
 
         <div className="mt-3 border-t border-[#D8DDD8]/54 pt-3">
@@ -92,7 +92,7 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
             GitHub
           </a>
           <p className="mt-1.5 select-text text-[11px] leading-5 text-[#5A6670]/55">
-            github.com/qq570850096/map-of-us-template
+            github.com/qq570850096/our-memories
           </p>
         </div>
       </div>
@@ -128,7 +128,7 @@ export function MemoryPageShell({
                 地图
               </Link>
               <span className="min-w-0 truncate text-sm font-semibold text-[#5A6670]">
-                {current?.label ?? "Map of Us"}
+                {current?.label ?? "我们的回忆"}
               </span>
             </div>
             <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">

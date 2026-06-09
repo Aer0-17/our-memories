@@ -8,6 +8,9 @@ type JwtPayload = AuthContext & {
   type: "access" | "refresh";
 };
 
+export const scopedUsername = (spaceSlug: string, username: string) =>
+  `${spaceSlug.trim().toLowerCase()}:${username.trim().toLowerCase()}`;
+
 export async function hashPassword(password: string) {
   return argon2.hash(password);
 }
@@ -39,9 +42,13 @@ export async function registerAuthRoutes(app: FastifyInstance) {
   app.post("/auth/login", async (request, reply) => {
     const payload = loginPayloadSchema.safeParse(request.body);
     if (!payload.success) return reply.code(400).send({ error: "Invalid login payload" });
+    const requestedSpaceSlug = payload.data.spaceSlug?.trim().toLowerCase();
+    const loginUsername = requestedSpaceSlug
+      ? scopedUsername(requestedSpaceSlug, payload.data.username)
+      : payload.data.username;
 
     const user = await prisma.user.findUnique({
-      where: { username: payload.data.username },
+      where: { username: loginUsername },
       include: {
         memberships: {
           include: { space: true },
@@ -54,7 +61,9 @@ export async function registerAuthRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: "Invalid username or password" });
     }
 
-    const membership = user.memberships[0];
+    const membership = requestedSpaceSlug
+      ? user.memberships.find((item) => item.space.slug === requestedSpaceSlug)
+      : user.memberships[0];
     if (!membership) return reply.code(403).send({ error: "User has no space" });
 
     const authPayload = {

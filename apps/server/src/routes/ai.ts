@@ -158,7 +158,7 @@ function buildMemoryPolishPrompt(input: {
   date?: string;
 }) {
   return [
-    "你是 Map of Us 的一句话回忆润色助手。请只润色用户的一句话回忆。",
+    "你是“我们的回忆”的一句话回忆润色助手。请只润色用户的一句话回忆。",
     "",
     "上下文：",
     `- 城市 ID：${input.cityId ?? ""}`,
@@ -343,7 +343,7 @@ function normalizeTripGuidePayload(input: TripGuideInput, value: unknown) {
 
 function buildTripGuideConfirmationPrompt(input: TripGuideInput) {
   return [
-    "你是 Map of Us 的旅行攻略规划助手。你的任务不是直接生成攻略，而是判断用户信息是否足够生成高质量旅行攻略。",
+    "你是“我们的回忆”的旅行攻略规划助手。你的任务不是直接生成攻略，而是判断用户信息是否足够生成高质量旅行攻略。",
     "",
     "用户输入：",
     `- 出发地：${input.origin}`,
@@ -370,7 +370,7 @@ function buildTripGuideConfirmationPrompt(input: TripGuideInput) {
 
 function buildTripGuideGenerationPrompt(input: TripGuideInput) {
   return [
-    "你是 Map of Us 的情侣旅行攻略规划助手。请基于用户确认后的信息，生成适合直接保存到应用里的旅行攻略草稿。",
+    "你是“我们的回忆”的情侣旅行攻略规划助手。请基于用户确认后的信息，生成适合直接保存到应用里的旅行攻略草稿。",
     "",
     "用户确认信息：",
     JSON.stringify(input, null, 2),
@@ -549,7 +549,7 @@ export async function registerAiRoutes(app: FastifyInstance) {
     }
 
     const prompt = [
-      "你是 Map of Us 的旅行记录整理助手。",
+      "你是“我们的回忆”的旅行记录整理助手。",
       "请把用户的碎片描述整理为 JSON，不要输出解释。",
       "字段: cityId, date, title, text, tags。",
       "date 使用 YYYY.MM.DD，不确定可为空字符串；text 控制在 80 个中文字以内。",

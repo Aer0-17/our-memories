@@ -34,8 +34,19 @@ export async function registerBackupRoutes(app: FastifyInstance) {
               cityId: info.id,
               city: info.name,
               cityEn: info.nameEn,
+              title: typeof entry.title === "string" ? entry.title : null,
               date: typeof entry.date === "string" ? entry.date : "待添加日期",
               text: typeof entry.text === "string" ? entry.text : "",
+              mood: typeof entry.mood === "string" ? entry.mood : null,
+              tags: Array.isArray(entry.tags)
+                ? entry.tags.filter((tag): tag is string => typeof tag === "string").slice(0, 12)
+                : [],
+              visibility:
+                entry.visibility === "me" || entry.visibility === "her" || entry.visibility === "both"
+                  ? entry.visibility
+                  : "both",
+              partnerNote: typeof entry.partnerNote === "string" ? entry.partnerNote : null,
+              placeName: typeof entry.placeName === "string" ? entry.placeName : null,
             },
           });
           const photos = Array.isArray(entry.photos)

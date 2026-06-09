@@ -1,0 +1,114 @@
+.memories-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  color: #273846;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.subtitle {
+  color: rgba(90, 102, 112, 0.54);
+  font-size: 13px;
+}
+
+.memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.memory-card {
+  overflow: hidden;
+}
+
+.memory-cover {
+  width: 100%;
+  height: 176px;
+  background: #d6e8f0;
+}
+
+.memory-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+}
+
+.memory-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.memory-title {
+  color: #5a6670;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.memory-date {
+  color: rgba(90, 102, 112, 0.46);
+  font-size: 12px;
+}
+
+.memory-place {
+  color: #7aa7bd;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.memory-text {
+  color: rgba(90, 102, 112, 0.72);
+  font-size: 14px;
+  line-height: 23px;
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  border-radius: 999px;
+  background: rgba(250, 251, 247, 0.9);
+  color: rgba(90, 102, 112, 0.54);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+
+.tag.mood {
+  background: rgba(214, 232, 240, 0.52);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 36px 18px;
+  text-align: center;
+}
+
+.empty-title {
+  color: #5a6670;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.empty-copy {
+  color: rgba(90, 102, 112, 0.58);
+  font-size: 13px;
+  line-height: 22px;
+}

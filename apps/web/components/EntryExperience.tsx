@@ -274,8 +274,8 @@ export default function EntryExperience() {
               <div className="flex items-center gap-3">
                 <PixelHeart />
                 <div>
-                  <p className="text-lg font-semibold leading-tight text-[#273846]">Map of Us</p>
-                  <p className="mt-0.5 text-xs font-semibold text-[#8A796C]">private map</p>
+                  <p className="text-lg font-semibold leading-tight text-[#273846]">我们的回忆</p>
+                  <p className="mt-0.5 text-xs font-semibold text-[#8A796C]">private memories</p>
                 </div>
               </div>
               <span className="grid h-10 w-10 place-items-center rounded-full border border-[#F5DCE0] bg-[#F5DCE0]/58 text-[#D86F82]">
@@ -289,7 +289,7 @@ export default function EntryExperience() {
                 <span className="block text-[#D86F82]">纪念日</span>
               </p>
               <p className="mt-4 max-w-[430px] text-sm font-medium leading-7 text-[#61717A] sm:text-base">
-                一扇只给我们的地图门，密码藏在开始的那一天。
+                一扇只给我们的回忆门，密码藏在开始的那一天。
               </p>
             </div>
 

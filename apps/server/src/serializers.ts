@@ -5,9 +5,16 @@ type MemoryWithPhotos = {
   cityId: string;
   city: string;
   cityEn: string;
+  title: string | null;
   date: string;
   text: string;
+  mood: string | null;
+  tags: string[];
+  visibility: "both" | "me" | "her";
+  partnerNote: string | null;
+  placeName: string | null;
   coverPhotoId: string | null;
+  createdById: string | null;
   createdAt: Date;
   updatedAt: Date;
   photos: Array<{
@@ -30,8 +37,14 @@ export function serializeMemory(memory: MemoryWithPhotos): Memory {
     cityId: memory.cityId,
     city: memory.city,
     cityEn: memory.cityEn,
+    title: memory.title ?? undefined,
     date: memory.date,
     text: memory.text,
+    mood: memory.mood ?? undefined,
+    tags: memory.tags,
+    visibility: memory.visibility,
+    partnerNote: memory.partnerNote ?? undefined,
+    placeName: memory.placeName ?? undefined,
     image: cover?.url ?? "",
     photos: sortedPhotos.map((photo) => photo.url),
     photoItems: sortedPhotos.map(
@@ -45,6 +58,7 @@ export function serializeMemory(memory: MemoryWithPhotos): Memory {
         sortOrder: photo.sortOrder,
       }),
     ),
+    createdById: memory.createdById ?? undefined,
     createdAt: memory.createdAt.toISOString(),
     updatedAt: memory.updatedAt.toISOString(),
   };

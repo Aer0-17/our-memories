@@ -476,6 +476,7 @@ export function SettingsPage() {
   const [isWorking, setIsWorking] = useState(false);
   const [newEntryPassword, setNewEntryPassword] = useState("");
   const [newAdminPassword, setNewAdminPassword] = useState("");
+  const [activationCode, setActivationCode] = useState("");
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const loadMemoryCount = async () => {
@@ -722,7 +723,7 @@ export function SettingsPage() {
     const stamp = new Date().toISOString().slice(0, 10);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `map-of-us-backup-${stamp}.json`;
+    link.download = `our-memories-backup-${stamp}.json`;
     link.click();
     URL.revokeObjectURL(url);
     setStatus("已导出完整备份");
@@ -783,7 +784,7 @@ export function SettingsPage() {
       setMemoryCount(Object.values(data.memories).flat().length);
       setStatus("导入完成，地图和回忆记录已刷新");
     } catch {
-      setStatus("导入失败，请确认选择的是 Map of Us 备份文件");
+      setStatus("导入失败，请确认选择的是我们的回忆备份文件");
     } finally {
       setIsWorking(false);
       if (importInputRef.current) importInputRef.current.value = "";
@@ -818,6 +819,30 @@ export function SettingsPage() {
     setAdminCode("");
     setAdminError("");
     setStatus("管理员模式已关闭");
+  };
+
+  const generateActivationCode = async () => {
+    if (!isAdmin || isWorking) return;
+    setIsWorking(true);
+    setActivationCode("");
+    setStatus("");
+
+    try {
+      const response = await apiFetch("/activation-codes", {
+        method: "POST",
+        body: JSON.stringify({ plan: "private" }),
+      });
+      if (!response.ok) throw new Error("Activation code failed");
+      const data = (await response.json()) as { activationCode?: { code?: unknown } };
+      const code = typeof data.activationCode?.code === "string" ? data.activationCode.code : "";
+      if (!code) throw new Error("Activation code missing");
+      setActivationCode(code);
+      setStatus("开通码已生成，请只在用户完成付款后发送给对方");
+    } catch {
+      setStatus("开通码生成失败，请确认当前账号是空间 owner");
+    } finally {
+      setIsWorking(false);
+    }
   };
 
   return (
@@ -881,6 +906,31 @@ export function SettingsPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] sm:p-5 md:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold text-[#5A6670]">开通码</p>
+              <p className="mt-2 max-w-[680px] text-sm leading-6 text-[#5A6670]/62">
+                用户完成付款后，生成一次性开通码发给对方。对方可在 Web 或小程序里自主创建情侣空间、两个账号和四位密码。
+              </p>
+            </div>
+            <button
+              className="rounded-[7px] border border-[#A8C8DC] px-4 py-2 text-sm font-semibold text-[#A8C8DC] transition hover:bg-[#D6E8F0]/36 disabled:opacity-45"
+              type="button"
+              onClick={() => void generateActivationCode()}
+              disabled={!isAdmin || isWorking}
+            >
+              生成开通码
+            </button>
+          </div>
+          {activationCode && (
+            <div className="mt-4 rounded-[8px] border border-[#F5DCE0]/78 bg-[#F5DCE0]/28 p-4">
+              <p className="text-xs font-semibold text-[#5A6670]/48">一次性开通码</p>
+              <p className="mt-2 select-all break-all text-2xl font-semibold tracking-normal text-[#B85D70]">{activationCode}</p>
+            </div>
+          )}
         </div>
 
         <div className="rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] sm:p-5 md:col-span-2">

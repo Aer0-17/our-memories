@@ -27,19 +27,29 @@ function normalizeDate(value: string) {
   return `${year}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
 }
 
-async function readSpaceMemories(spaceId: string) {
+async function readVisibleSpaceMemories(spaceId: string, userId: string) {
   const memories = await prisma.memory.findMany({
-    where: { spaceId },
+    where: {
+      spaceId,
+      OR: [
+        { visibility: "both" },
+        { createdById: userId },
+      ],
+    },
     include: { photos: true },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
   });
   return memories.map(serializeMemory);
 }
 
+function cleanTags(tags: string[] | undefined) {
+  return [...new Set((tags ?? []).map((tag) => tag.trim()).filter(Boolean))].slice(0, 12);
+}
+
 export async function registerMemoryRoutes(app: FastifyInstance) {
   app.get("/memories", { preHandler: requireAuth }, async (request) => {
     const auth = (request as AuthenticatedRequest).auth;
-    return { memories: memoryStore(await readSpaceMemories(auth.spaceId)) };
+    return { memories: memoryStore(await readVisibleSpaceMemories(auth.spaceId, auth.userId)) };
   });
 
   app.post("/memories", { preHandler: requireAuth }, async (request, reply) => {
@@ -67,8 +77,14 @@ export async function registerMemoryRoutes(app: FastifyInstance) {
         cityId: info.id,
         city: info.name,
         cityEn: info.nameEn,
+        title: parsed.data.memory.title?.trim() || null,
         date: normalizedDate,
         text: parsed.data.memory.text.trim(),
+        mood: parsed.data.memory.mood?.trim() || null,
+        tags: cleanTags(parsed.data.memory.tags),
+        visibility: parsed.data.memory.visibility ?? "both",
+        partnerNote: parsed.data.memory.partnerNote?.trim() || null,
+        placeName: parsed.data.memory.placeName?.trim() || null,
       },
     });
 
@@ -98,7 +114,7 @@ export async function registerMemoryRoutes(app: FastifyInstance) {
       });
     }
 
-    const memories = await readSpaceMemories(auth.spaceId);
+    const memories = await readVisibleSpaceMemories(auth.spaceId, auth.userId);
     return { memory: memories.find((item) => item.id === memory.id), memories: memoryStore(memories) };
   });
 
@@ -144,8 +160,14 @@ export async function registerMemoryRoutes(app: FastifyInstance) {
           cityId: info.id,
           city: info.name,
           cityEn: info.nameEn,
+          title: parsed.data.memory.title?.trim() || null,
           date: normalizedDate,
           text: parsed.data.memory.text.trim(),
+          mood: parsed.data.memory.mood?.trim() || null,
+          tags: cleanTags(parsed.data.memory.tags),
+          visibility: parsed.data.memory.visibility ?? "both",
+          partnerNote: parsed.data.memory.partnerNote?.trim() || null,
+          placeName: parsed.data.memory.placeName?.trim() || null,
         },
       });
 
@@ -176,7 +198,7 @@ export async function registerMemoryRoutes(app: FastifyInstance) {
       }
     }
 
-    const memories = await readSpaceMemories(auth.spaceId);
+    const memories = await readVisibleSpaceMemories(auth.spaceId, auth.userId);
     return { memory: memories.find((item) => item.id === existing.id), memories: memoryStore(memories) };
   });
 
@@ -193,6 +215,6 @@ export async function registerMemoryRoutes(app: FastifyInstance) {
     if (!existing) return reply.code(404).send({ error: "Memory not found" });
 
     await prisma.memory.delete({ where: { id: existing.id } });
-    return { memories: memoryStore(await readSpaceMemories(auth.spaceId)) };
+    return { memories: memoryStore(await readVisibleSpaceMemories(auth.spaceId, auth.userId)) };
   });
 }

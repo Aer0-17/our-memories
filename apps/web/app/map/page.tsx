@@ -134,7 +134,7 @@ export default function MapPage() {
               <BrandMark />
               <div className="min-w-0">
                 <h1 className="truncate text-xl font-semibold leading-tight tracking-normal text-[#5A6670] sm:text-[28px]">
-                  Map of Us
+                  我们的回忆
                 </h1>
                 <p className="mt-0.5 hidden text-sm font-medium text-[#5A6670]/62 sm:mt-1 sm:block sm:text-base">
                   我们的地图

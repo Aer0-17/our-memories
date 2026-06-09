@@ -3,8 +3,8 @@ import { ApiBaseScript } from "@/app/api-base-script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Map of Us",
-  description: "A private map for memories we made together.",
+  title: "我们的回忆",
+  description: "只属于两个人的私密地图与纪念日墙。",
 };
 
 export default function RootLayout({

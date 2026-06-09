@@ -3,10 +3,17 @@ export interface Memory {
   cityId: string;
   city: string;
   cityEn: string;
+  title?: string;
   date: string;
   image: string;
   photos?: string[];
   text: string;
+  mood?: string;
+  tags?: string[];
+  visibility?: "both" | "me" | "her";
+  partnerNote?: string;
+  placeName?: string;
+  createdById?: string;
   createdAt?: string;
   draft?: boolean;
 }

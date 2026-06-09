@@ -3,10 +3,16 @@ import { z } from "zod";
 export const spaceRoles = ["owner", "member"] as const;
 export const draftStatuses = ["draft", "accepted", "rejected"] as const;
 export const auxiliaryKinds = ["favorite", "anniversary", "capsule"] as const;
+export const memoryVisibilities = ["both", "me", "her"] as const;
+export const activationCodeStatuses = ["active", "used", "revoked"] as const;
+export const orderStatuses = ["pending", "paid", "fulfilled", "canceled"] as const;
 
 export type SpaceRole = (typeof spaceRoles)[number];
 export type DraftStatus = (typeof draftStatuses)[number];
 export type AuxiliaryKind = (typeof auxiliaryKinds)[number];
+export type MemoryVisibility = (typeof memoryVisibilities)[number];
+export type ActivationCodeStatus = (typeof activationCodeStatuses)[number];
+export type OrderStatus = (typeof orderStatuses)[number];
 
 export const memoryPhotoSchema = z.object({
   id: z.string(),
@@ -23,11 +29,18 @@ export const memorySchema = z.object({
   cityId: z.string(),
   city: z.string(),
   cityEn: z.string(),
+  title: z.string().optional(),
   date: z.string(),
   text: z.string(),
+  mood: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  visibility: z.enum(memoryVisibilities).default("both"),
+  partnerNote: z.string().optional(),
+  placeName: z.string().optional(),
   image: z.string(),
   photos: z.array(z.string()).default([]),
   photoItems: z.array(memoryPhotoSchema).default([]),
+  createdById: z.string().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   draft: z.boolean().optional(),
@@ -69,6 +82,7 @@ export const auxiliaryItemSchema = z.object({
 export const loginPayloadSchema = z.object({
   username: z.string().min(1).max(120),
   password: z.string().min(1).max(200),
+  spaceSlug: z.string().min(1).max(120).optional(),
 });
 
 export const memoryUpsertPayloadSchema = z.object({
@@ -86,9 +100,86 @@ export const memoryUpsertPayloadSchema = z.object({
     .extend({
       cityId: z.string().min(1),
       date: z.string().min(1),
+      title: z.string().max(120).optional(),
       text: z.string().min(1).max(500),
+      mood: z.string().max(40).optional(),
+      tags: z.array(z.string().min(1).max(24)).max(12).optional(),
+      visibility: z.enum(memoryVisibilities).optional(),
+      partnerNote: z.string().max(500).optional(),
+      placeName: z.string().max(120).optional(),
       image: z.string().optional(),
       photos: z.array(z.string()).optional(),
+    }),
+});
+
+export const anniversaryPhotoSchema = z.object({
+  id: z.string(),
+  url: z.string(),
+  key: z.string().optional(),
+  mimeType: z.string().optional(),
+  sortOrder: z.number().int().default(0),
+});
+
+export const anniversaryCardSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  date: z.string(),
+  note: z.string().default(""),
+  image: z.string().optional(),
+  photos: z.array(z.string()).default([]),
+  photoItems: z.array(anniversaryPhotoSchema).default([]),
+  repeatYearly: z.boolean().default(true),
+  pinned: z.boolean().default(false),
+  sortOrder: z.number().int().default(0),
+  createdById: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
+export const anniversaryCardUpsertPayloadSchema = z.object({
+  card: anniversaryCardSchema
+    .partial({
+      id: true,
+      image: true,
+      photos: true,
+      photoItems: true,
+      note: true,
+      repeatYearly: true,
+      pinned: true,
+      sortOrder: true,
+      createdById: true,
+      createdAt: true,
+      updatedAt: true,
+    })
+    .extend({
+      title: z.string().min(1).max(120),
+      date: z.string().min(1),
+      note: z.string().max(500).optional(),
+      photos: z.array(z.string()).optional(),
+      repeatYearly: z.boolean().optional(),
+      pinned: z.boolean().optional(),
+      sortOrder: z.number().int().optional(),
+    }),
+});
+
+export const activationCodeClaimPayloadSchema = z.object({
+  code: z.string().min(4).max(80),
+  spaceName: z.string().min(1).max(80),
+  accounts: z
+    .tuple([
+      z.object({
+        username: z.string().min(1).max(40),
+        displayName: z.string().min(1).max(80).optional(),
+        password: z.string().regex(/^\d{4}$/),
+      }),
+      z.object({
+        username: z.string().min(1).max(40),
+        displayName: z.string().min(1).max(80).optional(),
+        password: z.string().regex(/^\d{4}$/),
+      }),
+    ])
+    .refine(([first, second]) => first.username.trim() !== second.username.trim(), {
+      message: "Account usernames must be different",
     }),
 });
 
@@ -190,10 +281,13 @@ export const tripGuideJobSchema = z.object({
 
 export type MemoryPhoto = z.infer<typeof memoryPhotoSchema>;
 export type Memory = z.infer<typeof memorySchema>;
+export type AnniversaryPhoto = z.infer<typeof anniversaryPhotoSchema>;
+export type AnniversaryCard = z.infer<typeof anniversaryCardSchema>;
 export type AppSettings = z.infer<typeof appSettingsSchema>;
 export type CityAsset = z.infer<typeof cityAssetSchema>;
 export type AuxiliaryItem = z.infer<typeof auxiliaryItemSchema>;
 export type LoginPayload = z.infer<typeof loginPayloadSchema>;
+export type ActivationCodeClaimPayload = z.infer<typeof activationCodeClaimPayloadSchema>;
 export type MemoryDraft = z.infer<typeof memoryDraftSchema>;
 export type TripPlanDraft = z.infer<typeof tripPlanDraftSchema>;
 export type TripGuideCheckpoint = z.infer<typeof tripGuideCheckpointSchema>;
@@ -213,4 +307,68 @@ export type LoginPhotoStore = {
 export const toIsoString = (value: Date | string | null | undefined) => {
   if (!value) return undefined;
   return value instanceof Date ? value.toISOString() : value;
+};
+
+export const parseDottedDate = (value: string) => {
+  const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return { year, month, day, date };
+};
+
+export const normalizeDottedDate = (value: string) => {
+  const parsed = parseDottedDate(value);
+  if (!parsed) return null;
+  return `${parsed.year}.${String(parsed.month).padStart(2, "0")}.${String(parsed.day).padStart(2, "0")}`;
+};
+
+export const startOfUtcToday = (now = new Date()) =>
+  Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+export const daysSince = (date: string, now = new Date()) => {
+  const parsed = parseDottedDate(date);
+  if (!parsed) return null;
+  return Math.floor((startOfUtcToday(now) - parsed.date.getTime()) / 86_400_000);
+};
+
+export const daysUntilNext = (date: string, repeatYearly = false, now = new Date()) => {
+  const parsed = parseDottedDate(date);
+  if (!parsed) return null;
+  const today = startOfUtcToday(now);
+  let target = Date.UTC(parsed.year, parsed.month - 1, parsed.day);
+
+  if (repeatYearly) {
+    const currentYear = now.getUTCFullYear();
+    target = Date.UTC(currentYear, parsed.month - 1, parsed.day);
+    if (target < today) target = Date.UTC(currentYear + 1, parsed.month - 1, parsed.day);
+  }
+
+  return Math.ceil((target - today) / 86_400_000);
+};
+
+export const anniversaryDisplayState = (
+  card: Pick<AnniversaryCard, "date" | "repeatYearly">,
+  now = new Date(),
+) => {
+  const since = daysSince(card.date, now);
+  const until = daysUntilNext(card.date, card.repeatYearly, now);
+  if (since === null || until === null) return { valid: false as const };
+
+  return {
+    valid: true as const,
+    daysSince: since,
+    daysUntil: until,
+    label: until === 0 ? "今天" : until > 0 ? `还有 ${until} 天` : `已经 ${Math.abs(until)} 天`,
+    sinceLabel: since >= 0 ? `已经 ${since} 天` : `还有 ${Math.abs(since)} 天`,
+  };
 };

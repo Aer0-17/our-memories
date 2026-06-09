@@ -64,11 +64,11 @@ export async function apiJson<T>(path: string, options: ApiOptions = {}) {
   return (await response.json()) as T;
 }
 
-export async function login(username: string, password: string) {
+export async function login(username: string, password: string, spaceSlug?: string) {
   const response = await apiFetch("/auth/login", {
     method: "POST",
     auth: false,
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, password, spaceSlug }),
   });
   if (!response.ok) return false;
   const session = (await response.json()) as Parameters<typeof writeSession>[0];

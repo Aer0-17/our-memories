@@ -1,0 +1,141 @@
+.anniversary-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  color: #273846;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.subtitle {
+  color: rgba(90, 102, 112, 0.54);
+  font-size: 13px;
+}
+
+.anniversary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.anniversary-card {
+  overflow: hidden;
+}
+
+.anniversary-cover {
+  width: 100%;
+  height: 190px;
+  background: #d6e8f0;
+}
+
+.anniversary-cover.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(90, 102, 112, 0.38);
+  font-weight: 800;
+}
+
+.anniversary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.anniversary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.anniversary-title {
+  color: #5a6670;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.pin {
+  border: 1px solid rgba(245, 220, 224, 0.9);
+  border-radius: 999px;
+  color: #b85d70;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+}
+
+.anniversary-date {
+  color: rgba(90, 102, 112, 0.5);
+  font-size: 13px;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.metric {
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.metric.pink {
+  border: 1px solid rgba(245, 220, 224, 0.86);
+  background: rgba(245, 220, 224, 0.3);
+}
+
+.metric.blue {
+  border: 1px solid rgba(214, 232, 240, 0.9);
+  background: rgba(214, 232, 240, 0.34);
+}
+
+.metric-label {
+  color: rgba(90, 102, 112, 0.46);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.metric-value {
+  display: block;
+  margin-top: 5px;
+  color: #5a6670;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.anniversary-note {
+  color: rgba(90, 102, 112, 0.7);
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 36px 18px;
+  text-align: center;
+}
+
+.empty-title {
+  color: #5a6670;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.empty-copy {
+  color: rgba(90, 102, 112, 0.58);
+  font-size: 13px;
+  line-height: 22px;
+}

@@ -1,0 +1,79 @@
+.entry-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.entry-hero {
+  display: flex;
+  flex-direction: column;
+  padding: 26px 4px 8px;
+}
+
+.entry-eyebrow {
+  color: rgba(90, 102, 112, 0.52);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.entry-title {
+  margin-top: 10px;
+  color: #273846;
+  font-size: 42px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.entry-subtitle {
+  margin-top: 14px;
+  color: rgba(90, 102, 112, 0.66);
+  font-size: 14px;
+  line-height: 24px;
+}
+
+.mode-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.mode {
+  min-height: 40px;
+  border: 1px solid rgba(216, 221, 216, 0.86);
+  border-radius: 8px;
+  background: rgba(250, 251, 247, 0.78);
+  color: rgba(90, 102, 112, 0.66);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 40px;
+}
+
+.mode.active {
+  border-color: #f5dce0;
+  background: rgba(245, 220, 224, 0.72);
+  color: #b85d70;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.status {
+  border: 1px solid rgba(216, 221, 216, 0.76);
+  border-radius: 8px;
+  background: rgba(250, 251, 247, 0.72);
+  color: rgba(90, 102, 112, 0.7);
+  font-size: 12px;
+  line-height: 20px;
+  padding: 10px 12px;
+}

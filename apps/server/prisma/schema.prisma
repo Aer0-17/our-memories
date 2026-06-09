@@ -31,6 +31,12 @@ enum DraftStatus {
   rejected
 }
 
+enum MemoryVisibility {
+  both
+  me
+  her
+}
+
 enum AuxiliaryKind {
   favorite
   anniversary
@@ -54,37 +60,61 @@ enum AiJobStatus {
   failed
 }
 
+enum ActivationCodeStatus {
+  active
+  used
+  revoked
+}
+
+enum OrderStatus {
+  pending
+  paid
+  fulfilled
+  canceled
+}
+
+enum OrderProvider {
+  manual
+  wechat
+  app_store
+}
+
 model User {
-  id           String       @id @default(cuid())
-  username     String       @unique
-  displayName  String
-  passwordHash String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  memberships  Membership[]
-  memories     Memory[]     @relation("MemoryCreator")
-  drafts       AiDraft[]
+  id               String            @id @default(cuid())
+  username         String            @unique
+  displayName      String
+  passwordHash     String
+  wechatOpenId     String?           @unique
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  memberships      Membership[]
+  memories         Memory[]          @relation("MemoryCreator")
+  anniversaryCards AnniversaryCard[] @relation("AnniversaryCreator")
+  drafts           AiDraft[]
 }
 
 model Space {
-  id              String           @id @default(cuid())
-  name            String
-  slug            String           @unique
-  plan            SpacePlan        @default(private)
-  status          SpaceStatus      @default(active)
-  trialEndsAt     DateTime?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  memberships     Membership[]
-  memories        Memory[]
-  settings        Setting[]
-  cityAssets      CityAsset[]
-  loginPhotos     LoginPhoto[]
-  auxiliaryItems  AuxiliaryItem[]
-  aiConversations AiConversation[]
-  aiDrafts        AiDraft[]
-  aiJobs          AiJob[]
-  tripPlans       TripPlan[]
+  id               String            @id @default(cuid())
+  name             String
+  slug             String            @unique
+  plan             SpacePlan         @default(private)
+  status           SpaceStatus       @default(active)
+  trialEndsAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  memberships      Membership[]
+  memories         Memory[]
+  settings         Setting[]
+  cityAssets       CityAsset[]
+  loginPhotos      LoginPhoto[]
+  auxiliaryItems   AuxiliaryItem[]
+  anniversaryCards AnniversaryCard[]
+  activationCodes  ActivationCode[]
+  orders           Order[]
+  aiConversations  AiConversation[]
+  aiDrafts         AiDraft[]
+  aiJobs           AiJob[]
+  tripPlans        TripPlan[]
 }
 
 model Membership {
@@ -101,23 +131,30 @@ model Membership {
 }
 
 model Memory {
-  id          String        @id @default(cuid())
-  spaceId     String
-  cityId      String
-  city        String
-  cityEn      String
-  date        String
-  text        String
+  id           String           @id @default(cuid())
+  spaceId      String
+  cityId       String
+  city         String
+  cityEn       String
+  title        String?
+  date         String
+  text         String
+  mood         String?
+  tags         String[]         @default([])
+  visibility   MemoryVisibility @default(both)
+  partnerNote  String?
+  placeName    String?
   coverPhotoId String?
-  createdById String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  space       Space         @relation(fields: [spaceId], references: [id], onDelete: Cascade)
-  createdBy   User?         @relation("MemoryCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  photos      MemoryPhoto[]
+  createdById  String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  space        Space            @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdBy    User?            @relation("MemoryCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  photos       MemoryPhoto[]
 
   @@index([spaceId, cityId])
   @@index([spaceId, createdAt])
+  @@index([spaceId, visibility])
 }
 
 model MemoryPhoto {
@@ -187,15 +224,85 @@ model AuxiliaryItem {
   @@index([spaceId, kind])
 }
 
+model AnniversaryCard {
+  id           String             @id @default(cuid())
+  spaceId      String
+  title        String
+  date         String
+  note         String             @default("")
+  coverPhotoId String?
+  repeatYearly Boolean            @default(true)
+  pinned       Boolean            @default(false)
+  sortOrder    Int                @default(0)
+  createdById  String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  space        Space              @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  createdBy    User?              @relation("AnniversaryCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  photos       AnniversaryPhoto[]
+
+  @@index([spaceId, pinned, sortOrder])
+  @@index([spaceId, date])
+}
+
+model AnniversaryPhoto {
+  id                String          @id @default(cuid())
+  anniversaryCardId String
+  key               String
+  url               String
+  mimeType          String?
+  sortOrder         Int             @default(0)
+  createdAt         DateTime        @default(now())
+  card              AnniversaryCard @relation(fields: [anniversaryCardId], references: [id], onDelete: Cascade)
+
+  @@index([anniversaryCardId])
+}
+
+model ActivationCode {
+  id            String               @id @default(cuid())
+  codeHash      String               @unique
+  status        ActivationCodeStatus @default(active)
+  plan          SpacePlan            @default(private)
+  expiresAt     DateTime?
+  usedAt        DateTime?
+  usedBySpaceId String?
+  createdById   String?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  usedBySpace   Space?               @relation(fields: [usedBySpaceId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([usedBySpaceId])
+}
+
+model Order {
+  id               String        @id @default(cuid())
+  provider         OrderProvider @default(manual)
+  providerOrderId  String?
+  status           OrderStatus   @default(pending)
+  amount           Int?
+  currency         String        @default("CNY")
+  plan             SpacePlan     @default(private)
+  activationCodeId String?
+  spaceId          String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  space            Space?        @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+
+  @@index([provider, providerOrderId])
+  @@index([status])
+  @@index([spaceId])
+}
+
 model AiConversation {
-  id                String    @id @default(cuid())
-  spaceId           String
-  userId            String?
-  purpose           String
-  astrbotSessionId  String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  space             Space     @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  spaceId          String
+  userId           String?
+  purpose          String
+  astrbotSessionId String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  space            Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
 
   @@unique([spaceId, purpose, astrbotSessionId])
 }

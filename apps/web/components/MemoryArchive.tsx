@@ -71,10 +71,32 @@ function MemoryCard({ item, compact = false }: Readonly<{ item: MemoryItem; comp
         </div>
         <div className="min-w-0 py-1">
           <div className="flex items-baseline gap-2">
-            <h3 className="truncate text-lg font-semibold text-[#5A6670]">{memory.city}</h3>
+            <h3 className="truncate text-lg font-semibold text-[#5A6670]">{memory.title || memory.city}</h3>
             <span className="shrink-0 text-sm text-[#5A6670]/46">{memory.date}</span>
           </div>
+          {(memory.title || memory.placeName) && (
+            <p className="mt-1 truncate text-xs font-semibold text-[#A8C8DC]">
+              {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
+            </p>
+          )}
           <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5A6670]/70">{memory.text}</p>
+          {(memory.mood || memory.tags?.length) && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {memory.mood && (
+                <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
+                  {memory.mood}
+                </span>
+              )}
+              {memory.tags?.slice(0, 3).map((tag) => (
+                <span
+                  key={`${memory.id}-archive-tag-${tag}`}
+                  className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#A8C8DC]">
             <MapPin className="h-3.5 w-3.5" />
             回到地图

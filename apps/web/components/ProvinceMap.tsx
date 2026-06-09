@@ -1107,8 +1107,14 @@ function MemoryCard({
     [localMemories],
   );
   const [formOpen, setFormOpen] = useState(!isLit && isAdmin);
+  const [title, setTitle] = useState("");
+  const [placeName, setPlaceName] = useState("");
   const [date, setDate] = useState("");
   const [text, setText] = useState("");
+  const [mood, setMood] = useState("");
+  const [tags, setTags] = useState("");
+  const [partnerNote, setPartnerNote] = useState("");
+  const [visibility, setVisibility] = useState<"both" | "me" | "her">("both");
   const [photoDrafts, setPhotoDrafts] = useState<PhotoDraft[]>([]);
   const [photoError, setPhotoError] = useState("");
   const [polishSuggestion, setPolishSuggestion] = useState("");
@@ -1150,8 +1156,14 @@ function MemoryCard({
 
   const resetForm = (revokePhoto: boolean) => {
     photoReadTokenRef.current += 1;
+    setTitle("");
+    setPlaceName("");
     setDate("");
     setText("");
+    setMood("");
+    setTags("");
+    setPartnerNote("");
+    setVisibility("both");
     setPhotoError("");
     setPolishSuggestion("");
     setPolishError("");
@@ -1175,8 +1187,14 @@ function MemoryCard({
     photoDraftsRef.current = [];
     setPhotoDrafts([]);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    setTitle(record.title ?? "");
+    setPlaceName(record.placeName ?? "");
     setDate(record.date);
     setText(record.text);
+    setMood(record.mood ?? "");
+    setTags(record.tags?.join("，") ?? "");
+    setPartnerNote(record.partnerNote ?? "");
+    setVisibility(record.visibility ?? "both");
     setPhotoError("");
     setPolishSuggestion("");
     setPolishError("");
@@ -1368,6 +1386,14 @@ function MemoryCard({
 
     try {
       const photos = photoDrafts.map((photo) => photo.dataUrl).filter((photo): photo is string => Boolean(photo));
+      const nextTags = Array.from(
+        new Set(
+          tags
+            .split(/[，,\s]+/)
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      ).slice(0, 12);
 
       const nextPhotos = photos.length > 0 ? photos : editingMemory?.photos ?? [editingMemory?.image ?? landmarkImage];
       const nextMemory = {
@@ -1375,10 +1401,16 @@ function MemoryCard({
         cityId: city.id,
         city: city.name,
         cityEn: city.nameEn,
+        title: title.trim() || undefined,
+        placeName: placeName.trim() || undefined,
         date: normalizedDate,
         image: editingMemory && photos.length === 0 ? editingMemory.image : nextPhotos[0],
         photos: nextPhotos,
         text: trimmedText,
+        mood: mood.trim() || undefined,
+        tags: nextTags,
+        visibility,
+        partnerNote: partnerNote.trim() || undefined,
         createdAt: editingMemory?.createdAt,
       };
 
@@ -1392,6 +1424,12 @@ function MemoryCard({
         image: photos[0] ?? landmarkImage,
         photos: photos.length > 0 ? photos : [landmarkImage],
         text: trimmedText,
+        title: title.trim() || undefined,
+        placeName: placeName.trim() || undefined,
+        mood: mood.trim() || undefined,
+        tags: nextTags,
+        visibility,
+        partnerNote: partnerNote.trim() || undefined,
       });
       resetForm(true);
       setFormOpen(false);
@@ -1595,9 +1633,37 @@ function MemoryCard({
           )}
           {coverError && <p className="mt-2 text-xs text-[#E8B8C2]">{coverError}</p>}
 
+          {memory?.title && (
+            <h3 className="mt-4 text-lg font-semibold leading-tight text-[#5A6670]">{memory.title}</h3>
+          )}
+          {memory?.placeName && (
+            <p className="mt-1 text-xs font-semibold text-[#A8C8DC]">{memory.placeName}</p>
+          )}
           <p className="mt-4 text-sm leading-6 text-[#5A6670]/82">
             {memory?.text ?? "写下第一段回忆后，这座城市会被点亮。"}
           </p>
+          {memory?.partnerNote && (
+            <p className="mt-3 rounded-[7px] border border-[#F5DCE0]/70 bg-[#F5DCE0]/24 px-3 py-2 text-xs leading-5 text-[#5A6670]/70">
+              {memory.partnerNote}
+            </p>
+          )}
+          {(memory?.mood || memory?.tags?.length) && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {memory.mood && (
+                <span className="rounded-full border border-[#D6E8F0] bg-[#D6E8F0]/36 px-2 py-1 text-[11px] font-semibold text-[#5A6670]/66">
+                  {memory.mood}
+                </span>
+              )}
+              {memory.tags?.map((tag) => (
+                <span
+                  key={`${memory.id}-tag-${tag}`}
+                  className="rounded-full border border-[#D8DDD8] bg-[#FAFBF7]/78 px-2 py-1 text-[11px] font-semibold text-[#5A6670]/54"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
           {memory && localMemoryIds.has(memory.id) && (
             <div className="mt-4 flex gap-2">
               <button
@@ -1695,7 +1761,25 @@ function MemoryCard({
                       )}
                     </div>
                   </div>
+                  {record.title && <p className="mt-2 text-sm font-semibold text-[#5A6670]">{record.title}</p>}
                   <p className="mt-2 text-xs leading-5 text-[#5A6670]/72">{record.text}</p>
+                  {(record.mood || record.tags?.length) && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {record.mood && (
+                        <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
+                          {record.mood}
+                        </span>
+                      )}
+                      {record.tags?.slice(0, 4).map((tag) => (
+                        <span
+                          key={`${record.id}-history-tag-${tag}`}
+                          className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {recordPhotos.length > 0 && (
                     <div className={`mt-3 grid gap-1.5 ${expanded ? "grid-cols-6" : "grid-cols-5"}`}>
                       {recordPhotos.slice(0, expanded ? 12 : 10).map((photo, photoIndex) => (
@@ -1743,6 +1827,32 @@ function MemoryCard({
           >
             <div className="mt-4 space-y-3 border-t border-dashed border-[#D8DDD8] pt-4">
               <label className="block">
+                <span className="text-xs font-medium text-[#5A6670]/70">标题</span>
+                <input
+                  className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                  type="text"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder="例如：第一次一起看海"
+                  maxLength={120}
+                  disabled={!isAdmin}
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-medium text-[#5A6670]/70">具体地点</span>
+                <input
+                  className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                  type="text"
+                  value={placeName}
+                  onChange={(event) => setPlaceName(event.target.value)}
+                  placeholder={`${city.name} 的某条街、某家店、某个角落`}
+                  maxLength={120}
+                  disabled={!isAdmin}
+                />
+              </label>
+
+              <label className="block">
                 <span className="text-xs font-medium text-[#5A6670]/70">日期</span>
                 <input
                   className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
@@ -1783,6 +1893,71 @@ function MemoryCard({
                   disabled={!isAdmin}
                 />
               </label>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-xs font-medium text-[#5A6670]/70">心情</span>
+                  <input
+                    className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    type="text"
+                    value={mood}
+                    onChange={(event) => setMood(event.target.value)}
+                    placeholder="开心、想念、松弛..."
+                    maxLength={40}
+                    disabled={!isAdmin}
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-medium text-[#5A6670]/70">标签</span>
+                  <input
+                    className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    type="text"
+                    value={tags}
+                    onChange={(event) => setTags(event.target.value)}
+                    placeholder="海边，夜景，第一次"
+                    maxLength={120}
+                    disabled={!isAdmin}
+                  />
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-medium text-[#5A6670]/70">双方补充语</span>
+                <textarea
+                  className="mt-1.5 w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                  rows={2}
+                  value={partnerNote}
+                  onChange={(event) => setPartnerNote(event.target.value)}
+                  placeholder="留给另一个人的一句补充..."
+                  maxLength={500}
+                  disabled={!isAdmin}
+                />
+              </label>
+
+              <div>
+                <span className="text-xs font-medium text-[#5A6670]/70">可见性</span>
+                <div className="mt-1.5 grid grid-cols-3 gap-2">
+                  {[
+                    ["both", "给我们看"],
+                    ["me", "只给我"],
+                    ["her", "只给她"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      className={`rounded-[6px] border px-2 py-2 text-xs font-semibold transition ${
+                        visibility === value
+                          ? "border-[#F5DCE0] bg-[#F5DCE0]/62 text-[#B85D70]"
+                          : "border-[#D8DDD8] bg-[#FAFBF7] text-[#5A6670]/58 hover:border-[#A8C8DC]"
+                      }`}
+                      type="button"
+                      onClick={() => setVisibility(value as "both" | "me" | "her")}
+                      disabled={!isAdmin}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <button

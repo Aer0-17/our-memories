@@ -7,9 +7,12 @@ import { registerAuthRoutes } from "./auth.js";
 import { registerAssetRoutes } from "./routes/assets.js";
 import { registerBackupRoutes } from "./routes/backup.js";
 import { registerAiRoutes } from "./routes/ai.js";
+import { registerActivationCodeRoutes } from "./routes/activationCodes.js";
+import { registerAnniversaryCardRoutes } from "./routes/anniversaryCards.js";
 import { registerMemoryRoutes } from "./routes/memories.js";
 import { registerSettingsRoutes } from "./routes/settings.js";
 import { registerTripGuideRoutes } from "./routes/tripGuides.js";
+import { registerWechatRoutes } from "./routes/wechat.js";
 
 const app = fastify({ logger: true });
 
@@ -23,7 +26,10 @@ await app.register(multipart);
 app.get("/health", async () => ({ ok: true }));
 
 await registerAuthRoutes(app);
+await registerWechatRoutes(app);
+await registerActivationCodeRoutes(app);
 await registerMemoryRoutes(app);
+await registerAnniversaryCardRoutes(app);
 await registerAssetRoutes(app);
 await registerSettingsRoutes(app);
 await registerBackupRoutes(app);

@@ -1,0 +1,51 @@
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.title {
+  color: #273846;
+  font-size: 30px;
+  font-weight: 800;
+}
+
+.subtitle {
+  color: rgba(90, 102, 112, 0.54);
+  font-size: 13px;
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+}
+
+.label {
+  color: rgba(90, 102, 112, 0.48);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.value {
+  color: #5a6670;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.status {
+  border: 1px solid rgba(216, 221, 216, 0.76);
+  border-radius: 8px;
+  background: rgba(250, 251, 247, 0.72);
+  color: rgba(90, 102, 112, 0.7);
+  font-size: 12px;
+  line-height: 20px;
+  padding: 10px 12px;
+}
