@@ -1,0 +1,37 @@
+{
+  "name": "map-of-us",
+  "version": "0.2.0",
+  "description": "Online-first private couple memory map",
+  "author": "Map of Us",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @map-of-us/web",
+    "dev:web": "npm run dev -w @map-of-us/web",
+    "dev:server": "npm run dev -w @map-of-us/server",
+    "build": "npm run build:shared && npm run build --workspaces --if-present",
+    "build:shared": "npm run build -w @map-of-us/shared",
+    "build:web": "npm run build:shared && npm run build -w @map-of-us/web",
+    "build:server": "npm run build:shared && npm run build -w @map-of-us/server",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
+    "desktop": "npm run desktop -w @map-of-us/desktop",
+    "dist:dir": "npm run dist:dir -w @map-of-us/desktop",
+    "dist:win": "npm run dist:win -w @map-of-us/desktop",
+    "mobile:sync": "npm run sync -w @map-of-us/mobile",
+    "mobile:android:sync": "npm run android:sync -w @map-of-us/mobile",
+    "mobile:android:build": "npm run android:build -w @map-of-us/mobile",
+    "db:generate": "npm run db:generate -w @map-of-us/server",
+    "db:migrate": "npm run db:migrate -w @map-of-us/server",
+    "db:seed": "npm run db:seed -w @map-of-us/server"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@types/node": "^20",
+    "eslint": "^9",
+    "typescript": "^5"
+  }
+}
