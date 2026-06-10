@@ -1,16 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronRight,
   Heart,
+  ImagePlus,
+  Loader2,
   MapPin,
+  Plus,
   Star,
   Trash2,
+  X,
 } from "lucide-react";
 import { cities } from "@/data/cities";
 import { MemoryPageShell } from "@/components/MemoryNav";
+import { DatePicker, Input, Textarea } from "@/components/ui/input";
 import {
   recentTimelineMemories,
   sortMemoriesByTime,
@@ -22,6 +27,7 @@ import {
 } from "@/data/progress";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { apiFetch } from "@/lib/apiClient";
+import { normalizeDottedDate } from "@/lib/dateFormat";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 
 type ArchiveView = "city" | "timeline";
@@ -38,6 +44,423 @@ const memoryMonthLabel = (memory: Memory) => {
 
   return `${match[1]}年 ${Number(match[2])}月`;
 };
+
+type AddMemoryForm = {
+  cityId: string;
+  title: string;
+  placeName: string;
+  date: string;
+  text: string;
+  mood: string;
+  tags: string;
+  visibility: "both" | "me" | "her";
+  partnerNote: string;
+};
+
+type PhotoDraft = {
+  name: string;
+  dataUrl: string;
+};
+
+const defaultAddMemoryForm = (): AddMemoryForm => ({
+  cityId: "",
+  title: "",
+  placeName: "",
+  date: "",
+  text: "",
+  mood: "",
+  tags: "",
+  visibility: "both",
+  partnerNote: "",
+});
+
+const readBlobAsDataUrl = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Image read failed"));
+    });
+    reader.addEventListener("error", () => reject(reader.error ?? new Error("Image read failed")));
+    reader.readAsDataURL(blob);
+  });
+
+const loadImageFile = (file: File) =>
+  new Promise<HTMLImageElement>((resolve, reject) => {
+    const imageUrl = URL.createObjectURL(file);
+    const image = new window.Image();
+
+    image.addEventListener(
+      "load",
+      () => {
+        URL.revokeObjectURL(imageUrl);
+        resolve(image);
+      },
+      { once: true },
+    );
+    image.addEventListener(
+      "error",
+      () => {
+        URL.revokeObjectURL(imageUrl);
+        reject(new Error("Image load failed"));
+      },
+      { once: true },
+    );
+    image.src = imageUrl;
+  });
+
+async function readCompressedImageDataUrl(file: File) {
+  if (file.type === "image/svg+xml") return readBlobAsDataUrl(file);
+
+  const image = await loadImageFile(file);
+  const maxDimension = 1600;
+  const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) return readBlobAsDataUrl(file);
+
+  context.fillStyle = "#FAFBF7";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, "image/jpeg", 0.82);
+  });
+
+  return blob ? readBlobAsDataUrl(blob) : readBlobAsDataUrl(file);
+}
+
+const memoryPhotosPayload = (photos: string[]) =>
+  photos.filter(Boolean).map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
+
+function AddMemoryPanel({
+  canEdit,
+  onSaved,
+}: Readonly<{
+  canEdit: boolean;
+  onSaved: (memories: LocalMemoryStore) => void;
+}>) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cityOptions = useMemo(
+    () => [...cities].sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN")),
+    [],
+  );
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<AddMemoryForm>(() => ({
+    ...defaultAddMemoryForm(),
+    cityId: cityOptions[0]?.id ?? "",
+  }));
+  const [photos, setPhotos] = useState<PhotoDraft[]>([]);
+  const [isReadingPhoto, setIsReadingPhoto] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState("");
+  const [error, setError] = useState("");
+
+  const selectedCity = cityOptions.find((city) => city.id === form.cityId) ?? cityOptions[0];
+  const normalizedDate = normalizeDottedDate(form.date);
+  const canSave = canEdit && Boolean(selectedCity) && Boolean(normalizedDate) && Boolean(form.text.trim()) && !isSaving;
+
+  const resetForm = () => {
+    setForm({
+      ...defaultAddMemoryForm(),
+      cityId: selectedCity?.id ?? cityOptions[0]?.id ?? "",
+    });
+    setPhotos([]);
+    setError("");
+  };
+
+  const handlePickFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    if (files.length === 0) return;
+
+    setIsReadingPhoto(true);
+    setError("");
+
+    try {
+      const nextPhotos = await Promise.all(
+        files.slice(0, 12).map(async (file) => ({
+          name: file.name,
+          dataUrl: await readCompressedImageDataUrl(file),
+        })),
+      );
+      setPhotos(nextPhotos);
+    } catch {
+      setError("照片读取失败，请换一张图片重试。");
+    } finally {
+      setIsReadingPhoto(false);
+      event.target.value = "";
+    }
+  };
+
+  const handleSave = async () => {
+    if (!canEdit) {
+      setError("请先登录后再保存。");
+      return;
+    }
+    if (!selectedCity) {
+      setError("请选择城市。");
+      return;
+    }
+    if (!normalizedDate) {
+      setError("请选择有效日期。");
+      return;
+    }
+    if (!form.text.trim()) {
+      setError("请写一句回忆。");
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+    setStatus("");
+
+    try {
+      const tags = Array.from(
+        new Set(
+          form.tags
+            .split(/[，,\s]+/)
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+        ),
+      ).slice(0, 12);
+      const photoUrls = photos.map((photo) => photo.dataUrl);
+      const fallbackPhoto = selectedCity.sprite;
+      const response = await apiFetch("/api/v1/memories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cityId: selectedCity.id,
+          city: selectedCity.name,
+          cityEn: selectedCity.nameEn,
+          title: form.title.trim(),
+          placeName: form.placeName.trim(),
+          date: normalizedDate,
+          text: form.text.trim(),
+          mood: form.mood.trim(),
+          tags,
+          visibility: form.visibility,
+          partnerNote: form.partnerNote.trim(),
+          photos: memoryPhotosPayload(photoUrls.length > 0 ? photoUrls : [fallbackPhoto]),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save memory");
+
+      const data = (await response.json()) as { memories: LocalMemoryStore };
+      onSaved(data.memories);
+      resetForm();
+      setOpen(false);
+      setStatus("回忆已保存。");
+    } catch {
+      setError("保存失败，请检查登录状态或稍后再试。");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section className="mt-6 rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-3 shadow-[0_12px_28px_rgba(90,102,112,0.055)] backdrop-blur sm:mt-8 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-[#5A6670]">直接添加回忆</p>
+          <p className="mt-1 text-xs leading-5 text-[#5A6670]/55">不用回地图，选择城市后就能保存到同一套后端数据。</p>
+        </div>
+        <button
+          className="inline-flex min-h-10 items-center gap-2 rounded-[8px] bg-[#F5DCE0] px-4 text-sm font-semibold text-[#B85D70] transition hover:bg-[#E8B8C2] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          type="button"
+          onClick={() => {
+            setOpen((current) => !current);
+            setError("");
+            setStatus("");
+          }}
+          disabled={!canEdit}
+        >
+          {open ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {open ? "收起" : "新增回忆"}
+        </button>
+      </div>
+
+      {!canEdit && (
+        <p className="mt-3 rounded-[7px] border border-[#D8DDD8]/70 bg-white/50 px-3 py-2 text-xs text-[#5A6670]/58">
+          当前未登录或会话已失效，登录后才能新增和删除回忆。
+        </p>
+      )}
+      {status && <p className="mt-3 text-xs font-semibold text-[#7DA88B]">{status}</p>}
+
+      {open && (
+        <div className="mt-5 space-y-4 border-t border-dashed border-[#D8DDD8] pt-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
+              城市
+              <select
+                className="mt-1 min-h-10 w-full rounded-[7px] border border-[#D8DDD8]/80 bg-white/70 px-3 text-sm text-[#5A6670] outline-none transition focus:border-[#A8C8DC]"
+                value={form.cityId}
+                onChange={(event) => setForm({ ...form, cityId: event.target.value })}
+              >
+                {cityOptions.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
+              日期
+              <DatePicker className="mt-1 bg-white/70" value={form.date} onChange={(date) => setForm({ ...form, date })} />
+            </label>
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
+              标题
+              <Input
+                className="mt-1 bg-white/70"
+                value={form.title}
+                onChange={(event) => setForm({ ...form, title: event.target.value })}
+                placeholder="例如：第一次一起看海"
+                maxLength={120}
+              />
+            </label>
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
+              具体地点
+              <Input
+                className="mt-1 bg-white/70"
+                value={form.placeName}
+                onChange={(event) => setForm({ ...form, placeName: event.target.value })}
+                placeholder={selectedCity ? `${selectedCity.name} 的某家店、某条街` : "某个地点"}
+                maxLength={120}
+              />
+            </label>
+          </div>
+
+          <label className="block text-xs font-semibold text-[#5A6670]/58">
+            一句话回忆
+            <Textarea
+              className="mt-1 bg-white/70"
+              value={form.text}
+              onChange={(event) => setForm({ ...form, text: event.target.value })}
+              placeholder="写下这一刻..."
+              maxLength={500}
+            />
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
+              心情
+              <Input
+                className="mt-1 bg-white/70"
+                value={form.mood}
+                onChange={(event) => setForm({ ...form, mood: event.target.value })}
+                placeholder="开心、想念、松弛..."
+                maxLength={40}
+              />
+            </label>
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
+              标签
+              <Input
+                className="mt-1 bg-white/70"
+                value={form.tags}
+                onChange={(event) => setForm({ ...form, tags: event.target.value })}
+                placeholder="海边，夜景，第一次"
+                maxLength={120}
+              />
+            </label>
+          </div>
+
+          <label className="block text-xs font-semibold text-[#5A6670]/58">
+            双方补充语
+            <Textarea
+              className="mt-1 min-h-[72px] bg-white/70"
+              value={form.partnerNote}
+              onChange={(event) => setForm({ ...form, partnerNote: event.target.value })}
+              placeholder="留给另一个人的一句补充..."
+              maxLength={500}
+            />
+          </label>
+
+          <div>
+            <span className="text-xs font-semibold text-[#5A6670]/58">可见性</span>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {[
+                ["both", "给我们看"],
+                ["me", "只给我"],
+                ["her", "只给她"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`rounded-[7px] border px-2 py-2 text-xs font-semibold transition ${
+                    form.visibility === value
+                      ? "border-[#F5DCE0] bg-[#F5DCE0]/62 text-[#B85D70]"
+                      : "border-[#D8DDD8] bg-white/54 text-[#5A6670]/58 hover:border-[#A8C8DC]"
+                  }`}
+                  type="button"
+                  onClick={() => setForm({ ...form, visibility: value as AddMemoryForm["visibility"] })}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className="text-xs font-semibold text-[#5A6670]/58">照片</span>
+            <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={handlePickFile} />
+            <button
+              className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-[7px] border border-dashed border-[#D8DDD8] bg-white/52 px-3 py-3 text-sm text-[#5A6670]/70 transition hover:border-[#E8B8C2] hover:text-[#E8B8C2]"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {photos.length > 0 ? (
+                <span className="w-full">
+                  <span className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                    {photos.slice(0, 12).map((photo, index) => (
+                      <span key={`${photo.name}-${index}`} className="relative aspect-square overflow-hidden rounded-[5px] bg-[#D6E8F0]">
+                        <LocalPrivacyImg className="h-full w-full object-cover" src={photo.dataUrl} alt={photo.name || `照片 ${index + 1}`} />
+                      </span>
+                    ))}
+                  </span>
+                  <span className="mt-2 block text-xs text-[#5A6670]/58">
+                    {isReadingPhoto ? "读取中" : `已选择 ${photos.length} 张，可重新选择`}
+                  </span>
+                </span>
+              ) : (
+                <>
+                  <ImagePlus className="h-4 w-4" />
+                  选择本地图片，可多选
+                </>
+              )}
+            </button>
+          </div>
+
+          {error && <p className="text-xs font-semibold text-[#D86F82]">{error}</p>}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#273846] px-4 text-sm font-semibold text-white transition hover:bg-[#D86F82] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
+              type="button"
+              onClick={handleSave}
+              disabled={!canSave}
+            >
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isSaving ? "保存中" : "保存回忆"}
+            </button>
+            <button
+              className="min-h-11 rounded-[8px] border border-[#D8DDD8] px-4 text-sm font-semibold text-[#5A6670]/62 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+              type="button"
+              onClick={resetForm}
+              disabled={isSaving}
+            >
+              清空
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function MemoryImage({ memory }: Readonly<{ memory: Memory }>) {
   const className = "pixelated h-full w-full object-cover transition duration-300 group-hover:scale-105";
@@ -109,17 +532,19 @@ function MemoryCard({ item, compact = false, onDelete }: Readonly<{ item: Memory
       </Link>
       {onDelete && (
         <button
-          className="absolute right-2 top-2 rounded-full bg-[#FAFBF7]/95 p-2 opacity-0 shadow-lg transition hover:bg-red-50 group-hover:opacity-100"
+          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-red-100 bg-[#FAFBF7]/95 px-2.5 py-2 text-xs font-semibold text-red-500 shadow-lg transition hover:bg-red-50"
           type="button"
           onClick={(e) => {
             e.preventDefault();
+            e.stopPropagation();
             if (confirm("确定要删除这条回忆吗？")) {
               onDelete(memory.id);
             }
           }}
           title="删除回忆"
         >
-          <Trash2 className="h-4 w-4 text-red-500" />
+          <Trash2 className="h-4 w-4" />
+          <span className="hidden sm:inline">删除</span>
         </button>
       )}
     </div>
@@ -140,7 +565,7 @@ export default function MemoryArchive() {
     };
 
     async function loadLocalMemories() {
-      const response = await apiFetch("/memories", { cache: "no-store" }).catch(() => null);
+      const response = await apiFetch("/api/v1/memories", { cache: "no-store" }).catch(() => null);
       if (!response?.ok) return;
 
       const data = (await response.json().catch(() => null)) as
@@ -162,11 +587,7 @@ export default function MemoryArchive() {
   const handleDeleteMemory = async (cityId: string, memoryId: string) => {
     if (!canEdit) return;
 
-    const response = await apiFetch("/memories", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cityId, memoryId }),
-    });
+    const response = await apiFetch(`/memories/${memoryId}`, { method: "DELETE" });
 
     if (!response.ok) throw new Error("Failed to delete memory");
 
@@ -263,15 +684,23 @@ export default function MemoryArchive() {
             </div>
           </header>
 
+          <AddMemoryPanel
+            canEdit={canEdit}
+            onSaved={(memories) => {
+              setLocalMemories(memories);
+              window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: memories }));
+            }}
+          />
+
           {memoryItems.length === 0 ? (
-            <div className="mt-12 grid min-h-[420px] place-items-center rounded-[8px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7]/58 px-6 py-14 text-center shadow-[0_14px_34px_rgba(90,102,112,0.045)] backdrop-blur">
+            <div className="mt-6 grid min-h-[420px] place-items-center rounded-[8px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7]/58 px-6 py-14 text-center shadow-[0_14px_34px_rgba(90,102,112,0.045)] backdrop-blur sm:mt-8">
               <div className="max-w-[430px]">
                 <div className="mx-auto grid h-16 w-16 place-items-center rounded-[8px] border border-[#F5DCE0] bg-[#F5DCE0]/42">
                   <Heart className="h-8 w-8 fill-[#F5DCE0] text-[#E8B8C2]" />
                 </div>
                 <h2 className="mt-5 text-2xl font-semibold text-[#5A6670]">还没有回忆记录</h2>
                 <p className="mt-3 text-sm leading-7 text-[#5A6670]/60">
-                  回到地图，点开一座城市，添加日期、照片和一句话回忆。保存后这里会自动按城市和时间整理。
+                  可以直接点上方“新增回忆”添加城市、日期、照片和一句话回忆。保存后这里会自动按城市和时间整理。
                 </p>
                 <Link
                   className="mt-6 inline-flex items-center gap-2 rounded-[8px] border border-[#A8C8DC] bg-[#FAFBF7]/78 px-5 py-3 text-sm font-semibold text-[#A8C8DC] transition hover:bg-[#D6E8F0]/34"
