@@ -72,7 +72,7 @@ export async function apiJson<T>(path: string, options: ApiOptions = {}) {
   return (await response.json()) as T;
 }
 
-export async function login(spaceCode: string, password: string, userId: string) {
+export async function login(spaceCode: string, password: string, userId = "me") {
   const response = await apiFetch("/api/v1/auth/login", {
     method: "POST",
     auth: false,
