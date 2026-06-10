@@ -7,6 +7,7 @@ import {
   Heart,
   MapPin,
   Star,
+  Trash2,
 } from "lucide-react";
 import { cities } from "@/data/cities";
 import { MemoryPageShell } from "@/components/MemoryNav";
@@ -21,6 +22,7 @@ import {
 } from "@/data/progress";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { apiFetch } from "@/lib/apiClient";
+import { useContentEditAccess } from "@/lib/useContentEditAccess";
 
 type ArchiveView = "city" | "timeline";
 type MemoryItem = {
@@ -57,53 +59,70 @@ function MemoryImage({ memory }: Readonly<{ memory: Memory }>) {
   );
 }
 
-function MemoryCard({ item, compact = false }: Readonly<{ item: MemoryItem; compact?: boolean }>) {
+function MemoryCard({ item, compact = false, onDelete }: Readonly<{ item: MemoryItem; compact?: boolean; onDelete?: (memoryId: string) => void }>) {
   const { memory, city } = item;
 
   return (
-    <Link
-      className="group block rounded-[8px] border border-[#D8DDD8]/74 bg-[#FAFBF7]/78 p-3 shadow-[0_12px_26px_rgba(90,102,112,0.055)] backdrop-blur transition hover:border-[#F5DCE0] hover:shadow-[0_16px_34px_rgba(90,102,112,0.10)]"
-      href={city ? `/province/${city.provinceId}?city=${memory.cityId}` : "/"}
-    >
-      <article className={compact ? "grid grid-cols-[92px_1fr] gap-3" : "grid grid-cols-[112px_1fr] gap-4"}>
-        <div className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
-          <MemoryImage memory={memory} />
-        </div>
-        <div className="min-w-0 py-1">
-          <div className="flex items-baseline gap-2">
-            <h3 className="truncate text-lg font-semibold text-[#5A6670]">{memory.title || memory.city}</h3>
-            <span className="shrink-0 text-sm text-[#5A6670]/46">{memory.date}</span>
+    <div className="group relative block rounded-[8px] border border-[#D8DDD8]/74 bg-[#FAFBF7]/78 p-3 shadow-[0_12px_26px_rgba(90,102,112,0.055)] backdrop-blur transition hover:border-[#F5DCE0] hover:shadow-[0_16px_34px_rgba(90,102,112,0.10)]">
+      <Link
+        className="block"
+        href={city ? `/province/${city.provinceId}?city=${memory.cityId}` : "/"}
+      >
+        <article className={compact ? "grid grid-cols-[92px_1fr] gap-3" : "grid grid-cols-[112px_1fr] gap-4"}>
+          <div className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
+            <MemoryImage memory={memory} />
           </div>
-          {(memory.title || memory.placeName) && (
-            <p className="mt-1 truncate text-xs font-semibold text-[#A8C8DC]">
-              {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
-            </p>
-          )}
-          <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5A6670]/70">{memory.text}</p>
-          {(memory.mood || memory.tags?.length) && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {memory.mood && (
-                <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
-                  {memory.mood}
-                </span>
-              )}
-              {memory.tags?.slice(0, 3).map((tag) => (
-                <span
-                  key={`${memory.id}-archive-tag-${tag}`}
-                  className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
-                >
-                  #{tag}
-                </span>
-              ))}
+          <div className="min-w-0 py-1">
+            <div className="flex items-baseline gap-2">
+              <h3 className="truncate text-lg font-semibold text-[#5A6670]">{memory.title || memory.city}</h3>
+              <span className="shrink-0 text-sm text-[#5A6670]/46">{memory.date}</span>
             </div>
-          )}
-          <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#A8C8DC]">
-            <MapPin className="h-3.5 w-3.5" />
-            回到地图
-          </p>
-        </div>
-      </article>
-    </Link>
+            {(memory.title || memory.placeName) && (
+              <p className="mt-1 truncate text-xs font-semibold text-[#A8C8DC]">
+                {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
+              </p>
+            )}
+            <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5A6670]/70">{memory.text}</p>
+            {(memory.mood || memory.tags?.length) && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {memory.mood && (
+                  <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
+                    {memory.mood}
+                  </span>
+                )}
+                {memory.tags?.slice(0, 3).map((tag) => (
+                  <span
+                    key={`${memory.id}-archive-tag-${tag}`}
+                    className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#A8C8DC]">
+              <MapPin className="h-3.5 w-3.5" />
+              回到地图
+            </p>
+          </div>
+        </article>
+      </Link>
+      {onDelete && (
+        <button
+          className="absolute right-2 top-2 rounded-full bg-[#FAFBF7]/95 p-2 opacity-0 shadow-lg transition hover:bg-red-50 group-hover:opacity-100"
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            if (confirm("确定要删除这条回忆吗？")) {
+              onDelete(memory.id);
+            }
+          }}
+          title="删除回忆"
+        >
+          <Trash2 className="h-4 w-4 text-red-500" />
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -111,6 +130,7 @@ export default function MemoryArchive() {
   const [localMemories, setLocalMemories] = useState<LocalMemoryStore>({});
   const [view, setView] = useState<ArchiveView>("city");
   const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
+  const canEdit = useContentEditAccess();
 
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +158,22 @@ export default function MemoryArchive() {
       window.removeEventListener(memoryStoreUpdatedEvent, handleMemoryUpdate);
     };
   }, []);
+
+  const handleDeleteMemory = async (cityId: string, memoryId: string) => {
+    if (!canEdit) return;
+
+    const response = await apiFetch("/memories", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cityId, memoryId }),
+    });
+
+    if (!response.ok) throw new Error("Failed to delete memory");
+
+    const data = (await response.json()) as { memories: LocalMemoryStore };
+    setLocalMemories(data.memories);
+    window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: data.memories }));
+  };
 
   const memoryItems = useMemo<MemoryItem[]>(() => {
     const localItems = Object.values(localMemories).flat();
@@ -275,7 +311,12 @@ export default function MemoryArchive() {
                     </div>
                     <div className="grid gap-4 xl:grid-cols-3">
                       {visibleMemories.map((item) => (
-                        <MemoryCard key={item.memory.id} item={item} compact />
+                        <MemoryCard
+                          key={item.memory.id}
+                          item={item}
+                          compact
+                          onDelete={canEdit ? (memoryId) => handleDeleteMemory(item.memory.cityId, memoryId) : undefined}
+                        />
                       ))}
                     </div>
                   </section>
@@ -293,7 +334,11 @@ export default function MemoryArchive() {
                   <h2 className="mb-4 text-2xl font-semibold text-[#5A6670]">{group.label}</h2>
                   <div className="grid gap-4 xl:grid-cols-2">
                     {group.memories.map((item) => (
-                      <MemoryCard key={item.memory.id} item={item} />
+                      <MemoryCard
+                        key={item.memory.id}
+                        item={item}
+                        onDelete={canEdit ? (memoryId) => handleDeleteMemory(item.memory.cityId, memoryId) : undefined}
+                      />
                     ))}
                   </div>
                 </section>

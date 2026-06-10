@@ -160,7 +160,7 @@ export default function EntryExperience() {
   const [loginPhotos, setLoginPhotos] = useState<Record<string, string>>({});
   const [loginPhotoTexts, setLoginPhotoTexts] = useState<AppSettings["loginPhotoTexts"]>({});
   const [activeId, setActiveId] = useState<Stamp["id"]>("hangzhou");
-  const [username, setUsername] = useState<"me" | "her">("me");
+  const [username, setUsername] = useState<string>("lyl");
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "open">("idle");
   const pointerX = useMotionValue(0);
@@ -309,7 +309,7 @@ export default function EntryExperience() {
               </div>
 
               <div className="mb-3 grid grid-cols-2 gap-2">
-                {(["me", "her"] as const).map((option) => (
+                {(["lyl", "gwy"] as const).map((option) => (
                   <button
                     key={option}
                     className={`rounded-[7px] border px-3 py-2 text-xs font-semibold transition ${
@@ -325,7 +325,7 @@ export default function EntryExperience() {
                     }}
                     disabled={status === "checking" || status === "open"}
                   >
-                    {option === "me" ? "Me" : "Her"}
+                    {option === "lyl" ? "刘永伦" : "郭文盈"}
                   </button>
                 ))}
               </div>

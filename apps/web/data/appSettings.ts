@@ -5,6 +5,7 @@ export const appSettingsStorageKey = "mapofus:settings";
 export const appSettingsUpdatedEvent = "mapofus:settings-updated";
 
 export type AppSettings = {
+  spaceSlug?: string;
   loginPhotos?: Record<string, string>;
   loginPhotoTexts?: Record<string, LoginPhotoText>;
   anniversaryDate?: string;
@@ -88,6 +89,7 @@ export const normalizeAppSettings = (value: unknown): AppSettings => {
     : undefined;
 
   return {
+    spaceSlug: cleanString(settings.spaceSlug, 100),
     loginPhotos,
     loginPhotoTexts,
     anniversaryDate,
