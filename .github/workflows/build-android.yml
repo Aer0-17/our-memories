@@ -4,6 +4,14 @@ on:
   push:
     branches: [main, master]
   workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: "Backend API base URL"
+        required: false
+        default: "https://lylwithgwy.zeabur.app"
+
+env:
+  API_BASE_URL: ${{ inputs.api_base_url || secrets.API_BASE_URL || 'https://lylwithgwy.zeabur.app' }}
 
 jobs:
   build-apk:
@@ -30,23 +38,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared package
-        run: npm run build:shared
-
       - name: Set production API URL
-        run: echo "NEXT_PUBLIC_API_BASE_URL=${{ secrets.API_BASE_URL || 'https://lylwithgwy.zeabur.app' }}" >> apps/web/.env.local
+        run: echo "NEXT_PUBLIC_API_BASE_URL=${API_BASE_URL}" > apps/web/.env.local
 
       - name: Build web app
         run: npm run build:web
 
       - name: Sync Capacitor Android
-        run: |
-          cd apps/mobile
-          npx cap sync android
+        working-directory: apps/mobile
+        run: npx cap sync android
 
       - name: Build Android APK
+        working-directory: apps/mobile/android
         run: |
-          cd apps/mobile/android
           chmod +x gradlew
           ./gradlew assembleDebug
 

@@ -1,6 +1,6 @@
 import { clearSession, readSession, updateAccessToken, writeSession } from "@/lib/authStore";
 
-const defaultApiBaseUrl = "http://localhost:4002";
+const defaultApiBaseUrl = "http://localhost:8080";
 
 export const apiBaseUrl = () => {
   const envValue = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -17,6 +17,12 @@ type ApiOptions = RequestInit & {
   retry?: boolean;
 };
 
+function apiPath(path: string) {
+  if (/^https?:\/\//.test(path)) return path;
+  if (path === "/health" || path.startsWith("/api/")) return path;
+  return `/api/v1${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 function makeHeaders(headers?: HeadersInit, auth = true, body?: BodyInit | null) {
   const next = new Headers(headers);
   if (!next.has("Content-Type") && !(body instanceof FormData)) {
@@ -30,7 +36,7 @@ function makeHeaders(headers?: HeadersInit, auth = true, body?: BodyInit | null)
 async function refreshAccessToken() {
   const session = readSession();
   if (!session?.refreshToken) return false;
-  const response = await fetch(`${apiBaseUrl()}/auth/refresh`, {
+  const response = await fetch(`${apiBaseUrl()}/api/v1/auth/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken: session.refreshToken }),
@@ -44,7 +50,9 @@ async function refreshAccessToken() {
 
 export async function apiFetch(path: string, options: ApiOptions = {}) {
   const { auth = true, retry = true, ...init } = options;
-  const response = await fetch(`${apiBaseUrl()}${path}`, {
+  const normalizedPath = apiPath(path);
+  const url = /^https?:\/\//.test(normalizedPath) ? normalizedPath : `${apiBaseUrl()}${normalizedPath}`;
+  const response = await fetch(url, {
     ...init,
     headers: makeHeaders(init.headers, auth, init.body),
     cache: init.cache ?? "no-store",
@@ -64,11 +72,11 @@ export async function apiJson<T>(path: string, options: ApiOptions = {}) {
   return (await response.json()) as T;
 }
 
-export async function login(username: string, password: string, spaceSlug?: string) {
-  const response = await apiFetch("/auth/login", {
+export async function login(spaceCode: string, password: string, userId: string) {
+  const response = await apiFetch("/api/v1/auth/login", {
     method: "POST",
     auth: false,
-    body: JSON.stringify({ username, password, spaceSlug }),
+    body: JSON.stringify({ spaceCode, password, userId }),
   });
   if (!response.ok) return false;
   const session = (await response.json()) as Parameters<typeof writeSession>[0];
@@ -77,6 +85,6 @@ export async function login(username: string, password: string, spaceSlug?: stri
 }
 
 export async function logout() {
-  await apiFetch("/auth/logout", { method: "POST" }).catch(() => null);
+  await apiFetch("/api/v1/auth/logout", { method: "POST" }).catch(() => null);
   clearSession();
 }

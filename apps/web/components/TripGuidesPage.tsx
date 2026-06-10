@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { MemoryPageShell } from "@/components/MemoryNav";
+import { DatePicker } from "@/components/ui/input";
 import { apiJson } from "@/lib/apiClient";
 
 type TravelStyle = "relaxed" | "balanced" | "packed";
@@ -522,8 +523,8 @@ function TripEditor({
         <Field label="天数" type="number" value={String(payload.days)} onChange={(value) => setDays(Number(value))} />
         <Field label="出发地" value={payload.origin} onChange={(value) => change({ origin: value })} />
         <Field label="目的地" value={payload.destination} onChange={(value) => change({ destination: value })} />
-        <Field label="开始日期" value={payload.startDate ?? ""} onChange={(value) => change({ startDate: value })} />
-        <Field label="结束日期" value={payload.endDate ?? ""} onChange={(value) => change({ endDate: value })} />
+        <DateField label="开始日期" value={payload.startDate ?? ""} onChange={(value) => change({ startDate: value })} />
+        <DateField label="结束日期" value={payload.endDate ?? ""} onChange={(value) => change({ endDate: value })} />
       </div>
 
       <label className="mt-3 block text-xs font-semibold text-[#5A6670]/56">
@@ -696,8 +697,8 @@ function TripAiDialog({ onClose, onCreated }: Readonly<{ onClose: () => void; on
             <Field label="出发地" value={origin} onChange={setOrigin} />
             <Field label="目的地" value={destination} onChange={setDestination} />
             <Field label="天数" type="number" value={days} onChange={setDays} />
-            <Field label="开始日期" value={startDate} onChange={setStartDate} />
-            <Field label="结束日期" value={endDate} onChange={setEndDate} />
+            <DateField label="开始日期" value={startDate} onChange={setStartDate} />
+            <DateField label="结束日期" value={endDate} onChange={setEndDate} />
             <label className="block text-xs font-semibold text-[#5A6670]/56 sm:col-span-2">
               偏好
               <textarea
@@ -791,6 +792,23 @@ function Field({
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
+    </label>
+  );
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+}: Readonly<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}>) {
+  return (
+    <label className="block text-xs font-semibold text-[#5A6670]/56">
+      {label}
+      <DatePicker className="mt-1 border-[#D8DDD8] bg-white/70 focus:border-[#A8C8DC]" value={value} onChange={onChange} />
     </label>
   );
 }

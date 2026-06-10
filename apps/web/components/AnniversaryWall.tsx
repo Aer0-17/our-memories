@@ -7,7 +7,7 @@ import { MemoryPageShell } from "@/components/MemoryNav";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input, Textarea } from "@/components/ui/input";
+import { DatePicker, Input, Textarea } from "@/components/ui/input";
 import { apiJson } from "@/lib/apiClient";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 
@@ -19,6 +19,48 @@ const emptyForm = {
   pinned: false,
   photos: [] as string[],
 };
+
+type ServerPhoto = {
+  id?: string;
+  url?: string;
+  key?: string;
+  mimeType?: string;
+  sortOrder?: number;
+};
+
+type ServerAnniversaryCard = Omit<AnniversaryCard, "image" | "photos" | "photoItems"> & {
+  coverPhotoId?: string;
+  photos?: ServerPhoto[];
+};
+
+const normalizeCardsResponse = (data: {
+  cards?: AnniversaryCard[];
+  anniversaryCards?: ServerAnniversaryCard[];
+}) => {
+  if (data.cards) return data.cards;
+
+  return (data.anniversaryCards ?? []).map((card) => {
+    const photoItems = (card.photos ?? []).flatMap((photo, index) => {
+      if (!photo.url) return [];
+      return [{
+        id: photo.id ?? `${card.id}-photo-${index}`,
+        url: photo.url,
+        key: photo.key,
+        mimeType: photo.mimeType,
+        sortOrder: photo.sortOrder ?? index,
+      }];
+    });
+
+    return {
+      ...card,
+      image: photoItems[0]?.url,
+      photos: photoItems.map((photo) => photo.url),
+      photoItems,
+    } satisfies AnniversaryCard;
+  });
+};
+
+const photoPayload = (photos: string[]) => photos.map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
 
 const isBrowserImageUrl = (url: string) => url.startsWith("data:image/") || url.startsWith("https://");
 
@@ -73,9 +115,13 @@ export default function AnniversaryWall() {
   const [working, setWorking] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const loadCards = async () => {
+    const data = await apiJson<{ cards?: AnniversaryCard[]; anniversaryCards?: ServerAnniversaryCard[] }>("/api/v1/anniversary-cards");
+    setCards(normalizeCardsResponse(data));
+  };
+
   useEffect(() => {
-    void apiJson<{ cards: AnniversaryCard[] }>("/anniversary-cards")
-      .then((data) => setCards(data.cards))
+    void loadCards()
       .catch(() => setStatus("纪念日墙读取失败，请稍后再试。"));
   }, []);
 
@@ -127,25 +173,25 @@ export default function AnniversaryWall() {
     setStatus("");
     try {
       const payload = {
-        card: {
-          title: form.title.trim(),
-          date: form.date.trim(),
-          note: form.note.trim(),
-          repeatYearly: form.repeatYearly,
-          pinned: form.pinned,
-          photos: form.photos,
-        },
+        title: form.title.trim(),
+        date: form.date.trim(),
+        note: form.note.trim(),
+        repeatYearly: form.repeatYearly,
+        pinned: form.pinned,
+        photos: photoPayload(form.photos),
       };
-      const data = editingId
-        ? await apiJson<{ cards: AnniversaryCard[] }>(`/anniversary-cards/${editingId}`, {
+      if (editingId) {
+        await apiJson<{ ok: true }>(`/anniversary-cards/${editingId}`, {
             method: "PATCH",
             body: JSON.stringify(payload),
-          })
-        : await apiJson<{ cards: AnniversaryCard[] }>("/anniversary-cards", {
+        });
+      } else {
+        await apiJson<{ id: string }>("/api/v1/anniversary-cards", {
             method: "POST",
             body: JSON.stringify(payload),
-          });
-      setCards(data.cards);
+        });
+      }
+      await loadCards();
       resetForm();
       setStatus(editingId ? "纪念日已更新。" : "纪念日已添加。");
     } catch {
@@ -179,8 +225,8 @@ export default function AnniversaryWall() {
     if (!confirmed) return;
     setWorking(true);
     try {
-      const data = await apiJson<{ cards: AnniversaryCard[] }>(`/anniversary-cards/${card.id}`, { method: "DELETE" });
-      setCards(data.cards);
+      await apiJson<{ ok: true }>(`/anniversary-cards/${card.id}`, { method: "DELETE" });
+      await loadCards();
       setStatus("纪念日已删除。");
     } catch {
       setStatus("删除失败，请稍后再试。");
@@ -214,7 +260,7 @@ export default function AnniversaryWall() {
           </div>
           <div className="mt-4 grid gap-3">
             <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="例如：第一次见面" disabled={!isAdmin} />
-            <Input value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} placeholder="2025.12.23" inputMode="numeric" maxLength={10} disabled={!isAdmin} />
+            <DatePicker value={form.date} onChange={(date) => setForm({ ...form, date })} disabled={!isAdmin} />
             <Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="写一点那天的细节..." disabled={!isAdmin} />
             <div className="grid gap-2 rounded-[7px] border border-[#D8DDD8]/70 bg-white/36 p-3">
               <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">

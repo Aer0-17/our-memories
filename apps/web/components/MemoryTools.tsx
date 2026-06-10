@@ -9,8 +9,6 @@ import {
   Pencil,
   Plus,
   Settings,
-  ShieldCheck,
-  ShieldOff,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -41,12 +39,8 @@ import {
   writeLoginPhotoText,
   writeLoginPhoto,
 } from "@/data/loginPhotoStore";
-import {
-  adminModeUpdatedEvent,
-  readAdminMode,
-  writeAdminMode,
-} from "@/data/adminMode";
 import { LocalPrivacyImage } from "@/components/LocalPrivacyImage";
+import { DatePicker } from "@/components/ui/input";
 import { apiFetch } from "@/lib/apiClient";
 import { readSession } from "@/lib/authStore";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
@@ -150,7 +144,7 @@ const normalizeItems = (value: unknown): StoredItem[] => {
 };
 
 const auxiliaryEndpoint = (kind: ToolConfig["kind"]) =>
-  kind === "favorite" ? "/favorites" : kind === "anniversary" ? "/anniversaries" : "/capsules";
+  `/auxiliary-items?kind=${encodeURIComponent(kind)}`;
 
 const auxiliaryStorageKeyByKind = {
   favorite: "mapofus:favorites",
@@ -182,7 +176,7 @@ const loadAuxiliaryItems = async (config: ToolConfig) => {
     await Promise.all(
       localOnlyItems.map((item) =>
         apiFetch("/auxiliary-items", {
-          method: "PUT",
+          method: "POST",
           body: JSON.stringify({ ...item, kind: config.kind }),
         }).catch(() => null),
       ),
@@ -227,23 +221,7 @@ const readAuxiliaryBackup = async () => {
 };
 
 const useAdminMode = () => {
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setIsAdmin(readAdminMode()), 0);
-    const handleAdminMode = (event: Event) => {
-      setIsAdmin(Boolean((event as CustomEvent<boolean>).detail));
-    };
-
-    window.addEventListener(adminModeUpdatedEvent, handleAdminMode);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener(adminModeUpdatedEvent, handleAdminMode);
-    };
-  }, []);
-
-  return isAdmin;
+  return true;
 };
 
 const readJsonArray = (key: string) => {
@@ -417,7 +395,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
 
     try {
       const response = await apiFetch("/auxiliary-items", {
-        method: "PUT",
+        method: "POST",
         body: JSON.stringify({ ...item, kind: config.kind }),
       });
       if (!response.ok) throw new Error("Save failed");
@@ -511,12 +489,10 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
             </select>
           )}
           {config.kind !== "favorite" && (
-            <input
-              className="mt-3 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
+            <DatePicker
+              className="mt-3 border-[#D8DDD8] bg-[#FAFBF7] focus:border-[#E8B8C2]"
               value={date}
-              onChange={(event) => setDate(event.target.value)}
-              placeholder="2026.05.20"
-              maxLength={10}
+              onChange={setDate}
               disabled={!canEdit || isWorking}
             />
           )}
@@ -627,8 +603,6 @@ export function SettingsPage() {
   const [memoryCount, setMemoryCount] = useState(0);
   const [appSettings, setAppSettings] = useState<AppSettings>({});
   const [loginPhotos, setLoginPhotos] = useState<Record<string, string>>({});
-  const [adminCode, setAdminCode] = useState("");
-  const [adminError, setAdminError] = useState("");
   const [status, setStatus] = useState("");
   const [isWorking, setIsWorking] = useState(false);
   const [newEntryPassword, setNewEntryPassword] = useState("");
@@ -637,7 +611,7 @@ export function SettingsPage() {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const loadMemoryCount = async () => {
-    const response = await apiFetch("/memories", { cache: "no-store" }).catch(() => null);
+    const response = await apiFetch("/api/v1/memories", { cache: "no-store" }).catch(() => null);
     if (!response?.ok) return {};
     const data = (await response.json().catch(() => null)) as { memories?: LocalMemoryStore } | null;
     const memories = data?.memories ?? {};
@@ -684,11 +658,6 @@ export function SettingsPage() {
 
   const updateLoginPhoto = async (slotId: string, event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!isAdmin) {
-      setStatus("请先进入管理员模式");
-      event.target.value = "";
-      return;
-    }
     if (!file || isWorking) return;
 
     setIsWorking(true);
@@ -765,15 +734,12 @@ export function SettingsPage() {
   const weatherCityIds = appSettings.weatherCityIds ?? defaultWeatherCityIds;
 
   const updateBasicSetting = (patch: Partial<AppSettings>) => {
-    if (!isAdmin) {
-      setStatus("请先进入管理员模式");
-      return;
-    }
-
     const next = { ...appSettings, ...patch };
     setAppSettings(next);
-    writeAppSettings(next);
-    setStatus("基础设置已更新");
+    setStatus("正在保存基础设置...");
+    void writeAppSettings(next)
+      .then(() => setStatus("基础设置已更新"))
+      .catch(() => setStatus("基础设置保存失败，请确认后端已启动并重新登录"));
   };
 
   const updateWeatherCity = (index: number, cityId: string) => {
@@ -787,11 +753,6 @@ export function SettingsPage() {
 
   const updateCoupleLogo = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!isAdmin) {
-      setStatus("请先进入管理员模式");
-      event.target.value = "";
-      return;
-    }
     if (!file || isWorking) return;
 
     setIsWorking(true);
@@ -810,10 +771,6 @@ export function SettingsPage() {
   };
 
   const resetCoupleLogo = () => {
-    if (!isAdmin) {
-      setStatus("请先进入管理员模式");
-      return;
-    }
     updateBasicSetting({ coupleLogo: undefined });
     setStatus("头像 logo 已恢复默认");
   };
@@ -861,7 +818,7 @@ export function SettingsPage() {
     setStatus("");
 
     const memories = await loadMemoryCount();
-    const assetResponse = await apiFetch("/city-assets", { cache: "no-store" }).catch(() => null);
+    const assetResponse = await apiFetch("/api/v1/city-assets", { cache: "no-store" }).catch(() => null);
     const assetData = (await assetResponse?.json().catch(() => null)) as { assets?: CityAssetStore } | null;
     const payload = {
       version: 1,
@@ -911,7 +868,7 @@ export function SettingsPage() {
         auxiliary?: Record<string, unknown>;
         settings?: unknown;
       };
-      const importResponse = await apiFetch("/backup/import", {
+      const importResponse = await apiFetch("/api/v1/backup/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -946,43 +903,6 @@ export function SettingsPage() {
       setIsWorking(false);
       if (importInputRef.current) importInputRef.current.value = "";
     }
-  };
-
-  const unlockAdmin = async () => {
-    const session = readSession();
-    const username = session?.user?.username;
-    if (!username) {
-      setAdminError("未找到当前用户信息");
-      return;
-    }
-
-    const response = await apiFetch("/auth/login", {
-      method: "POST",
-      auth: false,
-      body: JSON.stringify({ username, password: adminCode }),
-    }).catch(() => null);
-
-    if (response?.ok) {
-      writeAdminMode(true);
-      setAdminCode("");
-      setAdminError("");
-      setStatus("管理员模式已开启");
-      return;
-    }
-
-    setAdminError(response?.status === 503 ? "管理员认证未配置" : "密码不对");
-  };
-
-  const lockAdmin = () => {
-    void apiFetch("/auth/login", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "admin" }),
-    }).catch(() => null);
-    writeAdminMode(false);
-    setAdminCode("");
-    setAdminError("");
-    setStatus("管理员模式已关闭");
   };
 
   const generateActivationCode = async () => {
@@ -1020,57 +940,7 @@ export function SettingsPage() {
       </header>
 
       <section className="mt-6 grid gap-4 sm:mt-10 md:grid-cols-2">
-        <div className="rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] sm:p-5 md:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {isAdmin ? (
-                <ShieldCheck className="h-6 w-6 text-[#A8C8DC]" />
-              ) : (
-                <ShieldOff className="h-6 w-6 text-[#E8B8C2]" />
-              )}
-              <div>
-                <p className="text-sm font-semibold text-[#5A6670]">管理员模式</p>
-                <p className="mt-1 text-xs text-[#5A6670]/52">
-                  {isAdmin ? "已开启，可以编辑和导入数据。" : "未开启，设置改动和删除操作已锁定。"}
-                </p>
-              </div>
-            </div>
-
-            {isAdmin ? (
-              <button
-                className="rounded-[7px] border border-[#D8DDD8] px-4 py-2 text-sm font-semibold text-[#5A6670]/64 transition hover:bg-white/60"
-                type="button"
-                onClick={lockAdmin}
-              >
-                退出管理员
-              </button>
-            ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  className="min-h-10 w-36 rounded-[7px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/70 px-3 text-sm text-[#5A6670] outline-none transition focus:border-[#A8C8DC] focus:bg-white"
-                  value={adminCode}
-                  onChange={(event) => {
-                    setAdminCode(event.target.value);
-                    setAdminError("");
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void unlockAdmin();
-                  }}
-                  placeholder="管理员密码"
-                  type="password"
-                />
-                <button
-                  className="rounded-[7px] bg-[#F5DCE0] px-4 py-2 text-sm font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7]"
-                  type="button"
-                  onClick={() => void unlockAdmin()}
-                >
-                  开启
-                </button>
-                {adminError && <span className="text-xs font-semibold text-[#E8B8C2]">{adminError}</span>}
-              </div>
-            )}
-          </div>
-        </div>
+        {/* 管理员模式模块已移除 */}
 
         <div className="rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] sm:p-5 md:col-span-2">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -1172,12 +1042,11 @@ export function SettingsPage() {
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs font-semibold text-[#5A6670]/48">纪念日开始日期（如 2026.03.20 或 2026年3月20日）</span>
-              <input
-                className="min-h-10 rounded-[7px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/70 px-3 text-sm text-[#5A6670] outline-none transition focus:border-[#A8C8DC] focus:bg-white"
+              <span className="text-xs font-semibold text-[#5A6670]/48">纪念日开始日期</span>
+              <DatePicker
+                className="bg-[#FAFBF7]/70"
                 value={anniversaryDate}
-                placeholder={defaultAnniversaryDate}
-                onChange={(event) => updateBasicSetting({ anniversaryDate: event.target.value })}
+                onChange={(value) => updateBasicSetting({ anniversaryDate: value })}
                 disabled={!isAdmin}
               />
             </label>

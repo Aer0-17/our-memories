@@ -22,7 +22,9 @@ import { getLatestMemory, sortMemoriesByTime, type Memory } from "@/data/memorie
 import { getLitCityIds, memoryStoreUpdatedEvent, type LocalMemoryStore } from "@/data/progress";
 import type { Province } from "@/data/provinces";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
+import { DatePicker } from "@/components/ui/input";
 import { apiFetch } from "@/lib/apiClient";
+import { normalizeDottedDate } from "@/lib/dateFormat";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 
 interface ProvinceMapProps {
@@ -90,26 +92,6 @@ const isDataImageUrl = (url?: string | null): url is string =>
 
 const isBrowserImageUrl = (url?: string | null): url is string =>
   typeof url === "string" && (url.startsWith("data:image/") || url.startsWith("https://"));
-
-const normalizeMemoryDate = (value: string) => {
-  const match = value.match(/^(\d{4})\.(\d{1,2})\.(\d{1,2})$/);
-  if (!match) return null;
-
-  const [, rawYear, rawMonth, rawDay] = match;
-  const year = Number(rawYear);
-  const month = Number(rawMonth);
-  const day = Number(rawDay);
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  const isValid =
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day;
-
-  if (!isValid) return null;
-
-  return `${rawYear}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
-};
 
 const markerLayoutByCity: Record<
   string,
@@ -331,6 +313,9 @@ const photosOfMemory = (memory?: Memory) => {
   return memory.photos?.length ? memory.photos : [memory.image];
 };
 
+const memoryPhotosPayload = (photos: string[]) =>
+  photos.filter(Boolean).map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
+
 export default function ProvinceMap({ province, width = 1120, height = 760 }: ProvinceMapProps) {
   const isAdmin = useContentEditAccess();
   const frameRef = useRef<HTMLDivElement>(null);
@@ -396,13 +381,10 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadLocalState() {
+  const loadLocalState = async () => {
       const [memoryResponse, assetResponse] = await Promise.all([
-        apiFetch("/memories", { cache: "no-store" }).catch(() => null),
-        apiFetch("/city-assets", { cache: "no-store" }).catch(() => null),
+        apiFetch("/api/v1/memories", { cache: "no-store" }).catch(() => null),
+        apiFetch("/api/v1/city-assets", { cache: "no-store" }).catch(() => null),
       ]);
 
       const memoryData = (await memoryResponse?.json().catch(() => null)) as
@@ -412,12 +394,17 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
         | { assets?: CityAssetStore }
         | null;
 
-      if (cancelled) return;
       if (memoryData?.memories) setLocalMemories(memoryData.memories);
       if (assetData?.assets) setCityAssets(assetData.assets);
-    }
+      return memoryData?.memories;
+  };
 
-    loadLocalState();
+  useEffect(() => {
+    let cancelled = false;
+
+    void loadLocalState().then((memories) => {
+      if (!cancelled && memories) localMemoriesRef.current = memories;
+    });
 
     return () => {
       cancelled = true;
@@ -517,15 +504,18 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleSaveMemory = async (cityId: string, memory: Memory) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
-    const response = await apiFetch("/memories", {
+    const response = await apiFetch("/api/v1/memories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ memory }),
+      body: JSON.stringify({
+        ...memory,
+        photos: memoryPhotosPayload(memory.photos ?? [memory.image]),
+      }),
     });
 
     if (!response.ok) throw new Error("Failed to save memory");
 
-    const data = (await response.json()) as { memory: Memory; memories: LocalMemoryStore };
+    const data = (await response.json()) as { memories: LocalMemoryStore };
 
     setLocalMemories(() => {
       localMemoriesRef.current = data.memories;
@@ -538,10 +528,10 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleSetMemoryCover = async (cityId: string, memoryId: string, coverImage: string) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
-    const response = await apiFetch("/memories", {
+    const response = await apiFetch(`/memories/${memoryId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cityId, memoryId, coverImage }),
+      body: JSON.stringify({ coverImage }),
     });
 
     if (!response.ok) throw new Error("Failed to update memory cover");
@@ -559,10 +549,13 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleUpdateMemory = async (cityId: string, memoryId: string, memory: Memory) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
-    const response = await apiFetch("/memories", {
+    const response = await apiFetch(`/memories/${memoryId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cityId, memoryId, memory }),
+      body: JSON.stringify({
+        ...memory,
+        photos: memoryPhotosPayload(memory.photos ?? [memory.image]),
+      }),
     });
 
     if (!response.ok) throw new Error("Failed to update memory");
@@ -580,10 +573,8 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleDeleteMemory = async (cityId: string, memoryId: string) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
-    const response = await apiFetch("/memories", {
+    const response = await apiFetch(`/memories/${memoryId}`, {
       method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ cityId, memoryId }),
     });
 
     if (!response.ok) throw new Error("Failed to delete memory");
@@ -601,7 +592,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleSaveCityAsset = async (cityId: string, image: string) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
-    const response = await apiFetch("/city-assets", {
+    const response = await apiFetch("/api/v1/city-assets", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cityId, image }),
@@ -616,7 +607,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleDeleteCityAsset = async (cityId: string) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
-    const response = await apiFetch("/city-assets", {
+    const response = await apiFetch("/api/v1/city-assets", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ cityId }),
@@ -1120,7 +1111,7 @@ function MemoryCard({
 
   const trimmedDate = date.trim();
   const trimmedText = text.trim();
-  const normalizedDate = normalizeMemoryDate(trimmedDate);
+  const normalizedDate = normalizeDottedDate(trimmedDate);
   const dateInvalid = trimmedDate.length > 0 && !normalizedDate;
   const canSave =
     isAdmin &&
@@ -1834,14 +1825,10 @@ function MemoryCard({
 
               <label className="block">
                 <span className="text-xs font-medium text-[#5A6670]/70">日期</span>
-                <input
+                <DatePicker
                   className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                  type="text"
                   value={date}
-                  onChange={(event) => setDate(event.target.value)}
-                  placeholder="2024.05.20"
-                  inputMode="numeric"
-                  maxLength={10}
+                  onChange={setDate}
                   aria-invalid={dateInvalid}
                   disabled={!isAdmin}
                 />

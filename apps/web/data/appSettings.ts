@@ -1,5 +1,6 @@
 import { apiJson } from "@/lib/apiClient";
 import { readSession } from "@/lib/authStore";
+import { normalizeDottedDate } from "@/lib/dateFormat";
 
 export const appSettingsStorageKey = "mapofus:settings";
 export const appSettingsUpdatedEvent = "mapofus:settings-updated";
@@ -25,8 +26,6 @@ export const defaultWeatherCityIds = ["beijing", "shanghai", "guangzhou"];
 export const maxWeatherCities = 3;
 export const defaultCoupleLogo = "/logo/couple-logo-placeholder.svg";
 
-const datePattern = /^(\d{4})\s*(?:[./-]|年)\s*(\d{1,2})\s*(?:[./-]|月)\s*(\d{1,2})\s*日?$/;
-
 const isValidLogo = (value: unknown): value is string =>
   typeof value === "string" && (value.startsWith("data:image/") || value.startsWith("/") || value.startsWith("https://"));
 
@@ -38,23 +37,7 @@ const cleanString = (value: unknown, maxLength: number): string | undefined => {
 };
 
 export const normalizeAnniversaryDate = (value: unknown): string | undefined => {
-  if (typeof value !== "string") return undefined;
-  const match = datePattern.exec(value.trim());
-  if (!match) return undefined;
-
-  const [, rawYear, rawMonth, rawDay] = match;
-  const year = Number(rawYear);
-  const month = Number(rawMonth);
-  const day = Number(rawDay);
-  const date = new Date(Date.UTC(year, month - 1, day));
-  const valid =
-    date.getUTCFullYear() === year &&
-    date.getUTCMonth() === month - 1 &&
-    date.getUTCDate() === day;
-
-  if (!valid) return undefined;
-
-  return `${rawYear}.${String(month).padStart(2, "0")}.${String(day).padStart(2, "0")}`;
+  return normalizeDottedDate(value);
 };
 
 export const normalizeAppSettings = (value: unknown): AppSettings => {
@@ -108,22 +91,45 @@ export const readAppSettings = (): AppSettings => {
   }
 };
 
-export const writeAppSettings = (settings: AppSettings) => {
+const serverSettingKeys = [
+  "spaceSlug",
+  "loginPhotoTexts",
+  "anniversaryDate",
+  "anniversaryLabel",
+  "weatherCityIds",
+  "coupleLogo",
+] as const satisfies ReadonlyArray<keyof AppSettings>;
+
+const serverSettingEntries = (settings: AppSettings) =>
+  serverSettingKeys.map((key) => [key, settings[key] ?? null] as const);
+
+export const writeAppSettings = async (settings: AppSettings) => {
   const normalized = normalizeAppSettings(settings);
   window.localStorage.setItem(appSettingsStorageKey, JSON.stringify(normalized));
   window.dispatchEvent(new CustomEvent<AppSettings>(appSettingsUpdatedEvent, { detail: normalized }));
   if (!readSession()) return;
-  void apiJson<{ settings: AppSettings }>("/settings", {
-    method: "PUT",
-    body: JSON.stringify({ settings: normalized }),
-  }).catch(() => {});
+
+  await Promise.all(
+    serverSettingEntries(normalized).map(([key, value]) =>
+      apiJson<{ ok: true }>(`/settings/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        body: JSON.stringify({ value }),
+      }),
+    ),
+  );
+};
+
+const unwrapSettings = (value: unknown): AppSettings => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+  if ("settings" in value) return normalizeAppSettings((value as { settings?: unknown }).settings);
+  return normalizeAppSettings(value);
 };
 
 export const syncAppSettings = async () => {
   if (!readSession()) return readAppSettings();
 
-  const data = await apiJson<{ settings: AppSettings }>("/settings");
-  const normalized = normalizeAppSettings(data.settings);
+  const data = await apiJson<unknown>("/api/v1/settings");
+  const normalized = unwrapSettings(data);
   window.localStorage.setItem(appSettingsStorageKey, JSON.stringify(normalized));
   window.dispatchEvent(new CustomEvent<AppSettings>(appSettingsUpdatedEvent, { detail: normalized }));
   return normalized;

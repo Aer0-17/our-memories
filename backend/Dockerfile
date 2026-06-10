@@ -2,14 +2,14 @@
 
 FROM golang:1.22-alpine AS builder
 
-WORKDIR /src/backend
+WORKDIR /src
 
 RUN apk add --no-cache ca-certificates tzdata
 
-COPY backend/go.mod backend/go.sum ./
+COPY go.mod go.sum ./
 RUN go mod download
 
-COPY backend/ ./
+COPY . ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/our-memories-api ./main.go
 
 FROM alpine:3.20
