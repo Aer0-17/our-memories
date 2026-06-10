@@ -160,7 +160,9 @@ export default function EntryExperience() {
   const [loginPhotos, setLoginPhotos] = useState<Record<string, string>>({});
   const [loginPhotoTexts, setLoginPhotoTexts] = useState<AppSettings["loginPhotoTexts"]>({});
   const [activeId, setActiveId] = useState<Stamp["id"]>("hangzhou");
-  const [username, setUsername] = useState<string>("lyl");
+  const [spaceCode] = useState<string>("our-space-2026");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "open">("idle");
   const pointerX = useMotionValue(0);
@@ -212,19 +214,40 @@ export default function EntryExperience() {
   const submitCode = async (nextCode: string) => {
     if (nextCode.length < passcodeLength || status === "checking" || status === "open") return;
 
-    setStatus("checking");
+    if (step === 1) {
+      setStatus("checking");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"}/api/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spaceCode, password: nextCode, userId: "me" }),
+      }).catch(() => null);
 
-    if (await login(username, nextCode).catch(() => false)) {
-      setStatus("open");
-      window.setTimeout(() => router.push("/map"), 720);
+      if (res?.ok) {
+        setStep(2);
+        setStatus("idle");
+      } else {
+        setStatus("wrong");
+        window.setTimeout(() => {
+          setCode("");
+          setStatus("idle");
+        }, 560);
+      }
       return;
     }
 
-    setStatus("wrong");
-    window.setTimeout(() => {
-      setCode("");
-      setStatus("idle");
-    }, 560);
+    if (step === 2 && selectedUserId) {
+      setStatus("checking");
+      if (await login(spaceCode, nextCode, selectedUserId).catch(() => false)) {
+        setStatus("open");
+        window.setTimeout(() => router.push("/map"), 720);
+      } else {
+        setStatus("wrong");
+        window.setTimeout(() => {
+          setCode("");
+          setStatus("idle");
+        }, 560);
+      }
+    }
   };
 
   const pressKey = (key: (typeof keys)[number]) => {
@@ -242,7 +265,9 @@ export default function EntryExperience() {
 
     setCode((current) => {
       const nextCode = `${current}${key}`.slice(0, passcodeLength);
-      void submitCode(nextCode);
+      if (nextCode.length === passcodeLength) {
+        void submitCode(nextCode);
+      }
       return nextCode;
     });
   };
@@ -304,30 +329,34 @@ export default function EntryExperience() {
                   anniversary code
                 </span>
                 <span className={status === "wrong" ? "text-xs font-semibold text-[#D86F82]" : "text-xs font-semibold text-[#8A796C]/62"}>
-                  {status === "open" ? "已解锁" : status === "checking" ? "验证中" : status === "wrong" ? "再想想" : "4 digits"}
+                  {status === "open" ? "已解锁" : status === "checking" ? "验证中" : status === "wrong" ? "再想想" : step === 1 ? "4 digits" : "选择身份"}
                 </span>
               </div>
 
               <div className="mb-3 grid grid-cols-2 gap-2">
-                {(["lyl", "gwy"] as const).map((option) => (
-                  <button
-                    key={option}
-                    className={`rounded-[7px] border px-3 py-2 text-xs font-semibold transition ${
-                      username === option
-                        ? "border-[#E8B8C2] bg-[#F5DCE0]/70 text-[#D86F82]"
-                        : "border-[#E1D3C6] bg-white/42 text-[#8A796C]"
-                    }`}
-                    type="button"
-                    onClick={() => {
-                      setUsername(option);
-                      setCode("");
-                      setStatus("idle");
-                    }}
-                    disabled={status === "checking" || status === "open"}
-                  >
-                    {option === "lyl" ? "刘永伦" : "郭文盈"}
-                  </button>
-                ))}
+                {step === 1 ? (
+                  <div className="col-span-2 text-center text-xs font-medium text-[#61717A]">
+                    输入纪念日密码
+                  </div>
+                ) : (
+                  <>
+                    {(["me", "ta"] as const).map((userId) => (
+                      <button
+                        key={userId}
+                        className={`rounded-[7px] border px-3 py-2 text-xs font-semibold transition ${
+                          selectedUserId === userId
+                            ? "border-[#E8B8C2] bg-[#F5DCE0]/70 text-[#D86F82]"
+                            : "border-[#E1D3C6] bg-white/42 text-[#8A796C]"
+                        }`}
+                        type="button"
+                        onClick={() => setSelectedUserId(userId)}
+                        disabled={status === "checking" || status === "open"}
+                      >
+                        {userId === "me" ? "刘永伦" : "郭文盈"}
+                      </button>
+                    ))}
+                  </>
+                )}
               </div>
 
               <div className="grid grid-cols-[repeat(4,minmax(0,1fr))] gap-2">
@@ -368,9 +397,9 @@ export default function EntryExperience() {
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[8px] bg-[#273846] px-4 text-sm font-semibold text-white shadow-[0_16px_34px_rgba(39,56,70,0.18)] transition hover:-translate-y-0.5 hover:bg-[#D86F82]"
               type="button"
               onClick={() => void submitCode(code)}
-              disabled={status === "checking" || status === "open"}
+              disabled={status === "checking" || status === "open" || (step === 2 && !selectedUserId)}
             >
-              {status === "checking" ? "验证中" : "解锁"}
+              {status === "checking" ? "验证中" : step === 1 ? "下一步" : "解锁"}
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
