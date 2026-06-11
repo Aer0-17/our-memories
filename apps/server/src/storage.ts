@@ -7,7 +7,7 @@ const client =
     ? new S3Client({
         endpoint: config.S3_ENDPOINT,
         region: config.S3_REGION,
-        forcePathStyle: true,
+        forcePathStyle: false, // 阿里云OSS需要虚拟主机样式
         credentials: {
           accessKeyId: config.S3_ACCESS_KEY_ID,
           secretAccessKey: config.S3_SECRET_ACCESS_KEY,
