@@ -57,7 +57,7 @@ export function TimeCapsuleGrid() {
   return (
     <div className="space-y-6">
       <button
-        className="fixed bottom-6 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-lg transition hover:scale-105 disabled:opacity-50"
+        className="fixed bottom-24 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-lg transition hover:scale-105 disabled:opacity-50 lg:bottom-6"
         onClick={() => setOpen(true)}
         disabled={!isAdmin}
       >

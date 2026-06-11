@@ -23,8 +23,8 @@ export type MemoryNavKey = "map" | "memories" | "favorites" | "anniversaries" | 
 const navItems = [
   { key: "map", label: "地图", icon: MapIcon, href: "/map" },
   { key: "memories", label: "回忆记录", icon: BookOpen, href: "/memories" },
-  { key: "favorites", label: "地点收藏", icon: Heart, href: "/favorites" },
   { key: "anniversaries", label: "纪念日", icon: CalendarDays, href: "/anniversaries" },
+  { key: "favorites", label: "地点收藏", icon: Heart, href: "/favorites" },
   { key: "whispers", label: "悄悄话", icon: MessageCircle, href: "/whispers" },
   { key: "capsule", label: "时光宝盒", icon: Archive, href: "/time-capsule" },
 ] satisfies Array<{
@@ -140,7 +140,7 @@ export function MemoryPageShell({
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D8DDD8]/78 bg-[#FAFBF7]/95 backdrop-blur-lg lg:hidden">
         <div className="grid grid-cols-5 gap-1 px-2 py-2">
           {navItems
-            .filter((item) => ["map", "memories", "favorites", "whispers"].includes(item.key))
+            .filter((item) => ["map", "memories", "anniversaries", "whispers"].includes(item.key))
             .map((item) => {
               const Icon = item.icon;
               const selected = item.key === active;
@@ -181,7 +181,7 @@ export function MemoryPageShell({
             />
             <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
               {navItems
-                .filter((item) => ["anniversaries", "capsule"].includes(item.key))
+                .filter((item) => ["favorites", "capsule"].includes(item.key))
                 .map((item) => {
                   const Icon = item.icon;
                   const selected = item.key === active;
@@ -221,7 +221,7 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D8DDD8]/78 bg-[#FAFBF7]/95 backdrop-blur-lg lg:hidden">
         <div className="grid grid-cols-5 gap-1 px-2 py-2">
           {navItems
-            .filter((item) => ["map", "memories", "favorites", "whispers"].includes(item.key))
+            .filter((item) => ["map", "memories", "anniversaries", "whispers"].includes(item.key))
             .map((item) => {
               const Icon = item.icon;
               const selected = item.key === "map";
@@ -262,7 +262,7 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
             />
             <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
               {navItems
-                .filter((item) => ["anniversaries", "capsule"].includes(item.key))
+                .filter((item) => ["favorites", "capsule"].includes(item.key))
                 .map((item) => {
                   const Icon = item.icon;
 
