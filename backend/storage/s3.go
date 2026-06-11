@@ -25,9 +25,9 @@ func InitS3() {
 
 	sess := session.Must(session.NewSession(&aws.Config{
 		Endpoint:         aws.String(cfg.S3Endpoint),
-		Region:           aws.String("auto"),
+		Region:           aws.String("us-east-1"), // 阿里云OSS不使用region，填任意值
 		Credentials:      credentials.NewStaticCredentials(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, ""),
-		S3ForcePathStyle: aws.Bool(true),
+		S3ForcePathStyle: aws.Bool(false), // 阿里云OSS需要虚拟主机样式
 	}))
 
 	s3Client = s3.New(sess)
