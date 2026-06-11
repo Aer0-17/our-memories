@@ -24,6 +24,7 @@ import {
   type AppSettings,
 } from "@/data/appSettings";
 import { apiFetch } from "@/lib/apiClient";
+import TripGuidesCard from "@/components/TripGuidesCard";
 
 const weatherFallbackTemp = 24;
 
@@ -640,6 +641,7 @@ export function StatsPanel({ children }: Readonly<{ children: ReactNode }>) {
     <aside className="hidden h-full w-[310px] shrink-0 flex-col overflow-y-auto border-l border-dashed border-[#D8DDD8] px-7 py-7 lg:flex">
       <DateTimeCard />
       <WeatherCard />
+      <TripGuidesCard />
       {children}
       <TogetherDaysCard />
       <AlbumProgressCard />

@@ -9,6 +9,7 @@ import {
   Loader2,
   MapPin,
   Plus,
+  Sparkles,
   Star,
   Trash2,
   X,
@@ -161,6 +162,9 @@ function AddMemoryPanel({
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [polishSuggestion, setPolishSuggestion] = useState("");
+  const [polishError, setPolishError] = useState("");
+  const [polishing, setPolishing] = useState(false);
 
   const selectedCity = cityOptions.find((city) => city.id === form.cityId) ?? cityOptions[0];
   const normalizedDate = normalizeDottedDate(form.date);
@@ -173,6 +177,42 @@ function AddMemoryPanel({
     });
     setPhotos([]);
     setError("");
+    setPolishSuggestion("");
+    setPolishError("");
+  };
+
+  const handlePolishMemory = async () => {
+    if (!canEdit) {
+      setPolishError("请先登录后再使用 AI 润色");
+      return;
+    }
+    const trimmedText = form.text.trim();
+    if (!trimmedText || polishing) return;
+
+    setPolishing(true);
+    setPolishError("");
+
+    try {
+      const response = await apiFetch("/ai/memory-polish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceText: trimmedText,
+          cityId: selectedCity?.id ?? "",
+          city: selectedCity?.name ?? "",
+          date: normalizedDate ?? form.date,
+        }),
+      });
+      if (!response.ok) throw new Error("Polish failed");
+      const data = (await response.json()) as { polishedText?: unknown };
+      const nextText = typeof data.polishedText === "string" ? data.polishedText.trim().slice(0, 500) : "";
+      if (!nextText) throw new Error("Empty polish result");
+      setPolishSuggestion(nextText);
+    } catch {
+      setPolishError("润色失败，请稍后再试");
+    } finally {
+      setPolishing(false);
+    }
   };
 
   const handlePickFile = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -265,36 +305,44 @@ function AddMemoryPanel({
   };
 
   return (
-    <section className="mt-6 rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-3 shadow-[0_12px_28px_rgba(90,102,112,0.055)] backdrop-blur sm:mt-8 sm:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-[#5A6670]">直接添加回忆</p>
-          <p className="mt-1 text-xs leading-5 text-[#5A6670]/55">不用回地图，选择城市后就能保存到同一套后端数据。</p>
-        </div>
-        <button
-          className="inline-flex min-h-10 items-center gap-2 rounded-[8px] bg-[#F5DCE0] px-4 text-sm font-semibold text-[#B85D70] transition hover:bg-[#E8B8C2] hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-          type="button"
-          onClick={() => {
-            setOpen((current) => !current);
-            setError("");
-            setStatus("");
-          }}
-          disabled={!canEdit}
-        >
-          {open ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-          {open ? "收起" : "新增回忆"}
-        </button>
-      </div>
+    <>
+      {/* 浮动加号按钮 */}
+      <button
+        className="fixed bottom-6 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-[#D86F82] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+        type="button"
+        onClick={() => {
+          setOpen(true);
+          setError("");
+          setStatus("");
+        }}
+        disabled={!canEdit}
+        aria-label="新增回忆"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
 
-      {!canEdit && (
-        <p className="mt-3 rounded-[7px] border border-[#D8DDD8]/70 bg-white/50 px-3 py-2 text-xs text-[#5A6670]/58">
-          当前未登录或会话已失效，登录后才能新增和删除回忆。
-        </p>
-      )}
-      {status && <p className="mt-3 text-xs font-semibold text-[#7DA88B]">{status}</p>}
-
+      {/* 弹窗表单 */}
       {open && (
-        <div className="mt-5 space-y-4 border-t border-dashed border-[#D8DDD8] pt-4">
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-[#273846]/32 px-4 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[8px] border border-[#D8DDD8] bg-[#FAFBF7] shadow-[0_28px_90px_rgba(39,56,70,0.24)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#D8DDD8] bg-white/90 px-5 py-4 backdrop-blur">
+              <h2 className="text-lg font-semibold text-[#5A6670]">新增回忆</h2>
+              <button
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-[#5A6670]/58">
               城市
@@ -341,11 +389,65 @@ function AddMemoryPanel({
             <Textarea
               className="mt-1 bg-white/70"
               value={form.text}
-              onChange={(event) => setForm({ ...form, text: event.target.value })}
+              onChange={(event) => {
+                setForm({ ...form, text: event.target.value });
+                setPolishSuggestion("");
+                setPolishError("");
+              }}
               placeholder="写下这一刻..."
               maxLength={500}
             />
           </label>
+
+          {/* AI 润色 */}
+          <div className="space-y-2">
+            <button
+              className="inline-flex min-h-9 items-center gap-2 rounded-[6px] border border-[#F5DCE0] bg-[#F5DCE0]/42 px-3 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/70 disabled:cursor-not-allowed disabled:opacity-45"
+              type="button"
+              onClick={handlePolishMemory}
+              disabled={!canEdit || !form.text.trim() || polishing}
+            >
+              {polishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {polishing ? "润色中" : "AI 润色"}
+            </button>
+            {polishSuggestion && (
+              <div className="rounded-[7px] border border-[#F5DCE0]/76 bg-white/54 p-3">
+                <p className="text-xs leading-5 text-[#5A6670]/72">{polishSuggestion}</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    className="rounded-[6px] bg-[#F5DCE0] px-3 py-1.5 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7]"
+                    type="button"
+                    onClick={() => {
+                      setForm({ ...form, text: polishSuggestion.slice(0, 500) });
+                      setPolishSuggestion("");
+                      setPolishError("");
+                    }}
+                  >
+                    采用
+                  </button>
+                  <button
+                    className="rounded-[6px] border border-[#D8DDD8] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/66 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+                    type="button"
+                    onClick={handlePolishMemory}
+                    disabled={polishing}
+                  >
+                    重新润色
+                  </button>
+                  <button
+                    className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/52 transition hover:bg-[#D8DDD8]/28"
+                    type="button"
+                    onClick={() => {
+                      setPolishSuggestion("");
+                      setPolishError("");
+                    }}
+                  >
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+            {polishError && <p className="text-xs text-[#E8B8C2]">{polishError}</p>}
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-[#5A6670]/58">
@@ -437,7 +539,7 @@ function AddMemoryPanel({
 
           {error && <p className="text-xs font-semibold text-[#D86F82]">{error}</p>}
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="sticky bottom-0 -mx-5 flex flex-wrap items-center gap-2 border-t border-[#D8DDD8]/70 bg-[#FAFBF7]/96 px-5 py-3 backdrop-blur">
             <button
               className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#273846] px-4 text-sm font-semibold text-white transition hover:bg-[#D86F82] disabled:cursor-not-allowed disabled:opacity-45 sm:flex-none"
               type="button"
@@ -457,8 +559,16 @@ function AddMemoryPanel({
             </button>
           </div>
         </div>
-      )}
-    </section>
+      </div>
+    )}
+
+    {/* 成功提示 */}
+    {status && (
+      <div className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-[8px] border border-[#7DA88B]/70 bg-[#D4E8D0]/95 px-4 py-3 text-sm font-semibold text-[#4A7A5A] shadow-[0_8px_24px_rgba(90,102,112,0.2)] backdrop-blur">
+        {status}
+      </div>
+    )}
+  </>
   );
 }
 
