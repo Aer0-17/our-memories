@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
   Archive,
@@ -11,8 +11,10 @@ import {
   Heart,
   Map as MapIcon,
   MessageCircle,
+  MoreHorizontal,
   Star,
 } from "lucide-react";
+import { PageTransition } from "@/components/PageTransition";
 
 const githubUrl = "https://github.com/qq570850096/our-memories";
 
@@ -108,6 +110,7 @@ export function MemoryPageShell({
 }>) {
   const current = navItems.find((item) => item.key === active);
   const navRef = useRef<HTMLDivElement>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     // 滚动到选中的导航项
@@ -126,24 +129,59 @@ export function MemoryPageShell({
       <span className="absolute right-[17%] top-[15%] h-2 w-2 bg-[#D6E8F0]" aria-hidden="true" />
       <div className="relative z-10 flex min-h-screen">
         <MemorySidebar active={active} />
-        <section className="memory-page-content min-w-0 flex-1 px-4 py-4 sm:px-10 sm:py-8">
-          <div className="mb-5 lg:hidden">
-            <div className="flex min-h-12 items-center justify-between gap-3 rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/84 px-3 shadow-[0_10px_26px_rgba(90,102,112,0.08)] backdrop-blur">
-              <Link
-                className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[7px] px-2 text-sm font-semibold text-[#5A6670]/72 transition hover:bg-white/58"
-                href="/map"
-                aria-label="返回地图"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                地图
-              </Link>
-              <span className="min-w-0 truncate text-sm font-semibold text-[#5A6670]">
-                {current?.label ?? "我们的回忆"}
-              </span>
-            </div>
-            <nav className="mt-3 flex gap-2 overflow-x-auto pb-1" ref={navRef}>
+        <section className="memory-page-content min-w-0 flex-1 px-4 pb-20 pt-4 sm:px-10 sm:py-8 lg:pb-8">
+          <PageTransition>
+            {children}
+          </PageTransition>
+        </section>
+      </div>
+
+      {/* 底部导航固定在底部（仅移动端） */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D8DDD8]/78 bg-[#FAFBF7]/95 backdrop-blur-lg lg:hidden">
+        <div className="grid grid-cols-5 gap-1 px-2 py-2">
+          {navItems
+            .filter((item) => ["map", "memories", "favorites", "whispers"].includes(item.key))
+            .map((item) => {
+              const Icon = item.icon;
+              const selected = item.key === active;
+
+              return (
+                <Link
+                  key={item.key}
+                  className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2 transition ${
+                    selected
+                      ? "bg-[#F5DCE0] text-[#B85D70]"
+                      : "text-[#5A6670]/54 hover:bg-white/58"
+                  }`}
+                  href={item.href}
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-[11px] font-semibold">{item.label}</span>
+                </Link>
+              );
+            })}
+
+          {/* 更多按钮 */}
+          <button
+            className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[#5A6670]/54 transition hover:bg-white/58"
+            onClick={() => setMoreOpen(!moreOpen)}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[11px] font-semibold">更多</span>
+          </button>
+        </div>
+
+        {/* 更多菜单弹出层 */}
+        {moreOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMoreOpen(false)}
+            />
+            <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
               {navItems
-                .filter((item) => item.key !== "map")
+                .filter((item) => ["anniversaries", "capsule"].includes(item.key))
                 .map((item) => {
                   const Icon = item.icon;
                   const selected = item.key === active;
@@ -151,24 +189,99 @@ export function MemoryPageShell({
                   return (
                     <Link
                       key={item.key}
-                      data-selected={selected}
-                      className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-[8px] border px-3 text-xs font-semibold transition ${
+                      className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2 transition ${
                         selected
-                          ? "border-[#F5DCE0] bg-[#F5DCE0]/58 text-[#E8B8C2]"
-                          : "border-[#D8DDD8]/70 bg-[#FAFBF7]/72 text-[#5A6670]/62"
+                          ? "bg-[#F5DCE0] text-[#B85D70]"
+                          : "text-[#5A6670]/64 hover:bg-white/60"
                       }`}
                       href={item.href}
+                      onClick={() => setMoreOpen(false)}
                     >
-                      <Icon className="h-3.5 w-3.5" />
-                      {item.label}
+                      <Icon className="h-4 w-4" />
+                      <span className="text-xs font-semibold">{item.label}</span>
                     </Link>
                   );
                 })}
-            </nav>
-          </div>
-          {children}
-        </section>
-      </div>
+            </div>
+          </>
+        )}
+      </nav>
     </main>
+  );
+}
+
+export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  return (
+    <>
+      {children}
+
+      {/* 底部导航固定在底部（仅移动端） */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D8DDD8]/78 bg-[#FAFBF7]/95 backdrop-blur-lg lg:hidden">
+        <div className="grid grid-cols-5 gap-1 px-2 py-2">
+          {navItems
+            .filter((item) => ["map", "memories", "favorites", "whispers"].includes(item.key))
+            .map((item) => {
+              const Icon = item.icon;
+              const selected = item.key === "map";
+
+              return (
+                <Link
+                  key={item.key}
+                  className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2 transition ${
+                    selected
+                      ? "bg-[#F5DCE0] text-[#B85D70]"
+                      : "text-[#5A6670]/54 hover:bg-white/58"
+                  }`}
+                  href={item.href}
+                  onClick={() => setMoreOpen(false)}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="text-[11px] font-semibold">{item.label}</span>
+                </Link>
+              );
+            })}
+
+          {/* 更多按钮 */}
+          <button
+            className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[#5A6670]/54 transition hover:bg-white/58"
+            onClick={() => setMoreOpen(!moreOpen)}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[11px] font-semibold">更多</span>
+          </button>
+        </div>
+
+        {/* 更多菜单弹出层 */}
+        {moreOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setMoreOpen(false)}
+            />
+            <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
+              {navItems
+                .filter((item) => ["anniversaries", "capsule"].includes(item.key))
+                .map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.key}
+                      className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[#5A6670]/64 transition hover:bg-white/60"
+                      href={item.href}
+                      onClick={() => setMoreOpen(false)}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span className="text-xs font-semibold">{item.label}</span>
+                    </Link>
+                  );
+                })}
+            </div>
+          </>
+        )}
+      </nav>
+    </>
   );
 }

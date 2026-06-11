@@ -1,20 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import {
-  Archive,
-  BookOpen,
-  CalendarDays,
   ChevronUp,
   Heart,
-  Map as MapIcon,
-  MessageCircle,
-  MoreHorizontal,
 } from "lucide-react";
 import ChinaMap, { SouthChinaSeaInset } from "@/components/ChinaMap";
 import BackToLoginButton from "@/components/BackToLoginButton";
 import { LegendProgress, ProgressBadge, StatsPanel, TogetherDaysBadge } from "@/components/HomeProgress";
 import RandomPhotoCard from "@/components/RandomPhotoCard";
 import { MapTimeCapsules } from "@/components/MapTimeCapsules";
+import { MapPageShell } from "@/components/MemoryNav";
 
 function BrandMark() {
   return (
@@ -101,7 +96,7 @@ function Legend({ compact = false }: Readonly<{ compact?: boolean }>) {
 
 function MobileMapDock() {
   return (
-    <details className="group fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5.6rem)] z-40 overflow-hidden rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/90 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl lg:hidden">
+    <details className="group fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+4.5rem)] z-40 overflow-hidden rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/90 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl lg:hidden">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 pl-14 sm:pl-3 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className="block truncate text-sm font-semibold text-[#5A6670]">地图信息</span>
@@ -123,69 +118,10 @@ function MobileMapDock() {
   );
 }
 
-function MobilePrimaryNav() {
-  const items = [
-    { label: "地图", icon: MapIcon, href: "/map", active: true },
-    { label: "回忆", icon: BookOpen, href: "/memories", active: false },
-    { label: "悄悄话", icon: MessageCircle, href: "/whispers", active: false },
-    { label: "纪念日", icon: CalendarDays, href: "/anniversaries", active: false },
-  ];
-  const moreItems = [
-    { label: "收藏", icon: Heart, href: "/favorites" },
-    { label: "宝盒", icon: Archive, href: "/time-capsule" },
-  ];
-
-  return (
-    <nav className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.65rem)] z-40 grid grid-cols-5 gap-1 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/92 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl lg:hidden">
-      {items.map((item) => {
-        const Icon = item.icon;
-
-        return (
-          <Link
-            key={item.href}
-            className={`grid min-h-14 place-items-center rounded-[8px] px-1 py-1.5 text-[11px] font-semibold leading-none transition ${
-              item.active
-                ? "bg-[#F5DCE0] text-[#B85D70]"
-                : "text-[#5A6670]/58 hover:bg-white/58 hover:text-[#5A6670]"
-            }`}
-            href={item.href}
-            aria-label={item.label}
-          >
-            <Icon className="h-5 w-5" />
-            <span className="mt-1 block max-w-full truncate">{item.label}</span>
-          </Link>
-        );
-      })}
-      <details className="group">
-        <summary className="grid min-h-14 cursor-pointer list-none place-items-center rounded-[8px] px-1 py-1.5 text-[11px] font-semibold leading-none text-[#5A6670]/58 transition hover:bg-white/58 hover:text-[#5A6670] [&::-webkit-details-marker]:hidden">
-          <MoreHorizontal className="h-5 w-5" />
-          <span className="mt-1 block max-w-full truncate">更多</span>
-        </summary>
-        <div className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+5.65rem)] grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/94 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
-          {moreItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <Link
-                key={item.href}
-                className="grid min-h-12 place-items-center rounded-[8px] px-2 py-2 text-xs font-semibold text-[#5A6670]/64 transition hover:bg-white/60 hover:text-[#5A6670]"
-                href={item.href}
-                aria-label={item.label}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="mt-1 block max-w-full truncate">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </details>
-    </nav>
-  );
-}
-
 export default function MapPage() {
   return (
-    <main className="relative h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#FAFBF7] text-[#5A6670]">
+    <MapPageShell>
+      <main className="relative h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#FAFBF7] text-[#5A6670]">
       <div className="map-mist-band" aria-hidden="true" />
       <Cloud src="/sprites/decorations/cloud-medium.png" className="left-[18%] top-[12%] w-28" />
       <Cloud src="/sprites/decorations/cloud-large.png" className="left-[43%] top-[11%] w-36" />
@@ -235,10 +171,10 @@ export default function MapPage() {
             <Legend />
           </div>
           <MobileMapDock />
-          <MobilePrimaryNav />
         </section>
         <StatsPanel>{null}</StatsPanel>
       </div>
     </main>
+    </MapPageShell>
   );
 }

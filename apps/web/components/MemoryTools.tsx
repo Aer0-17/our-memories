@@ -11,6 +11,7 @@ import {
   Settings,
   Trash2,
   Upload,
+  X,
 } from "lucide-react";
 import { cities } from "@/data/cities";
 import { MemoryPageShell, type MemoryNavKey } from "@/components/MemoryNav";
@@ -333,6 +334,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
   const Icon = config.icon;
   const canEdit = useContentEditAccess();
   const [items, setItems] = useState<StoredItem[]>([]);
+  const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [note, setNote] = useState("");
@@ -370,6 +372,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
     setDate("");
     setNote("");
     setEditingId("");
+    setOpen(false);
   };
 
   const save = async () => {
@@ -444,6 +447,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
     setDate(item.date ?? "");
     setNote(item.note);
     if (item.cityId) setCityId(item.cityId);
+    setOpen(true);
   };
 
   const remove = async (id: string) => {
@@ -485,69 +489,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
         </div>
       </header>
 
-      <section className="mt-6 grid gap-4 sm:mt-10 sm:gap-5 lg:grid-cols-[340px_1fr]">
-        <div className="h-fit rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] backdrop-blur sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[#5A6670]">{editingId ? "编辑" : "新增"}</p>
-            {!canEdit && <span className="text-xs font-semibold text-[#5A6670]/42">登录后可编辑</span>}
-          </div>
-          <input
-            className="mt-4 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder={config.kind === "favorite" ? "想去的地方" : "标题"}
-            disabled={!canEdit || isWorking}
-          />
-          {config.kind === "favorite" && (
-            <select
-              className="mt-3 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
-              value={cityId}
-              onChange={(event) => setCityId(event.target.value)}
-              disabled={!canEdit || isWorking}
-            >
-              {cityOptions.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name}
-                </option>
-              ))}
-            </select>
-          )}
-          {config.kind !== "favorite" && (
-            <DatePicker
-              className="mt-3 border-[#D8DDD8] bg-[#FAFBF7] focus:border-[#E8B8C2]"
-              value={date}
-              onChange={setDate}
-              disabled={!canEdit || isWorking}
-            />
-          )}
-          <textarea
-            className="mt-3 w-full resize-none rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 outline-none transition focus:border-[#E8B8C2]"
-            rows={4}
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="写一点备注……"
-            disabled={!canEdit || isWorking}
-          />
-          <button
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-[7px] bg-[#F5DCE0] px-4 py-2.5 text-sm font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7] disabled:opacity-45"
-            type="button"
-            onClick={() => void save()}
-            disabled={!canEdit || !canSave || isWorking}
-          >
-            <Plus className="h-4 w-4" />
-            {isWorking ? "保存中" : editingId ? "保存修改" : "保存"}
-          </button>
-          {editingId && (
-            <button
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-[7px] px-4 py-2 text-sm font-semibold text-[#5A6670]/56 transition hover:bg-[#D8DDD8]/28 hover:text-[#5A6670]"
-              type="button"
-              onClick={resetForm}
-            >
-              取消编辑
-            </button>
-          )}
-        </div>
-
+      <section className="mt-6 sm:mt-10">
         <div className="grid gap-4 md:grid-cols-2">
           {items.map((item) => {
             const city = cities.find((candidate) => candidate.id === item.cityId);
@@ -601,6 +543,109 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
           )}
         </div>
       </section>
+
+      {/* 浮动添加按钮 */}
+      <button
+        className="fixed bottom-24 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-[#D86F82] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
+        type="button"
+        onClick={() => {
+          resetForm();
+          setOpen(true);
+        }}
+        disabled={!canEdit}
+        aria-label={`新增${config.title}`}
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      {/* 弹窗表单 */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-[#273846]/32 px-4 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[8px] border border-[#D8DDD8] bg-[#FAFBF7] shadow-[0_28px_90px_rgba(39,56,70,0.24)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#D8DDD8] bg-white/90 px-5 py-4 backdrop-blur">
+              <h2 className="text-lg font-semibold text-[#5A6670]">{editingId ? "编辑" : "新增"}</h2>
+              <button
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="block text-xs font-semibold text-[#5A6670]/58">
+                {config.kind === "favorite" ? "地点" : "标题"}
+                <input
+                  className="mt-1 w-full rounded-[7px] border border-[#D8DDD8] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
+                  value={title}
+                  onChange={(event) => setTitle(event.target.value)}
+                  placeholder={config.kind === "favorite" ? "想去的地方" : "标题"}
+                  disabled={isWorking}
+                />
+              </label>
+
+              {config.kind === "favorite" && (
+                <label className="block text-xs font-semibold text-[#5A6670]/58">
+                  城市
+                  <select
+                    className="mt-1 w-full rounded-[7px] border border-[#D8DDD8] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
+                    value={cityId}
+                    onChange={(event) => setCityId(event.target.value)}
+                    disabled={isWorking}
+                  >
+                    {cityOptions.map((city) => (
+                      <option key={city.id} value={city.id}>
+                        {city.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {config.kind !== "favorite" && (
+                <label className="block text-xs font-semibold text-[#5A6670]/58">
+                  日期
+                  <DatePicker
+                    className="mt-1 border-[#D8DDD8] bg-white focus:border-[#E8B8C2]"
+                    value={date}
+                    onChange={setDate}
+                    disabled={isWorking}
+                  />
+                </label>
+              )}
+
+              <label className="block text-xs font-semibold text-[#5A6670]/58">
+                备注
+                <textarea
+                  className="mt-1 w-full resize-none rounded-[7px] border border-[#D8DDD8] bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-[#E8B8C2]"
+                  rows={4}
+                  value={note}
+                  onChange={(event) => setNote(event.target.value)}
+                  placeholder="写一点备注……"
+                  disabled={isWorking}
+                />
+              </label>
+
+              <button
+                className="flex w-full items-center justify-center gap-2 rounded-[7px] bg-[#E8B8C2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#D86F82] disabled:opacity-50"
+                type="button"
+                onClick={() => void save()}
+                disabled={!canSave || isWorking}
+              >
+                {isWorking ? "保存中" : editingId ? "保存修改" : "保存"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {status && (
         <p className="mt-5 rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/72 px-4 py-3 text-sm text-[#5A6670]/66">
           {status}

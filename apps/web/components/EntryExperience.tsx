@@ -296,9 +296,9 @@ export default function EntryExperience() {
       <motion.div className="login-cloud login-cloud-b" style={{ x: reverseX }} aria-hidden="true" />
       <div className="login-grid absolute inset-0" aria-hidden="true" />
 
-      <section className="relative z-10 grid h-full w-full grid-cols-1 gap-3 overflow-hidden px-4 py-4 sm:px-6 lg:grid-cols-[minmax(360px,0.86fr)_minmax(520px,1.14fr)] lg:gap-5 lg:px-8">
+      <section className="relative z-10 flex h-full w-full items-center justify-center overflow-hidden px-3 py-3 sm:px-6 lg:grid lg:grid-cols-[minmax(360px,0.86fr)_minmax(520px,1.14fr)] lg:gap-5 lg:px-8 lg:py-4">
         <motion.div
-          className="login-panel flex min-w-0 max-w-full flex-col justify-between overflow-hidden rounded-[8px] border border-[#DCCFC1]/86 bg-[#FEFCF5]/74 p-4 shadow-[0_28px_80px_rgba(91,71,50,0.12)] backdrop-blur-xl sm:p-5"
+          className="login-panel flex h-full w-full max-w-md flex-col justify-between overflow-hidden rounded-[8px] border border-[#DCCFC1]/86 bg-[#FEFCF5]/74 p-4 shadow-[0_28px_80px_rgba(91,71,50,0.12)] backdrop-blur-xl sm:p-5 lg:max-w-full"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.58 }}
