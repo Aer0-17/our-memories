@@ -98,7 +98,7 @@ export function TimeCapsuleGrid() {
                     <p className="whitespace-pre-wrap">{cap.content}</p>
                   </div>
                 ) : (
-                  <Button size="sm" onClick={() => openCapsule(cap.id)}>打开胶囊</Button>
+                  <Button onClick={() => openCapsule(cap.id)}>打开胶囊</Button>
                 )
               ) : (
                 <div className="rounded bg-blue-50 p-3 text-center">

@@ -122,11 +122,11 @@ export function WhisperWall() {
               {replyOpen === w.id ? (
                 <div className="flex gap-2">
                   <Input placeholder="回复..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)} />
-                  <Button size="sm" onClick={() => reply(w.id)}>发送</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setReplyOpen("")}>取消</Button>
+                  <Button onClick={() => reply(w.id)}>发送</Button>
+                  <Button variant="ghost" onClick={() => setReplyOpen("")}>取消</Button>
                 </div>
               ) : (
-                <Button size="sm" variant="secondary" onClick={() => setReplyOpen(w.id)} disabled={!isAdmin}>回复</Button>
+                <Button variant="secondary" onClick={() => setReplyOpen(w.id)} disabled={!isAdmin}>回复</Button>
               )}
             </div>
           ))
