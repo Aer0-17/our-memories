@@ -66,3 +66,33 @@ type AnniversaryCard struct {
 	UpdatedAt    string  `json:"updatedAt"`
 	Photos       []Photo `json:"photos,omitempty"`
 }
+
+type Whisper struct {
+	ID          string          `json:"id"`
+	SpaceID     string          `json:"spaceId"`
+	Title       string          `json:"title"`
+	CreatedByID string          `json:"createdById"`
+	CreatedAt   string          `json:"createdAt"`
+	UpdatedAt   string          `json:"updatedAt"`
+	Messages    []WhisperReply  `json:"messages,omitempty"`
+}
+
+type WhisperReply struct {
+	ID        string `json:"id"`
+	WhisperID string `json:"whisperId"`
+	UserID    string `json:"userId"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"createdAt"`
+}
+
+type TimeCapsule struct {
+	ID          string  `json:"id"`
+	SpaceID     string  `json:"spaceId"`
+	Title       string  `json:"title"`
+	OpenDate    string  `json:"openDate"`
+	Content     string  `json:"content"`
+	CreatedByID string  `json:"createdById"`
+	IsOpened    bool    `json:"isOpened"`
+	CreatedAt   string  `json:"createdAt"`
+	Photos      []Photo `json:"photos,omitempty"`
+}

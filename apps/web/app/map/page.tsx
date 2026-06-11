@@ -7,14 +7,14 @@ import {
   ChevronUp,
   Heart,
   Map as MapIcon,
+  MessageCircle,
   MoreHorizontal,
-  Route,
-  Settings,
 } from "lucide-react";
 import ChinaMap, { SouthChinaSeaInset } from "@/components/ChinaMap";
 import BackToLoginButton from "@/components/BackToLoginButton";
 import { LegendProgress, ProgressBadge, StatsPanel, TogetherDaysBadge } from "@/components/HomeProgress";
 import RandomPhotoCard from "@/components/RandomPhotoCard";
+import { MapTimeCapsules } from "@/components/MapTimeCapsules";
 
 function BrandMark() {
   return (
@@ -127,13 +127,12 @@ function MobilePrimaryNav() {
   const items = [
     { label: "地图", icon: MapIcon, href: "/map", active: true },
     { label: "回忆", icon: BookOpen, href: "/memories", active: false },
-    { label: "攻略", icon: Route, href: "/trips", active: false },
+    { label: "悄悄话", icon: MessageCircle, href: "/whispers", active: false },
     { label: "纪念日", icon: CalendarDays, href: "/anniversaries", active: false },
   ];
   const moreItems = [
     { label: "收藏", icon: Heart, href: "/favorites" },
-    { label: "宝盒", icon: Archive, href: "/time-capsule", active: false },
-    { label: "设置", icon: Settings, href: "/settings", active: false },
+    { label: "宝盒", icon: Archive, href: "/time-capsule" },
   ];
 
   return (
@@ -229,6 +228,7 @@ export default function MapPage() {
           </div>
 
           <RandomPhotoCard />
+          <MapTimeCapsules />
 
           <div className="absolute bottom-7 left-6 hidden flex-col gap-4 sm:left-9 lg:flex">
             <SouthChinaSeaInset />

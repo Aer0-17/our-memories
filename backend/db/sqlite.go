@@ -155,6 +155,56 @@ func Migrate() {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_auxiliary_space_kind ON auxiliary_items(space_id, kind);
+
+	CREATE TABLE IF NOT EXISTS whispers (
+		id TEXT PRIMARY KEY,
+		space_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		created_by_id TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (space_id) REFERENCES spaces(id),
+		FOREIGN KEY (created_by_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS whisper_replies (
+		id TEXT PRIMARY KEY,
+		whisper_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		content TEXT NOT NULL,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (whisper_id) REFERENCES whispers(id) ON DELETE CASCADE,
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_whispers_space ON whispers(space_id, created_at DESC);
+	CREATE INDEX IF NOT EXISTS idx_whisper_replies ON whisper_replies(whisper_id, created_at);
+
+	CREATE TABLE IF NOT EXISTS time_capsules (
+		id TEXT PRIMARY KEY,
+		space_id TEXT NOT NULL,
+		title TEXT NOT NULL,
+		open_date TEXT NOT NULL,
+		content TEXT NOT NULL,
+		created_by_id TEXT NOT NULL,
+		is_opened INTEGER DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (space_id) REFERENCES spaces(id),
+		FOREIGN KEY (created_by_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS time_capsule_photos (
+		id TEXT PRIMARY KEY,
+		time_capsule_id TEXT NOT NULL,
+		key TEXT NOT NULL,
+		url TEXT NOT NULL,
+		mime_type TEXT,
+		sort_order INTEGER DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (time_capsule_id) REFERENCES time_capsules(id) ON DELETE CASCADE
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_time_capsules_space ON time_capsules(space_id, open_date);
 	`
 
 	if _, err := DB.Exec(schema); err != nil {

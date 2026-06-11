@@ -56,6 +56,7 @@ func main() {
 
 			auth.GET("/auxiliary-items", handlers.GetAuxiliaryItems)
 			auth.POST("/auxiliary-items", handlers.CreateAuxiliaryItem)
+			auth.PATCH("/auxiliary-items/:id", handlers.UpdateAuxiliaryItem)
 			auth.DELETE("/auxiliary-items/:id", handlers.DeleteAuxiliaryItem)
 
 			auth.GET("/login-photos", handlers.GetLoginPhotos)
@@ -76,6 +77,17 @@ func main() {
 
 			auth.POST("/ai/memory-polish", handlers.PolishMemory)
 			auth.POST("/activation-codes", handlers.CreateActivationCode)
+
+			auth.GET("/whispers", handlers.GetWhispers)
+			auth.POST("/whispers", handlers.CreateWhisper)
+			auth.POST("/whispers/:id/reply", handlers.ReplyWhisper)
+			auth.DELETE("/whispers/:id", handlers.DeleteWhisper)
+
+			auth.GET("/time-capsules", handlers.GetTimeCapsules)
+			auth.POST("/time-capsules", handlers.CreateTimeCapsule)
+			auth.PATCH("/time-capsules/:id", handlers.UpdateTimeCapsule)
+			auth.POST("/time-capsules/:id/open", handlers.OpenTimeCapsule)
+			auth.DELETE("/time-capsules/:id", handlers.DeleteTimeCapsule)
 		}
 	}
 

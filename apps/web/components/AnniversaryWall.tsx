@@ -1,7 +1,7 @@
 "use client";
 
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarHeart, ImagePlus, Pencil, Pin, Trash2 } from "lucide-react";
+import { CalendarHeart, ImagePlus, Pencil, Pin, Plus, Trash2, X } from "lucide-react";
 import { anniversaryDisplayState, type AnniversaryCard } from "@map-of-us/shared";
 import { MemoryPageShell } from "@/components/MemoryNav";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
@@ -111,6 +111,7 @@ export default function AnniversaryWall() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState("");
   const [status, setStatus] = useState("");
+  const [open, setOpen] = useState(false);
   const isAdmin = useContentEditAccess();
   const [working, setWorking] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -140,6 +141,7 @@ export default function AnniversaryWall() {
   const resetForm = () => {
     setForm(emptyForm);
     setEditingId("");
+    setOpen(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -212,6 +214,7 @@ export default function AnniversaryWall() {
       pinned: card.pinned,
       photos: [],
     });
+    setOpen(true);
     setStatus("正在编辑，未重新选择照片时会保留原照片。");
   };
 
@@ -252,44 +255,74 @@ export default function AnniversaryWall() {
         </div>
       </header>
 
-      <section className="mt-6 grid gap-5 lg:grid-cols-[360px_1fr]">
-        <aside className="h-fit rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] backdrop-blur sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[#5A6670]">{editingId ? "编辑纪念日" : "新增纪念日"}</p>
-            {!isAdmin && <span className="text-xs font-semibold text-[#5A6670]/42">登录后可编辑</span>}
-          </div>
-          <div className="mt-4 grid gap-3">
-            <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="例如：第一次见面" disabled={!isAdmin} />
-            <DatePicker value={form.date} onChange={(date) => setForm({ ...form, date })} disabled={!isAdmin} />
-            <Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="写一点那天的细节..." disabled={!isAdmin} />
-            <div className="grid gap-2 rounded-[7px] border border-[#D8DDD8]/70 bg-white/36 p-3">
-              <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">
-                <input type="checkbox" checked={form.repeatYearly} onChange={(event) => setForm({ ...form, repeatYearly: event.target.checked })} disabled={!isAdmin} />
-                每年重复计算下一次纪念日
-              </label>
-              <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">
-                <input type="checkbox" checked={form.pinned} onChange={(event) => setForm({ ...form, pinned: event.target.checked })} disabled={!isAdmin} />
-                置顶在纪念日墙前面
-              </label>
+      {/* 悬浮FAB按钮 */}
+      <button
+        className="fixed bottom-6 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-[#D86F82] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+        type="button"
+        onClick={() => setOpen(true)}
+        disabled={!isAdmin}
+        aria-label="新增纪念日"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
+
+      {/* 弹窗表单 */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-[#273846]/32 px-4 backdrop-blur-sm"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[8px] border border-[#D8DDD8] bg-[#FAFBF7] shadow-[0_28px_90px_rgba(39,56,70,0.24)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#D8DDD8] bg-white/90 px-5 py-4 backdrop-blur">
+              <h2 className="text-lg font-semibold text-[#5A6670]">{editingId ? "编辑纪念日" : "新增纪念日"}</h2>
+              <button
+                className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28"
+                type="button"
+                onClick={() => setOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-            <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={pickPhotos} disabled={!isAdmin || working} />
-            <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || working}>
-              <ImagePlus className="h-4 w-4" />
-              {form.photos.length ? `已选择 ${form.photos.length} 张照片` : "选择照片"}
-            </Button>
-            <div className="flex gap-2">
-              <Button className="flex-1" onClick={save} disabled={!isAdmin || working}>
-                {working ? "处理中" : editingId ? "保存修改" : "添加到墙上"}
+
+            <div className="p-5 space-y-3">
+              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="例如：第一次见面" disabled={!isAdmin} />
+              <DatePicker value={form.date} onChange={(date) => setForm({ ...form, date })} disabled={!isAdmin} />
+              <Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="写一点那天的细节..." disabled={!isAdmin} />
+              <div className="grid gap-2 rounded-[7px] border border-[#D8DDD8]/70 bg-white/36 p-3">
+                <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">
+                  <input type="checkbox" checked={form.repeatYearly} onChange={(event) => setForm({ ...form, repeatYearly: event.target.checked })} disabled={!isAdmin} />
+                  每年重复计算下一次纪念日
+                </label>
+                <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">
+                  <input type="checkbox" checked={form.pinned} onChange={(event) => setForm({ ...form, pinned: event.target.checked })} disabled={!isAdmin} />
+                  置顶在纪念日墙前面
+                </label>
+              </div>
+              <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={pickPhotos} disabled={!isAdmin || working} />
+              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || working}>
+                <ImagePlus className="h-4 w-4" />
+                {form.photos.length ? `已选择 ${form.photos.length} 张照片` : "选择照片"}
               </Button>
-              {editingId && (
-                <Button variant="ghost" onClick={resetForm} disabled={working}>
-                  取消
+              {status && <p className="rounded-[7px] border border-[#D8DDD8]/70 bg-white/42 px-3 py-2 text-xs leading-5 text-[#5A6670]/66">{status}</p>}
+              <div className="flex gap-2">
+                <Button className="flex-1" onClick={save} disabled={!isAdmin || working}>
+                  {working ? "处理中" : editingId ? "保存修改" : "添加到墙上"}
                 </Button>
-              )}
+                {editingId && (
+                  <Button variant="ghost" onClick={resetForm} disabled={working}>
+                    取消
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
-          {status && <p className="mt-3 rounded-[7px] border border-[#D8DDD8]/70 bg-white/42 px-3 py-2 text-xs leading-5 text-[#5A6670]/66">{status}</p>}
-        </aside>
+        </div>
+      )}
+
+      <section className="mt-6">
 
         {cards.length === 0 ? (
           <EmptyState icon={<CalendarHeart className="h-7 w-7" />} title="还没有纪念日卡片">

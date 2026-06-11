@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { cities } from "@/data/cities";
+import { provinces } from "@/data/provinces";
 import { MemoryPageShell } from "@/components/MemoryNav";
 import { DatePicker, Input, Textarea } from "@/components/ui/input";
 import {
@@ -30,6 +31,7 @@ import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyIma
 import { apiFetch } from "@/lib/apiClient";
 import { normalizeDottedDate } from "@/lib/dateFormat";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
+import { useMemories } from "@/lib/swr";
 
 type ArchiveView = "city" | "timeline";
 type MemoryItem = {
@@ -152,11 +154,24 @@ function AddMemoryPanel({
     () => [...cities].sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN")),
     [],
   );
+
+  // 按省份分组城市
+  const provinceGroups = useMemo(() => {
+    const groups = new Map<string, typeof cities>();
+    cityOptions.forEach(city => {
+      const list = groups.get(city.provinceId) || [];
+      list.push(city);
+      groups.set(city.provinceId, list);
+    });
+    return groups;
+  }, [cityOptions]);
+
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<AddMemoryForm>(() => ({
     ...defaultAddMemoryForm(),
     cityId: cityOptions[0]?.id ?? "",
   }));
+  const [selectedProvince, setSelectedProvince] = useState(cityOptions[0]?.provinceId || provinces[0]?.id || "");
   const [photos, setPhotos] = useState<PhotoDraft[]>([]);
   const [isReadingPhoto, setIsReadingPhoto] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -169,6 +184,18 @@ function AddMemoryPanel({
   const selectedCity = cityOptions.find((city) => city.id === form.cityId) ?? cityOptions[0];
   const normalizedDate = normalizeDottedDate(form.date);
   const canSave = canEdit && Boolean(selectedCity) && Boolean(normalizedDate) && Boolean(form.text.trim()) && !isSaving;
+
+  // 当前省份的城市列表
+  const citiesInProvince = provinceGroups.get(selectedProvince) || [];
+
+  // 省份变化时，自动选中该省第一个城市
+  const handleProvinceChange = (provinceId: string) => {
+    setSelectedProvince(provinceId);
+    const cities = provinceGroups.get(provinceId) || [];
+    if (cities.length > 0) {
+      setForm({ ...form, cityId: cities[0].id });
+    }
+  };
 
   const resetForm = () => {
     setForm({
@@ -311,6 +338,11 @@ function AddMemoryPanel({
         className="fixed bottom-6 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-[#D86F82] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
         onClick={() => {
+          // 同步省份选择
+          const currentCity = cityOptions.find(c => c.id === form.cityId);
+          if (currentCity) {
+            setSelectedProvince(currentCity.provinceId);
+          }
           setOpen(true);
           setError("");
           setStatus("");
@@ -345,19 +377,35 @@ function AddMemoryPanel({
             <div className="p-5 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-[#5A6670]/58">
+              省份
+              <select
+                className="mt-1 min-h-10 w-full rounded-[7px] border border-[#D8DDD8]/80 bg-white/70 px-3 text-sm text-[#5A6670] outline-none transition focus:border-[#A8C8DC]"
+                value={selectedProvince}
+                onChange={(event) => handleProvinceChange(event.target.value)}
+              >
+                {provinces.map((province) => (
+                  <option key={province.id} value={province.id}>
+                    {province.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-semibold text-[#5A6670]/58">
               城市
               <select
                 className="mt-1 min-h-10 w-full rounded-[7px] border border-[#D8DDD8]/80 bg-white/70 px-3 text-sm text-[#5A6670] outline-none transition focus:border-[#A8C8DC]"
                 value={form.cityId}
                 onChange={(event) => setForm({ ...form, cityId: event.target.value })}
               >
-                {cityOptions.map((city) => (
+                {citiesInProvince.map((city) => (
                   <option key={city.id} value={city.id}>
                     {city.name}
                   </option>
                 ))}
               </select>
             </label>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-[#5A6670]/58">
               日期
               <DatePicker className="mt-1 bg-white/70" value={form.date} onChange={(date) => setForm({ ...form, date })} />
@@ -558,9 +606,10 @@ function AddMemoryPanel({
               清空
             </button>
           </div>
+            </div>
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
     {/* 成功提示 */}
     {status && (
@@ -662,37 +711,25 @@ function MemoryCard({ item, compact = false, onDelete }: Readonly<{ item: Memory
 }
 
 export default function MemoryArchive() {
-  const [localMemories, setLocalMemories] = useState<LocalMemoryStore>({});
+  const { data, mutate } = useMemories();
   const [view, setView] = useState<ArchiveView>("city");
   const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
   const canEdit = useContentEditAccess();
 
+  const localMemories = data?.memories ?? {};
+
   useEffect(() => {
-    let cancelled = false;
     const handleMemoryUpdate = (event: Event) => {
       const detail = (event as CustomEvent<LocalMemoryStore>).detail;
-      if (detail) setLocalMemories(detail);
+      if (detail) mutate({ memories: detail }, { revalidate: false });
     };
-
-    async function loadLocalMemories() {
-      const response = await apiFetch("/api/v1/memories", { cache: "no-store" }).catch(() => null);
-      if (!response?.ok) return;
-
-      const data = (await response.json().catch(() => null)) as
-        | { memories?: LocalMemoryStore }
-        | null;
-
-      if (!cancelled && data?.memories) setLocalMemories(data.memories);
-    }
 
     window.addEventListener(memoryStoreUpdatedEvent, handleMemoryUpdate);
-    loadLocalMemories();
 
     return () => {
-      cancelled = true;
       window.removeEventListener(memoryStoreUpdatedEvent, handleMemoryUpdate);
     };
-  }, []);
+  }, [mutate]);
 
   const handleDeleteMemory = async (cityId: string, memoryId: string) => {
     if (!canEdit) return;
@@ -702,7 +739,7 @@ export default function MemoryArchive() {
     if (!response.ok) throw new Error("Failed to delete memory");
 
     const data = (await response.json()) as { memories: LocalMemoryStore };
-    setLocalMemories(data.memories);
+    mutate({ memories: data.memories }, { revalidate: false });
     window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: data.memories }));
   };
 
@@ -797,7 +834,7 @@ export default function MemoryArchive() {
           <AddMemoryPanel
             canEdit={canEdit}
             onSaved={(memories) => {
-              setLocalMemories(memories);
+              mutate({ memories }, { revalidate: false });
               window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: memories }));
             }}
           />

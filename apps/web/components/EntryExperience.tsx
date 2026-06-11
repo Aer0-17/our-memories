@@ -18,6 +18,7 @@ import {
   readLoginPhotos,
 } from "@/data/loginPhotoStore";
 import { login } from "@/lib/apiClient";
+import { readSession } from "@/lib/authStore";
 
 const passcodeLength = 4;
 const loginPhotoVersion = "placeholder-20260601";
@@ -174,6 +175,13 @@ export default function EntryExperience() {
   const reverseX = useTransform(smoothX, [-0.5, 0.5], [12, -12]);
 
   useEffect(() => {
+    // 检查是否已登录
+    const session = readSession();
+    if (session?.accessToken) {
+      router.push("/map");
+      return;
+    }
+
     const timer = window.setTimeout(() => {
       setSettings(readAppSettings());
       void syncAppSettings().then(setSettings).catch(() => {});
@@ -198,7 +206,7 @@ export default function EntryExperience() {
       window.removeEventListener(appSettingsUpdatedEvent, handleSettingsUpdate);
       window.removeEventListener(loginPhotosUpdatedEvent, handleLoginPhotosUpdate);
     };
-  }, []);
+  }, [router]);
 
   const loginStamps = useMemo<Stamp[]>(() => {
     return stamps.map((stamp) => ({
@@ -288,14 +296,14 @@ export default function EntryExperience() {
       <motion.div className="login-cloud login-cloud-b" style={{ x: reverseX }} aria-hidden="true" />
       <div className="login-grid absolute inset-0" aria-hidden="true" />
 
-      <section className="relative z-10 grid h-full min-h-0 w-full grid-cols-1 gap-3 overflow-hidden px-4 py-4 sm:px-6 lg:grid-cols-[minmax(360px,0.86fr)_minmax(520px,1.14fr)] lg:gap-5 lg:px-8">
+      <section className="relative z-10 grid h-full w-full grid-cols-1 gap-3 overflow-hidden px-4 py-4 sm:px-6 lg:grid-cols-[minmax(360px,0.86fr)_minmax(520px,1.14fr)] lg:gap-5 lg:px-8">
         <motion.div
-          className="login-panel flex min-h-0 min-w-0 max-w-full flex-col justify-between overflow-hidden rounded-[8px] border border-[#DCCFC1]/86 bg-[#FEFCF5]/74 p-4 shadow-[0_28px_80px_rgba(91,71,50,0.12)] backdrop-blur-xl sm:p-5"
+          className="login-panel flex min-w-0 max-w-full flex-col justify-between overflow-hidden rounded-[8px] border border-[#DCCFC1]/86 bg-[#FEFCF5]/74 p-4 shadow-[0_28px_80px_rgba(91,71,50,0.12)] backdrop-blur-xl sm:p-5"
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.58 }}
         >
-          <div className="min-h-0">
+          <div className="flex-1 overflow-y-auto">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <PixelHeart />

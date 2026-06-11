@@ -55,7 +55,6 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
   const response = await fetch(url, {
     ...init,
     headers: makeHeaders(init.headers, auth, init.body),
-    cache: init.cache ?? "no-store",
   });
 
   if (response.status === 401 && auth && retry && (await refreshAccessToken())) {

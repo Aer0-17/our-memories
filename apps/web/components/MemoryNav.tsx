@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
 import {
   ArrowLeft,
   Archive,
@@ -9,23 +10,21 @@ import {
   CalendarDays,
   Heart,
   Map as MapIcon,
-  Route,
-  Settings,
+  MessageCircle,
   Star,
 } from "lucide-react";
 
 const githubUrl = "https://github.com/qq570850096/our-memories";
 
-export type MemoryNavKey = "map" | "memories" | "trips" | "favorites" | "anniversaries" | "capsule" | "settings";
+export type MemoryNavKey = "map" | "memories" | "favorites" | "anniversaries" | "capsule" | "whispers";
 
 const navItems = [
   { key: "map", label: "地图", icon: MapIcon, href: "/map" },
   { key: "memories", label: "回忆记录", icon: BookOpen, href: "/memories" },
-  { key: "trips", label: "旅行攻略", icon: Route, href: "/trips" },
   { key: "favorites", label: "地点收藏", icon: Heart, href: "/favorites" },
   { key: "anniversaries", label: "纪念日", icon: CalendarDays, href: "/anniversaries" },
+  { key: "whispers", label: "悄悄话", icon: MessageCircle, href: "/whispers" },
   { key: "capsule", label: "时光宝盒", icon: Archive, href: "/time-capsule" },
-  { key: "settings", label: "设置", icon: Settings, href: "/settings" },
 ] satisfies Array<{
   key: MemoryNavKey;
   label: string;
@@ -108,6 +107,17 @@ export function MemoryPageShell({
   children: ReactNode;
 }>) {
   const current = navItems.find((item) => item.key === active);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // 滚动到选中的导航项
+    if (navRef.current) {
+      const selectedItem = navRef.current.querySelector('[data-selected="true"]');
+      if (selectedItem) {
+        selectedItem.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      }
+    }
+  }, [active]);
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#FAFBF7] text-[#5A6670]">
@@ -131,7 +141,7 @@ export function MemoryPageShell({
                 {current?.label ?? "我们的回忆"}
               </span>
             </div>
-            <nav className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <nav className="mt-3 flex gap-2 overflow-x-auto pb-1" ref={navRef}>
               {navItems
                 .filter((item) => item.key !== "map")
                 .map((item) => {
@@ -141,6 +151,7 @@ export function MemoryPageShell({
                   return (
                     <Link
                       key={item.key}
+                      data-selected={selected}
                       className={`inline-flex h-10 shrink-0 items-center gap-2 rounded-[8px] border px-3 text-xs font-semibold transition ${
                         selected
                           ? "border-[#F5DCE0] bg-[#F5DCE0]/58 text-[#E8B8C2]"

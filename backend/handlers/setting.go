@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/db"
@@ -27,6 +28,18 @@ func GetSettings(c *gin.Context) {
 		var value interface{}
 		json.Unmarshal([]byte(valueJSON), &value)
 		settings[key] = value
+	}
+
+	// 从环境变量读取纪念日期（如果没有数据库设置）
+	if _, hasAnniversaryDate := settings["anniversaryDate"]; !hasAnniversaryDate {
+		if envDate := os.Getenv("DEFAULT_ANNIVERSARY_DATE"); envDate != "" {
+			settings["anniversaryDate"] = envDate
+		}
+	}
+	if _, hasAnniversaryLabel := settings["anniversaryLabel"]; !hasAnniversaryLabel {
+		if envLabel := os.Getenv("DEFAULT_ANNIVERSARY_LABEL"); envLabel != "" {
+			settings["anniversaryLabel"] = envLabel
+		}
 	}
 
 	utils.Success(c, settings)
@@ -139,6 +152,34 @@ func CreateAuxiliaryItem(c *gin.Context) {
 	}
 
 	utils.Success(c, gin.H{"id": itemID})
+}
+
+func UpdateAuxiliaryItem(c *gin.Context) {
+	id := c.Param("id")
+	spaceID := c.GetString("spaceID")
+
+	var req struct {
+		Kind   string `json:"kind"`
+		Title  string `json:"title"`
+		Date   string `json:"date"`
+		Note   string `json:"note"`
+		CityID string `json:"cityId"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Error(c, 400, "Invalid request")
+		return
+	}
+
+	_, err := db.DB.Exec(`UPDATE auxiliary_items SET title = ?, date = ?, note = ?, city_id = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND space_id = ?`,
+		req.Title, req.Date, req.Note, req.CityID, id, spaceID)
+	if err != nil {
+		utils.Error(c, 500, "Failed to update item")
+		return
+	}
+
+	utils.Success(c, gin.H{"ok": true})
 }
 
 func DeleteAuxiliaryItem(c *gin.Context) {

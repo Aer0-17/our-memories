@@ -86,8 +86,8 @@ const configs = {
   capsule: {
     active: "capsule",
     icon: Archive,
-    title: "时光宝盒",
-    subtitle: "存放不一定属于某座城市的小秘密。",
+    title: "悄悄话",
+    subtitle: "只属于我们的对话，记录彼此的心里话。",
     storageKey: "mapofus:capsules",
     kind: "capsule",
   },
@@ -379,33 +379,57 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
     }
     if (!canSave) return;
 
-    const item = {
-      id: editingId || `${config.kind}-${Date.now()}`,
-      title: title.trim(),
-      date: date.trim(),
-      note: note.trim(),
-      cityId: config.kind === "favorite" ? cityId : undefined,
-    };
-    const nextItems = editingId
-      ? items.map((current) => (current.id === editingId ? item : current))
-      : [item, ...items];
-
     setIsWorking(true);
     setStatus("");
 
     try {
-      const response = await apiFetch("/auxiliary-items", {
-        method: "POST",
-        body: JSON.stringify({ ...item, kind: config.kind }),
-      });
-      if (!response.ok) throw new Error("Save failed");
+      if (editingId) {
+        // 更新现有项
+        const item = {
+          id: editingId,
+          title: title.trim(),
+          date: date.trim(),
+          note: note.trim(),
+          cityId: config.kind === "favorite" ? cityId : undefined,
+        };
 
-      setItems(nextItems);
-      writeItems(config.storageKey, nextItems);
-      resetForm();
+        const response = await apiFetch(`/api/v1/auxiliary-items/${editingId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ ...item, kind: config.kind }),
+        });
+        if (!response.ok) throw new Error("Update failed");
+
+        const nextItems = items.map((current) => (current.id === editingId ? item : current));
+        setItems(nextItems);
+        writeItems(config.storageKey, nextItems);
+        resetForm();
+        setStatus("已保存修改。");
+      } else {
+        // 创建新项
+        const item = {
+          id: `${config.kind}-${Date.now()}`,
+          title: title.trim(),
+          date: date.trim(),
+          note: note.trim(),
+          cityId: config.kind === "favorite" ? cityId : undefined,
+        };
+
+        const response = await apiFetch("/api/v1/auxiliary-items", {
+          method: "POST",
+          body: JSON.stringify({ ...item, kind: config.kind }),
+        });
+        if (!response.ok) throw new Error("Create failed");
+
+        const nextItems = [item, ...items];
+        setItems(nextItems);
+        writeItems(config.storageKey, nextItems);
+        resetForm();
+        setStatus("已保存。");
+      }
+
+      // 刷新数据
       const refreshedItems = await loadAuxiliaryItems(config);
       setItems(refreshedItems);
-      setStatus(editingId ? "已保存修改。" : "已保存。");
     } catch {
       setStatus("保存失败，请确认网络和登录状态后重试。");
     } finally {
@@ -431,7 +455,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
     setStatus("");
 
     try {
-      const response = await apiFetch(`/auxiliary-items/${id}`, { method: "DELETE" });
+      const response = await apiFetch(`/api/v1/auxiliary-items/${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Delete failed");
 
       const nextItems = items.filter((item) => item.id !== id);

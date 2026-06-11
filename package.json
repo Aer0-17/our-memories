@@ -35,5 +35,8 @@
     "@types/node": "^20",
     "eslint": "^9",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "swr": "^2.4.1"
   }
 }

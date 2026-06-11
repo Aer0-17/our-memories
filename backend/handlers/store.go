@@ -1,9 +1,13 @@
 package handlers
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -392,8 +396,74 @@ func PolishMemory(c *gin.Context) {
 	var req struct {
 		SourceText string `json:"sourceText"`
 	}
-	_ = c.ShouldBindJSON(&req)
-	utils.Success(c, gin.H{"polishedText": req.SourceText})
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.Error(c, 400, "Invalid request")
+		return
+	}
+
+	// 获取DeepSeek API配置
+	apiKey := os.Getenv("DEEPSEEK_API_KEY")
+	apiURL := os.Getenv("DEEPSEEK_API_URL")
+	if apiURL == "" {
+		apiURL = "https://api.deepseek.com/v1/chat/completions"
+	}
+
+	// 如果没有配置API Key，直接返回原文
+	if apiKey == "" {
+		utils.Success(c, gin.H{"polishedText": req.SourceText})
+		return
+	}
+
+	// 构建DeepSeek请求
+	payload := map[string]interface{}{
+		"model": "deepseek-chat",
+		"messages": []map[string]string{
+			{
+				"role":    "system",
+				"content": "你是一个文字润色助手。请优化用户提供的文字，使其更加生动、准确、有感染力。保持原意，只改进表达。直接返回润色后的文字，不要添加任何解释。",
+			},
+			{
+				"role":    "user",
+				"content": req.SourceText,
+			},
+		},
+		"temperature": 0.7,
+		"max_tokens":  500,
+	}
+
+	jsonData, _ := json.Marshal(payload)
+	httpReq, err := http.NewRequest("POST", apiURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		utils.Error(c, 500, "Failed to create request")
+		return
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		utils.Error(c, 500, "Failed to call AI service")
+		return
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || len(result.Choices) == 0 {
+		utils.Error(c, 500, "Failed to parse AI response")
+		return
+	}
+
+	polishedText := strings.TrimSpace(result.Choices[0].Message.Content)
+	utils.Success(c, gin.H{"polishedText": polishedText})
 }
 
 func CreateActivationCode(c *gin.Context) {

@@ -15,9 +15,9 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className="h-full antialiased"
+      className="antialiased"
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex flex-col">
         <ApiBaseScript />
         {children}
       </body>
