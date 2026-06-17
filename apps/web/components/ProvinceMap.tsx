@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ImagePlus,
@@ -22,10 +22,13 @@ import { getLatestMemory, sortMemoriesByTime, type Memory } from "@/data/memorie
 import { getLitCityIds, memoryStoreUpdatedEvent, type LocalMemoryStore } from "@/data/progress";
 import type { Province } from "@/data/provinces";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
+import { MemoryContentView, MemoryThumb, photosOfMemory } from "@/components/memories/MemoryContentView";
+import { MemoryCitySheet, type MemoryPatchPayload } from "@/components/memories/MemoryCitySheet";
 import { DatePicker } from "@/components/ui/input";
 import { apiFetch } from "@/lib/apiClient";
 import { normalizeDottedDate } from "@/lib/dateFormat";
-import { useContentEditAccess } from "@/lib/useContentEditAccess";
+import { computeMemoryEditAccess, useContentEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 interface ProvinceMapProps {
   province: Province;
@@ -307,25 +310,25 @@ const revokePhotoDrafts = (photos: PhotoDraft[]) => {
   photos.forEach((photo) => revokeObjectUrl(photo.previewUrl));
 };
 
-const photosOfMemory = (memory?: Memory) => {
-  if (!memory) return [];
-
-  return memory.photos?.length ? memory.photos : [memory.image];
-};
-
 const memoryPhotosPayload = (photos: string[]) =>
   photos.filter(Boolean).map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
 
 export default function ProvinceMap({ province, width = 1120, height = 760 }: ProvinceMapProps) {
   const isAdmin = useContentEditAccess();
+  const isMobile = useIsMobile();
   const frameRef = useRef<HTMLDivElement>(null);
   const nudgeTimeoutRef = useRef<BrowserTimeout | null>(null);
+  const longPressTimeoutRef = useRef<BrowserTimeout | null>(null);
+  const previousLitCityIdsRef = useRef<Set<string> | null>(null);
   const localMemoriesRef = useRef<LocalMemoryStore>({});
   const cameraRef = useRef<MapCamera>({ scale: 1, x: 0, y: 0 });
   const dragStateRef = useRef<DragState | null>(null);
   const dragMovedRef = useRef(false);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
   const [nudgedCityId, setNudgedCityId] = useState<string | null>(null);
+  const [sparkedCityId, setSparkedCityId] = useState<string | null>(null);
+  const [previewCityId, setPreviewCityId] = useState<string | null>(null);
+  const [mobileSheetMode, setMobileSheetMode] = useState<"view" | "create">("view");
   const [dragging, setDragging] = useState(false);
   const [frameScale, setFrameScale] = useState(1);
   const [localMemories, setLocalMemories] = useState<LocalMemoryStore>({});
@@ -362,8 +365,32 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   useEffect(() => {
     return () => {
       if (nudgeTimeoutRef.current) window.clearTimeout(nudgeTimeoutRef.current);
+      if (longPressTimeoutRef.current) window.clearTimeout(longPressTimeoutRef.current);
     };
   }, []);
+
+  const clearLongPressPreview = useCallback(() => {
+    if (longPressTimeoutRef.current) {
+      window.clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const previous = previousLitCityIdsRef.current;
+    if (!previous) {
+      previousLitCityIdsRef.current = new Set(litCityIds);
+      return;
+    }
+
+    const newlyLitCityId = [...litCityIds].find((cityId) => !previous.has(cityId));
+    previousLitCityIdsRef.current = new Set(litCityIds);
+    if (!newlyLitCityId) return;
+
+    setSparkedCityId(newlyLitCityId);
+    const timer = window.setTimeout(() => setSparkedCityId(null), 900);
+    return () => window.clearTimeout(timer);
+  }, [litCityIds]);
 
   useEffect(() => {
     localMemoriesRef.current = localMemories;
@@ -402,15 +429,17 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   useEffect(() => {
     let cancelled = false;
 
-    void loadLocalState().then((memories) => {
-      if (!cancelled && memories) localMemoriesRef.current = memories;
-    });
+    const timer = window.setTimeout(() => {
+      void loadLocalState().then((memories) => {
+        if (!cancelled && memories) localMemoriesRef.current = memories;
+      });
+    }, 0);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
   }, []);
-
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
@@ -462,7 +491,8 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const mapCities = useMemo(
     () =>
       mapGeometry.cities.map(({ city, x, y }) => {
-        const localMemory = localMemories[city.id]?.[0];
+        const cityMemories = localMemories[city.id] ?? [];
+        const localMemory = cityMemories[0];
         const lit = litCityIds.has(city.id);
         const customSprite = cityAssets[city.id];
 
@@ -474,10 +504,29 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
           y,
           lit,
           memory: localMemory ?? (lit ? getLatestMemory(city.id) : undefined),
+          // 该城回忆数量（用于徽标）与最早回忆日期（用于轨迹连线排序）。
+          memoryCount: cityMemories.length,
+          earliestDate: cityMemories.reduce<string | undefined>((earliest, memory) => {
+            if (!memory.date) return earliest;
+            return !earliest || memory.date < earliest ? memory.date : earliest;
+          }, undefined),
         };
       }),
     [cityAssets, litCityIds, localMemories, mapGeometry.cities],
   );
+
+  const travelRoute = useMemo(() => {
+    const points = mapCities
+      .filter((city) => city.lit && city.memoryCount > 0 && city.earliestDate)
+      .sort((a, b) => (a.earliestDate ?? "").localeCompare(b.earliestDate ?? ""))
+      .map((city) => ({ id: city.id, x: city.x, y: city.y }));
+
+    if (points.length < 2) return null;
+
+    return points
+      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
+      .join(" ");
+  }, [mapCities]);
 
   const selectedPoint = mapCities.find((city) => city.id === selectedCityId);
   const cardAnchor = selectedPoint
@@ -546,16 +595,13 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: data.memories }));
   };
 
-  const handleUpdateMemory = async (cityId: string, memoryId: string, memory: Memory) => {
+  const handleUpdateMemory = async (cityId: string, memoryId: string, memory: MemoryPatchPayload) => {
     if (!isAdmin) throw new Error("Admin mode required");
 
     const response = await apiFetch(`/memories/${memoryId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...memory,
-        photos: memoryPhotosPayload(memory.photos ?? [memory.image]),
-      }),
+      body: JSON.stringify(memory),
     });
 
     if (!response.ok) throw new Error("Failed to update memory");
@@ -634,6 +680,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const handleSelectCity = (cityId: string, lit: boolean) => {
     const city = provinceCities.find((candidate) => candidate.id === cityId);
     setSelectedCityId(cityId);
+    setMobileSheetMode(!lit && isAdmin ? "create" : "view");
     if (city) focusCity(city);
     if (!lit) {
       setNudgedCityId(cityId);
@@ -807,12 +854,30 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
               />
             ))}
 
+            {travelRoute && (
+              <motion.path
+                d={travelRoute}
+                fill="none"
+                stroke={colors.sky}
+                strokeWidth={3.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="9 11"
+                strokeOpacity={0.58}
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
+                transition={{ duration: 1.05, ease: "easeInOut" }}
+              />
+            )}
+
           </svg>
 
           {mapCities.map((city) => {
             const selected = city.id === selectedCityId;
             const faded = selectedCityId && !selected;
             const nudged = nudgedCityId === city.id;
+            const sparked = sparkedCityId === city.id;
+            const previewOpen = previewCityId === city.id && city.memoryCount > 0;
             const layout = getMarkerLayout(city, selected);
 
             return (
@@ -822,8 +887,9 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
                 initial={false}
                 animate={{
                   x: nudged ? [0, -3, 3, -2, 0] : 0,
+                  scale: sparked ? [1, 1.24, 1] : 1,
                 }}
-                transition={{ duration: nudged ? 0.42 : 0.24 }}
+                transition={{ duration: sparked ? 0.72 : nudged ? 0.42 : 0.24 }}
                 style={{
                   left: city.x - layout.width / 2,
                   top: city.y - layout.height / 2,
@@ -836,9 +902,31 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
                   event.stopPropagation();
                   handleSelectCity(city.id, city.lit);
                 }}
+                onHoverStart={() => {
+                  clearLongPressPreview();
+                  setPreviewCityId(city.id);
+                }}
+                onHoverEnd={() => setPreviewCityId((current) => (current === city.id ? null : current))}
+                onPointerDown={(event) => {
+                  if (event.pointerType === "mouse") return;
+                  clearLongPressPreview();
+                  longPressTimeoutRef.current = window.setTimeout(() => setPreviewCityId(city.id), 400);
+                }}
+                onPointerUp={clearLongPressPreview}
+                onPointerCancel={clearLongPressPreview}
+                onPointerLeave={clearLongPressPreview}
                 aria-label={`${city.lit ? "查看" : "添加"}${city.name}回忆`}
               >
-                <CityMarker city={city} lit={city.lit} selected={selected} />
+                <CityMarker city={city} lit={city.lit} selected={selected} memoryCount={city.memoryCount} />
+                <AnimatePresence>
+                  {previewOpen && (
+                    <CityPreviewPopover
+                      city={city}
+                      memory={city.memory}
+                      memoryCount={city.memoryCount}
+                    />
+                  )}
+                </AnimatePresence>
               </motion.button>
             );
           })}
@@ -846,7 +934,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
       </div>
 
       <div
-        className="absolute left-3 top-3 z-40 flex items-center gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/86 p-2 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur"
+        className="absolute left-3 top-3 z-40 hidden items-center gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/86 p-2 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur lg:flex"
         onClick={(event) => event.stopPropagation()}
       >
         <button
@@ -879,7 +967,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
       </div>
 
       <aside
-        className="absolute right-0 top-3 z-40 w-[230px] rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/90 p-3 shadow-[0_16px_34px_rgba(90,102,112,0.10)] backdrop-blur"
+        className="absolute right-0 top-3 z-40 hidden w-[230px] rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/90 p-3 shadow-[0_16px_34px_rgba(90,102,112,0.10)] backdrop-blur lg:block"
         onClick={(event) => event.stopPropagation()}
         onPointerDown={(event) => event.stopPropagation()}
         onPointerMove={(event) => event.stopPropagation()}
@@ -923,7 +1011,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
         </div>
       </aside>
 
-      {selectedCity && (
+      {selectedCity && !isMobile && (
         <MemoryCard
           key={selectedCity.id}
           city={selectedCity}
@@ -942,30 +1030,62 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
         onDeleteLandmark={handleDeleteCityAsset}
       />
       )}
+
+      {selectedCity && isMobile && (
+        <MemoryCitySheet
+          key={`${selectedCity.id}-mobile-sheet`}
+          open={selectedCity != null}
+          onClose={() => setSelectedCityId(null)}
+          city={selectedCity}
+          localMemories={localMemories[selectedCity.id] ?? []}
+          isLit={litCityIds.has(selectedCity.id)}
+          isAdmin={isAdmin}
+          defaultMode={mobileSheetMode}
+          landmarkImage={cityAssets[selectedCity.id] ?? selectedCity.sprite}
+          hasCustomLandmark={Boolean(cityAssets[selectedCity.id])}
+          onSave={handleSaveMemory}
+          onSetCover={handleSetMemoryCover}
+          onUpdate={handleUpdateMemory}
+          onDelete={handleDeleteMemory}
+          onSaveLandmark={handleSaveCityAsset}
+          onDeleteLandmark={handleDeleteCityAsset}
+        />
+      )}
     </div>
   );
 }
 
-function CityMarker({ city, lit, selected }: Readonly<{ city: City; lit: boolean; selected: boolean }>) {
+function CityMarker({ city, lit, selected, memoryCount }: Readonly<{ city: City; lit: boolean; selected: boolean; memoryCount?: number }>) {
   const isFallbackCity = city.sprite === cityFallbackSprite;
   const layout = getMarkerLayout(city, selected);
+  const showBadge = memoryCount != null && memoryCount > 0;
 
   if (isFallbackCity) {
     return (
       <span className="relative block h-full w-full">
-        <span
-          className={`absolute block rounded-full border-2 border-[#FAFBF7] transition duration-300 ${
-            lit
-              ? "bg-[#E8B8C2] shadow-[0_0_12px_rgba(232,184,194,0.7)]"
-              : "bg-[#D8DDD8] shadow-[0_4px_10px_rgba(90,102,112,0.08)]"
-          }`}
+        <motion.span
+          className="absolute block rounded-full border-2 border-[#FAFBF7]"
+          animate={{
+            backgroundColor: lit ? "#E8B8C2" : "#D8DDD8",
+            boxShadow: lit
+              ? "0 0 12px rgba(232,184,194,0.7)"
+              : "0 4px 10px rgba(90,102,112,0.08)",
+            scale: lit ? 1 : 0.9,
+          }}
+          transition={{ type: "spring", stiffness: 260, damping: 18 }}
           style={{
             left: `calc(50% + ${layout.iconX}px)`,
             top: `calc(50% + ${layout.iconY}px)`,
             width: layout.iconSize,
             height: layout.iconSize,
           }}
-        />
+        >
+          {showBadge && (
+            <span className="absolute -right-1.5 -top-1.5 grid min-h-[16px] min-w-[16px] place-items-center rounded-full border border-[#FAFBF7] bg-[#E8B8C2] px-1 text-[9px] font-bold leading-none text-[#FAFBF7] shadow-[0_2px_6px_rgba(232,184,194,0.55)]">
+              {memoryCount}
+            </span>
+          )}
+        </motion.span>
         <span
           className={`absolute flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#FAFBF7]/92 px-3 py-1.5 text-xs font-semibold shadow-[0_8px_18px_rgba(90,102,112,0.10)] backdrop-blur transition duration-200 ${
             lit
@@ -1025,8 +1145,55 @@ function CityMarker({ city, lit, selected }: Readonly<{ city: City; lit: boolean
             {city.nameEn}
           </span>
         )}
+        {showBadge && (
+          <span className="ml-0.5 grid min-h-[16px] min-w-[16px] place-items-center rounded-full border border-[#FAFBF7] bg-[#E8B8C2] px-1 text-[9px] font-bold leading-none text-[#FAFBF7] shadow-[0_2px_6px_rgba(232,184,194,0.55)]">
+            {memoryCount}
+          </span>
+        )}
       </span>
     </span>
+  );
+}
+
+function CityPreviewPopover({
+  city,
+  memory,
+  memoryCount,
+}: Readonly<{
+  city: City;
+  memory?: Memory;
+  memoryCount: number;
+}>) {
+  const photos = photosOfMemory(memory);
+  const cover = photos[0] ?? city.sprite;
+
+  return (
+    <motion.span
+      className="pointer-events-none absolute left-1/2 top-0 z-40 w-[184px] -translate-x-1/2 -translate-y-[calc(100%+10px)] overflow-hidden rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/96 text-[#5A6670] shadow-[0_14px_32px_rgba(90,102,112,0.14)] backdrop-blur"
+      initial={{ opacity: 0, y: 8, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 6, scale: 0.96 }}
+      transition={{ duration: 0.16 }}
+    >
+      <span className="grid grid-cols-[58px_1fr] gap-2 p-2">
+        <span className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
+          <MemoryThumb
+            className={`pixelated h-full w-full object-cover ${memory ? "" : "opacity-50 grayscale"}`}
+            src={cover}
+            alt={`${city.name} preview`}
+          />
+        </span>
+        <span className="min-w-0 py-0.5">
+          <span className="block truncate text-sm font-semibold text-[#5A6670]">{city.name}</span>
+          <span className="mt-1 block text-[11px] font-medium text-[#E8B8C2]">
+            {memoryCount} 条回忆
+          </span>
+          <span className="mt-1 block truncate text-[11px] text-[#5A6670]/52">
+            {memory?.date ?? "还没有本地回忆"}
+          </span>
+        </span>
+      </span>
+    </motion.span>
   );
 }
 
@@ -1054,7 +1221,7 @@ function MemoryCard({
   onClose: () => void;
   onSave: (cityId: string, memory: Memory) => Promise<void>;
   onSetCover: (cityId: string, memoryId: string, coverImage: string) => Promise<void>;
-  onUpdate: (cityId: string, memoryId: string, memory: Memory) => Promise<void>;
+  onUpdate: (cityId: string, memoryId: string, memory: MemoryPatchPayload) => Promise<void>;
   onDelete: (cityId: string, memoryId: string) => Promise<void>;
   landmarkImage: string;
   hasCustomLandmark: boolean;
@@ -1071,6 +1238,11 @@ function MemoryCard({
     ],
   );
   const memory = memories[0];
+  // 卡片级权限：基于「最新回忆」判断，决定卡片上显示「编辑/加批注/删除」哪个按钮。
+  // useMemoryEditAccess 比较 memory.createdById === session.user.id（两者均为 UUID）。
+  const access = useMemoryEditAccess(memory);
+  const canEditMemory = isAdmin && access.canEdit;
+  const canAnnotateMemory = isAdmin && access.canAddNote && !access.canEdit;
   const memoryPhotos = photosOfMemory(memory);
   const galleryPhotos = Array.from(new Set(memories.flatMap((item) => photosOfMemory(item))));
   const localMemoryIds = useMemo(
@@ -1109,17 +1281,34 @@ function MemoryCard({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const landmarkInputRef = useRef<HTMLInputElement>(null);
 
+  // 表单级权限：基于「正在编辑的记录」editingMemory 判断，而非最新回忆。
+  // 这样编辑较旧记录、或在最新回忆属对方时新建回忆，都能得到正确权限。
+  // 用同步的 computeMemoryEditAccess（而非 hook）：编辑中途登录态变化无意义，
+  // 同步计算可避免 startEdit 切换 editingMemory 后 1 帧的陈旧权限窗口。
+  const editingAccess = computeMemoryEditAccess(editingMemory);
+  // 新建模式（editingMemory 为 null）：任何登录者都可编辑全部字段（任何人都能创建新回忆并成为作者）。
+  // 编辑模式：创建者可编辑全部字段，非创建者只能加 partnerNote 批注。
+  const isCreating = editingMemory == null;
+  const canEditFields = isAdmin && (isCreating || editingAccess.canEdit);
+  const canAnnotate = isAdmin && !isCreating && editingAccess.canAddNote && !editingAccess.canEdit;
+
   const trimmedDate = date.trim();
   const trimmedText = text.trim();
   const normalizedDate = normalizeDottedDate(trimmedDate);
   const dateInvalid = trimmedDate.length > 0 && !normalizedDate;
-  const canSave =
-    isAdmin &&
-    Boolean(normalizedDate) &&
-    trimmedText.length > 0 &&
-    !isReadingPhoto &&
-    !photoError &&
-    !isSaving;
+  // 创建者/新建：保存完整回忆（需日期+正文）；非创建者：仅保存 partnerNote 批注。
+  const canSave = isAdmin
+    ? canEditFields
+      ? Boolean(normalizedDate) &&
+        trimmedText.length > 0 &&
+        !isReadingPhoto &&
+        !photoError &&
+        !isSaving
+      : canAnnotate &&
+        editingMemory != null &&
+        partnerNote.trim().length > 0 &&
+        !isSaving
+    : false;
   const isEditing = Boolean(editingMemory);
   const showMemory = !expanded || activeTab === "memory";
   const showGallery = expanded && activeTab === "gallery";
@@ -1351,11 +1540,21 @@ function MemoryCard({
       return;
     }
     if (!canSave) return;
-    if (!normalizedDate) return;
+    // 非创建者只保存 partnerNote 批注；创建者/新建保存完整回忆（需日期）。
+    if (canEditFields && !normalizedDate) return;
     setIsSaving(true);
     setSaveError("");
 
     try {
+      if (editingMemory && canAnnotate && !canEditFields) {
+        await onUpdate(city.id, editingMemory.id, { partnerNote: partnerNote.trim() || undefined });
+        resetForm(true);
+        setFormOpen(false);
+        return;
+      }
+
+      if (!normalizedDate) return;
+
       const photos = photoDrafts.map((photo) => photo.dataUrl).filter((photo): photo is string => Boolean(photo));
       const nextTags = Array.from(
         new Set(
@@ -1367,7 +1566,7 @@ function MemoryCard({
       ).slice(0, 12);
 
       const nextPhotos = photos.length > 0 ? photos : editingMemory?.photos ?? [editingMemory?.image ?? landmarkImage];
-      const nextMemory = {
+      const nextMemory: Memory = {
         id: editingMemory?.id ?? `${city.id}-local`,
         cityId: city.id,
         city: city.name,
@@ -1382,10 +1581,16 @@ function MemoryCard({
         tags: nextTags,
         visibility,
         partnerNote: partnerNote.trim() || undefined,
+        createdById: editingMemory?.createdById,
         createdAt: editingMemory?.createdAt,
       };
 
-      if (editingMemory) await onUpdate(city.id, editingMemory.id, nextMemory);
+      if (editingMemory) {
+        await onUpdate(city.id, editingMemory.id, {
+          ...nextMemory,
+          photos: memoryPhotosPayload(nextMemory.photos ?? [nextMemory.image]),
+        });
+      }
       else await onSave(city.id, {
         id: `${city.id}-local`,
         cityId: city.id,
@@ -1465,6 +1670,9 @@ function MemoryCard({
           </p>
           {!isAdmin && (
             <p className="mt-2 text-xs font-semibold text-[#5A6670]/42">登录后可以修改回忆</p>
+          )}
+          {isAdmin && memory && !access.canEdit && (
+            <p className="mt-2 text-xs font-semibold text-[#5A6670]/42">这是对方写的回忆，你可以加批注</p>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -1604,53 +1812,41 @@ function MemoryCard({
           )}
           {coverError && <p className="mt-2 text-xs text-[#E8B8C2]">{coverError}</p>}
 
-          {memory?.title && (
-            <h3 className="mt-4 text-lg font-semibold leading-tight text-[#5A6670]">{memory.title}</h3>
-          )}
-          {memory?.placeName && (
-            <p className="mt-1 text-xs font-semibold text-[#A8C8DC]">{memory.placeName}</p>
-          )}
-          <p className="mt-4 text-sm leading-6 text-[#5A6670]/82">
-            {memory?.text ?? "写下第一段回忆后，这座城市会被点亮。"}
-          </p>
-          {memory?.partnerNote && (
-            <p className="mt-3 rounded-[7px] border border-[#F5DCE0]/70 bg-[#F5DCE0]/24 px-3 py-2 text-xs leading-5 text-[#5A6670]/70">
-              {memory.partnerNote}
-            </p>
-          )}
-          {(memory?.mood || memory?.tags?.length) && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {memory.mood && (
-                <span className="rounded-full border border-[#D6E8F0] bg-[#D6E8F0]/36 px-2 py-1 text-[11px] font-semibold text-[#5A6670]/66">
-                  {memory.mood}
-                </span>
-              )}
-              {memory.tags?.map((tag) => (
-                <span
-                  key={`${memory.id}-tag-${tag}`}
-                  className="rounded-full border border-[#D8DDD8] bg-[#FAFBF7]/78 px-2 py-1 text-[11px] font-semibold text-[#5A6670]/54"
-                >
-                  #{tag}
-                </span>
-              ))}
+          {memory ? (
+            <div className="mt-4">
+              <MemoryContentView memory={memory} cityName={city.name} showPhotos={false} showTitle />
             </div>
+          ) : (
+            <p className="mt-4 text-sm leading-6 text-[#5A6670]/82">
+              写下第一段回忆后，这座城市会被点亮。
+            </p>
           )}
           {memory && localMemoryIds.has(memory.id) && (
             <div className="mt-4 flex gap-2">
-              <button
-                className="flex flex-1 items-center justify-center gap-1.5 rounded-[6px] border border-[#D8DDD8] px-3 py-2 text-xs font-medium text-[#5A6670]/70 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
-                type="button"
-                onClick={() => startEdit(memory)}
-                disabled={!isAdmin}
-              >
-                <Pencil className="h-3.5 w-3.5" />
-                编辑
-              </button>
+              {canEditMemory ? (
+                <button
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-[6px] border border-[#D8DDD8] px-3 py-2 text-xs font-medium text-[#5A6670]/70 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+                  type="button"
+                  onClick={() => startEdit(memory)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  编辑
+                </button>
+              ) : canAnnotateMemory ? (
+                <button
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-[6px] border border-[#F5DCE0] px-3 py-2 text-xs font-medium text-[#E8B8C2] transition hover:bg-[#F5DCE0]/55"
+                  type="button"
+                  onClick={() => startEdit(memory)}
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  加批注
+                </button>
+              ) : null}
               <button
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-[6px] border border-[#F5DCE0] px-3 py-2 text-xs font-medium text-[#E8B8C2] transition hover:bg-[#F5DCE0]/55 disabled:opacity-45"
                 type="button"
                 onClick={() => handleDelete(memory)}
-                disabled={!isAdmin || deletingMemoryId === memory.id}
+                disabled={!canEditMemory || deletingMemoryId === memory.id}
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 {deletingMemoryId === memory.id ? "删除中" : "删除"}
@@ -1692,6 +1888,10 @@ function MemoryCard({
             {memories.map((record, recordIndex) => {
               const recordPhotos = photosOfMemory(record);
               const editable = localMemoryIds.has(record.id);
+              // 按每条记录的作者判断权限（历史里各条可能由不同人创建）。
+              const recordAccess = computeMemoryEditAccess(record);
+              const canEditRecord = editable && isAdmin && recordAccess.canEdit;
+              const canAnnotateRecord = editable && isAdmin && recordAccess.canAddNote && !recordAccess.canEdit;
 
               return (
                 <article
@@ -1708,20 +1908,31 @@ function MemoryCard({
                       )}
                       {editable ? (
                         <>
-                          <button
-                            className="grid h-6 w-6 place-items-center rounded-[5px] text-[#5A6670]/46 transition hover:bg-[#D6E8F0]/34 hover:text-[#A8C8DC]"
-                            type="button"
-                            onClick={() => startEdit(record)}
-                            disabled={!isAdmin}
-                            aria-label={`编辑 ${record.city} ${record.date} 回忆`}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
+                          {canEditRecord && (
+                            <button
+                              className="grid h-6 w-6 place-items-center rounded-[5px] text-[#5A6670]/46 transition hover:bg-[#D6E8F0]/34 hover:text-[#A8C8DC]"
+                              type="button"
+                              onClick={() => startEdit(record)}
+                              aria-label={`编辑 ${record.city} ${record.date} 回忆`}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {canAnnotateRecord && (
+                            <button
+                              className="grid h-6 w-6 place-items-center rounded-[5px] text-[#E8B8C2]/70 transition hover:bg-[#F5DCE0]/46 hover:text-[#E8B8C2]"
+                              type="button"
+                              onClick={() => startEdit(record)}
+                              aria-label={`给 ${record.city} ${record.date} 回忆加批注`}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
                           <button
                             className="grid h-6 w-6 place-items-center rounded-[5px] text-[#5A6670]/46 transition hover:bg-[#F5DCE0]/46 hover:text-[#E8B8C2] disabled:opacity-40"
                             type="button"
                             onClick={() => handleDelete(record)}
-                            disabled={!isAdmin || deletingMemoryId === record.id}
+                            disabled={!canEditRecord || deletingMemoryId === record.id}
                             aria-label={`删除 ${record.city} ${record.date} 回忆`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -1797,237 +2008,233 @@ function MemoryCard({
             transition={spring}
           >
             <div className="mt-4 space-y-3 border-t border-dashed border-[#D8DDD8] pt-4">
-              <label className="block">
-                <span className="text-xs font-medium text-[#5A6670]/70">标题</span>
-                <input
-                  className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                  type="text"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="例如：第一次一起看海"
-                  maxLength={120}
-                  disabled={!isAdmin}
-                />
-              </label>
+              {canEditFields && (
+                <>
+                  <label className="block">
+                    <span className="text-xs font-medium text-[#5A6670]/70">标题</span>
+                    <input
+                      className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                      type="text"
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder="例如：第一次一起看海"
+                      maxLength={120}
+                    />
+                  </label>
 
-              <label className="block">
-                <span className="text-xs font-medium text-[#5A6670]/70">具体地点</span>
-                <input
-                  className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                  type="text"
-                  value={placeName}
-                  onChange={(event) => setPlaceName(event.target.value)}
-                  placeholder={`${city.name} 的某条街、某家店、某个角落`}
-                  maxLength={120}
-                  disabled={!isAdmin}
-                />
-              </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-[#5A6670]/70">具体地点</span>
+                    <input
+                      className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                      type="text"
+                      value={placeName}
+                      onChange={(event) => setPlaceName(event.target.value)}
+                      placeholder={`${city.name} 的某条街、某家店、某个角落`}
+                      maxLength={120}
+                    />
+                  </label>
 
-              <label className="block">
-                <span className="text-xs font-medium text-[#5A6670]/70">日期</span>
-                <DatePicker
-                  className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                  value={date}
-                  onChange={setDate}
-                  aria-invalid={dateInvalid}
-                  disabled={!isAdmin}
-                />
-                {dateInvalid && (
-                  <span className="mt-1.5 block text-xs text-[#E8B8C2]">
-                    请使用 2024.05.20 或 2024.5.20 格式
-                  </span>
-                )}
-              </label>
+                  <label className="block">
+                    <span className="text-xs font-medium text-[#5A6670]/70">日期</span>
+                    <DatePicker
+                      className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                      value={date}
+                      onChange={setDate}
+                      aria-invalid={dateInvalid}
+                    />
+                    {dateInvalid && (
+                      <span className="mt-1.5 block text-xs text-[#E8B8C2]">
+                        请使用 2024.05.20 或 2024.5.20 格式
+                      </span>
+                    )}
+                  </label>
 
-              <label className="block">
-                <span className="flex items-center justify-between gap-3 text-xs font-medium text-[#5A6670]/70">
-                  一句话回忆
-                  <span className="font-normal text-[#5A6670]/45">
-                    {text.length}/{memoryTextMaxLength}
-                  </span>
-                </span>
-                <textarea
-                  className="mt-1.5 w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                  rows={3}
-                  value={text}
-                  onChange={(event) => {
-                    setText(event.target.value);
-                    setPolishSuggestion("");
-                    setPolishError("");
-                  }}
-                  placeholder="写下这一刻……"
-                  maxLength={memoryTextMaxLength}
-                  disabled={!isAdmin}
-                />
-              </label>
+                  <label className="block">
+                    <span className="flex items-center justify-between gap-3 text-xs font-medium text-[#5A6670]/70">
+                      一句话回忆
+                      <span className="font-normal text-[#5A6670]/45">
+                        {text.length}/{memoryTextMaxLength}
+                      </span>
+                    </span>
+                    <textarea
+                      className="mt-1.5 w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                      rows={3}
+                      value={text}
+                      onChange={(event) => {
+                        setText(event.target.value);
+                        setPolishSuggestion("");
+                        setPolishError("");
+                      }}
+                      placeholder="写下这一刻……"
+                      maxLength={memoryTextMaxLength}
+                    />
+                  </label>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="text-xs font-medium text-[#5A6670]/70">心情</span>
-                  <input
-                    className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                    type="text"
-                    value={mood}
-                    onChange={(event) => setMood(event.target.value)}
-                    placeholder="开心、想念、松弛..."
-                    maxLength={40}
-                    disabled={!isAdmin}
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-medium text-[#5A6670]/70">标签</span>
-                  <input
-                    className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                    type="text"
-                    value={tags}
-                    onChange={(event) => setTags(event.target.value)}
-                    placeholder="海边，夜景，第一次"
-                    maxLength={120}
-                    disabled={!isAdmin}
-                  />
-                </label>
-              </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="text-xs font-medium text-[#5A6670]/70">心情</span>
+                      <input
+                        className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                        type="text"
+                        value={mood}
+                        onChange={(event) => setMood(event.target.value)}
+                        placeholder="开心、想念、松弛..."
+                        maxLength={40}
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-xs font-medium text-[#5A6670]/70">标签</span>
+                      <input
+                        className="mt-1.5 w-full rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                        type="text"
+                        value={tags}
+                        onChange={(event) => setTags(event.target.value)}
+                        placeholder="海边，夜景，第一次"
+                        maxLength={120}
+                      />
+                    </label>
+                  </div>
 
-              <label className="block">
-                <span className="text-xs font-medium text-[#5A6670]/70">双方补充语</span>
-                <textarea
-                  className="mt-1.5 w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
-                  rows={2}
-                  value={partnerNote}
-                  onChange={(event) => setPartnerNote(event.target.value)}
-                  placeholder="留给另一个人的一句补充..."
-                  maxLength={500}
-                  disabled={!isAdmin}
-                />
-              </label>
-
-              <div>
-                <span className="text-xs font-medium text-[#5A6670]/70">可见性</span>
-                <div className="mt-1.5 grid grid-cols-3 gap-2">
-                  {[
-                    ["both", "给我们看"],
-                    ["me", "只给我"],
-                    ["her", "只给她"],
-                  ].map(([value, label]) => (
-                    <button
-                      key={value}
-                      className={`rounded-[6px] border px-2 py-2 text-xs font-semibold transition ${
-                        visibility === value
-                          ? "border-[#F5DCE0] bg-[#F5DCE0]/62 text-[#B85D70]"
-                          : "border-[#D8DDD8] bg-[#FAFBF7] text-[#5A6670]/58 hover:border-[#A8C8DC]"
-                      }`}
-                      type="button"
-                      onClick={() => setVisibility(value as "both" | "me" | "her")}
-                      disabled={!isAdmin}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  className="inline-flex min-h-9 items-center gap-2 rounded-[6px] border border-[#F5DCE0] bg-[#F5DCE0]/42 px-3 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/70 disabled:cursor-not-allowed disabled:opacity-45"
-                  type="button"
-                  onClick={handlePolishMemory}
-                  disabled={!isAdmin || !trimmedText || polishing}
-                >
-                  {polishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  {polishing ? "润色中" : "AI 润色"}
-                </button>
-                {polishSuggestion && (
-                  <div className="rounded-[7px] border border-[#F5DCE0]/76 bg-white/54 p-3">
-                    <p className="text-xs leading-5 text-[#5A6670]/72">{polishSuggestion}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button
-                        className="rounded-[6px] bg-[#F5DCE0] px-3 py-1.5 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7]"
-                        type="button"
-                        onClick={() => {
-                          setText(polishSuggestion.slice(0, memoryTextMaxLength));
-                          setPolishSuggestion("");
-                          setPolishError("");
-                        }}
-                      >
-                        采用
-                      </button>
-                      <button
-                        className="rounded-[6px] border border-[#D8DDD8] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/66 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
-                        type="button"
-                        onClick={handlePolishMemory}
-                        disabled={polishing}
-                      >
-                        重新润色
-                      </button>
-                      <button
-                        className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/52 transition hover:bg-[#D8DDD8]/28"
-                        type="button"
-                        onClick={() => {
-                          setPolishSuggestion("");
-                          setPolishError("");
-                        }}
-                      >
-                        取消
-                      </button>
+                  <div>
+                    <span className="text-xs font-medium text-[#5A6670]/70">可见性</span>
+                    <div className="mt-1.5 grid grid-cols-3 gap-2">
+                      {[
+                        ["both", "给我们看"],
+                        ["me", "只给我"],
+                        ["her", "只给她"],
+                      ].map(([value, label]) => (
+                        <button
+                          key={value}
+                          className={`rounded-[6px] border px-2 py-2 text-xs font-semibold transition ${
+                            visibility === value
+                              ? "border-[#F5DCE0] bg-[#F5DCE0]/62 text-[#B85D70]"
+                              : "border-[#D8DDD8] bg-[#FAFBF7] text-[#5A6670]/58 hover:border-[#A8C8DC]"
+                          }`}
+                          type="button"
+                          onClick={() => setVisibility(value as "both" | "me" | "her")}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                )}
-                {polishError && <p className="text-xs text-[#E8B8C2]">{polishError}</p>}
-              </div>
 
-              <div>
-                <span className="text-xs font-medium text-[#5A6670]/70">照片</span>
-                <input
-                  ref={fileInputRef}
-                  className="hidden"
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handlePickFile}
-                  disabled={!isAdmin}
-                />
-                <button
-                  className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-[6px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7] px-3 py-3 text-sm text-[#5A6670]/70 transition hover:border-[#E8B8C2] hover:text-[#E8B8C2]"
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={!isAdmin}
-                >
-                  {photoDrafts.length > 0 ? (
-                    <span className="relative w-full">
-                      <span className="grid grid-cols-4 gap-2">
-                        {photoDrafts.slice(0, 8).map((photo, index) => (
-                          <span
-                            key={`${photo.previewUrl}-${index}`}
-                            className="relative aspect-square overflow-hidden rounded-[4px] bg-[#D6E8F0]"
+                  <div className="space-y-2">
+                    <button
+                      className="inline-flex min-h-9 items-center gap-2 rounded-[6px] border border-[#F5DCE0] bg-[#F5DCE0]/42 px-3 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/70 disabled:cursor-not-allowed disabled:opacity-45"
+                      type="button"
+                      onClick={handlePolishMemory}
+                      disabled={!trimmedText || polishing}
+                    >
+                      {polishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                      {polishing ? "润色中" : "AI 润色"}
+                    </button>
+                    {polishSuggestion && (
+                      <div className="rounded-[7px] border border-[#F5DCE0]/76 bg-white/54 p-3">
+                        <p className="text-xs leading-5 text-[#5A6670]/72">{polishSuggestion}</p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <button
+                            className="rounded-[6px] bg-[#F5DCE0] px-3 py-1.5 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7]"
+                            type="button"
+                            onClick={() => {
+                              setText(polishSuggestion.slice(0, memoryTextMaxLength));
+                              setPolishSuggestion("");
+                              setPolishError("");
+                            }}
                           >
-                            <LocalPrivacyImg
-                              className="pixelated h-full w-full object-cover"
-                              src={photo.previewUrl}
-                              alt={photo.name || `照片预览 ${index + 1}`}
-                            />
+                            采用
+                          </button>
+                          <button
+                            className="rounded-[6px] border border-[#D8DDD8] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/66 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+                            type="button"
+                            onClick={handlePolishMemory}
+                            disabled={polishing}
+                          >
+                            重新润色
+                          </button>
+                          <button
+                            className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/52 transition hover:bg-[#D8DDD8]/28"
+                            type="button"
+                            onClick={() => {
+                              setPolishSuggestion("");
+                              setPolishError("");
+                            }}
+                          >
+                            取消
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {polishError && <p className="text-xs text-[#E8B8C2]">{polishError}</p>}
+                  </div>
+
+                  <div>
+                    <span className="text-xs font-medium text-[#5A6670]/70">照片</span>
+                    <input
+                      ref={fileInputRef}
+                      className="hidden"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handlePickFile}
+                    />
+                    <button
+                      className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-[6px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7] px-3 py-3 text-sm text-[#5A6670]/70 transition hover:border-[#E8B8C2] hover:text-[#E8B8C2]"
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {photoDrafts.length > 0 ? (
+                        <span className="relative w-full">
+                          <span className="grid grid-cols-4 gap-2">
+                            {photoDrafts.slice(0, 8).map((photo, index) => (
+                              <span
+                                key={`${photo.previewUrl}-${index}`}
+                                className="relative aspect-square overflow-hidden rounded-[4px] bg-[#D6E8F0]"
+                              >
+                                <LocalPrivacyImg
+                                  className="pixelated h-full w-full object-cover"
+                                  src={photo.previewUrl}
+                                  alt={photo.name || `照片预览 ${index + 1}`}
+                                />
+                              </span>
+                            ))}
                           </span>
-                        ))}
-                      </span>
-                      <span className="mt-2 block text-xs text-[#5A6670]/58">
-                        已选择 {photoDrafts.length} 张
-                      </span>
-                      {isReadingPhoto && (
-                        <span className="absolute inset-0 grid place-items-center bg-[#FAFBF7]/72 text-xs text-[#5A6670]/70">
-                          读取中
+                          <span className="mt-2 block text-xs text-[#5A6670]/58">
+                            已选择 {photoDrafts.length} 张
+                          </span>
+                          {isReadingPhoto && (
+                            <span className="absolute inset-0 grid place-items-center bg-[#FAFBF7]/72 text-xs text-[#5A6670]/70">
+                              读取中
+                            </span>
+                          )}
                         </span>
+                      ) : (
+                        <>
+                          <ImagePlus className="h-4 w-4" />
+                          选择本地图片，可多选
+                        </>
                       )}
-                    </span>
-                  ) : (
-                    <>
-                      <ImagePlus className="h-4 w-4" />
-                      选择本地图片，可多选
-                    </>
-                  )}
-                </button>
-                {photoError && (
-                  <span className="mt-1.5 block text-xs text-[#E8B8C2]">{photoError}</span>
-                )}
-              </div>
+                    </button>
+                    {photoError && (
+                      <span className="mt-1.5 block text-xs text-[#E8B8C2]">{photoError}</span>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {canAnnotate && (
+                <label className="block">
+                  <span className="text-xs font-medium text-[#5A6670]/70">给对方的批注</span>
+                  <textarea
+                    className="mt-1.5 w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    rows={4}
+                    value={partnerNote}
+                    onChange={(event) => setPartnerNote(event.target.value)}
+                    placeholder="留给另一个人的一句补充..."
+                    maxLength={500}
+                  />
+                </label>
+              )}
 
               <div className="sticky bottom-0 -mx-5 flex items-center gap-2 border-t border-[#D8DDD8]/70 bg-[#FAFBF7]/96 px-5 pb-1 pt-3 shadow-[0_-10px_18px_rgba(250,251,247,0.88)] backdrop-blur">
                 <button
@@ -2036,7 +2243,7 @@ function MemoryCard({
                   onClick={handleSave}
                   disabled={!canSave}
                 >
-                  {isSaving ? "保存中" : isEditing ? "保存修改" : "保存回忆"}
+                  {isSaving ? "保存中" : canAnnotate ? "保存批注" : isEditing ? "保存修改" : "保存回忆"}
                 </button>
                 <button
                   className="rounded-[6px] px-3 py-2 text-sm text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28 hover:text-[#5A6670]"

@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import type { SWRConfiguration } from "swr";
 import { apiFetch } from "@/lib/apiClient";
+import type { LocalMemoryStore } from "@/data/progress";
 
 const defaultFetcher = async (url: string) => {
   const response = await apiFetch(url);
@@ -20,7 +21,7 @@ export function useApi<T>(
 }
 
 export function useMemories() {
-  return useApi<{ memories: Record<string, any[]> }>("/api/v1/memories", {
+  return useApi<{ memories: LocalMemoryStore }>("/api/v1/memories", {
     revalidateOnMount: true,
   });
 }

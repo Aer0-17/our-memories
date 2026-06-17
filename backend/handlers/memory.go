@@ -181,6 +181,7 @@ func CreateMemory(c *gin.Context) {
 func UpdateMemory(c *gin.Context) {
 	id := c.Param("id")
 	spaceID := c.GetString("spaceID")
+	userID := c.GetString("userID")
 
 	var req struct {
 		Title       string   `json:"title"`
@@ -206,7 +207,27 @@ func UpdateMemory(c *gin.Context) {
 		return
 	}
 
-	if req.Date != "" || req.Text != "" {
+	// 检查回忆是否存在并获取创建者ID
+	var createdByID string
+	err := db.DB.QueryRow(`SELECT created_by_id FROM memories WHERE id = ? AND space_id = ?`, id, spaceID).Scan(&createdByID)
+	if err != nil {
+		utils.Error(c, 404, "Memory not found")
+		return
+	}
+
+	// 判断是否为创建者
+	isCreator := createdByID == userID
+
+	// 非创建者只能更新 partner_note，前端会发送最小 payload：{ partnerNote }。
+	if !isCreator {
+		_, err := db.DB.Exec(`UPDATE memories SET partner_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND space_id = ?`,
+			req.PartnerNote, id, spaceID)
+		if err != nil {
+			utils.Error(c, 500, "Failed to update partner note")
+			return
+		}
+	} else if req.Date != "" || req.Text != "" {
+		// 创建者可以更新所有字段
 		tagsJSON, _ := json.Marshal(req.Tags)
 		if req.Visibility == "" {
 			req.Visibility = "both"
@@ -221,7 +242,8 @@ func UpdateMemory(c *gin.Context) {
 		}
 	}
 
-	if len(req.Photos) > 0 || req.CoverImage != "" {
+	// 只有创建者可以更新照片
+	if isCreator && (len(req.Photos) > 0 || req.CoverImage != "") {
 		_, _ = db.DB.Exec(`DELETE FROM memory_photos WHERE memory_id = ?`, id)
 		photos := req.Photos
 		if len(photos) == 0 && req.CoverImage != "" {
@@ -253,8 +275,23 @@ func UpdateMemory(c *gin.Context) {
 func DeleteMemory(c *gin.Context) {
 	id := c.Param("id")
 	spaceID := c.GetString("spaceID")
+	userID := c.GetString("userID")
 
-	_, err := db.DB.Exec(`DELETE FROM memories WHERE id = ? AND space_id = ?`, id, spaceID)
+	// 检查回忆是否存在并获取创建者ID
+	var createdByID string
+	err := db.DB.QueryRow(`SELECT created_by_id FROM memories WHERE id = ? AND space_id = ?`, id, spaceID).Scan(&createdByID)
+	if err != nil {
+		utils.Error(c, 404, "Memory not found")
+		return
+	}
+
+	// 只有创建者可以删除
+	if createdByID != userID {
+		utils.Error(c, 403, "Only the creator can delete this memory")
+		return
+	}
+
+	_, err = db.DB.Exec(`DELETE FROM memories WHERE id = ? AND space_id = ?`, id, spaceID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to delete memory")
 		return

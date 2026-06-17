@@ -30,8 +30,10 @@ import {
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { apiFetch } from "@/lib/apiClient";
 import { normalizeDottedDate } from "@/lib/dateFormat";
-import { useContentEditAccess } from "@/lib/useContentEditAccess";
+import { useContentEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
+import { useIsMobile } from "@/lib/useIsMobile";
 import { useMemories } from "@/lib/swr";
+import { MemoryCitySheet, type MemoryPatchPayload } from "@/components/memories/MemoryCitySheet";
 
 type ArchiveView = "city" | "timeline";
 type MemoryItem = {
@@ -641,65 +643,79 @@ function MemoryImage({ memory }: Readonly<{ memory: Memory }>) {
   );
 }
 
-function MemoryCard({ item, compact = false, onDelete }: Readonly<{ item: MemoryItem; compact?: boolean; onDelete?: (memoryId: string) => void }>) {
+function MemoryCard({ item, compact = false, onDelete, onOpen }: Readonly<{ item: MemoryItem; compact?: boolean; onDelete?: (memoryId: string) => void; onOpen?: (item: MemoryItem) => void }>) {
   const { memory, city } = item;
+  // 只有回忆的创建者才能删除（后端 DeleteMemory 对非创建者返回 403）。
+  const access = useMemoryEditAccess(memory);
+  const showDelete = Boolean(onDelete);
+  const canDelete = showDelete && access.canEdit;
+  // 移动端：整卡 button 原地展开详情；桌面端：Link 跳地图页。
+  const href = city ? `/province/${city.provinceId}?city=${memory.cityId}` : "/";
+  const cardInner = (
+    <article className={compact ? "grid grid-cols-[92px_1fr] gap-3" : "grid grid-cols-[112px_1fr] gap-4"}>
+      <div className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
+        <MemoryImage memory={memory} />
+      </div>
+      <div className="min-w-0 py-1">
+        <div className="flex items-baseline gap-2">
+          <h3 className="truncate text-lg font-semibold text-[#5A6670]">{memory.title || memory.city}</h3>
+          <span className="shrink-0 text-sm text-[#5A6670]/46">{memory.date}</span>
+        </div>
+        {(memory.title || memory.placeName) && (
+          <p className="mt-1 truncate text-xs font-semibold text-[#A8C8DC]">
+            {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5A6670]/70">{memory.text}</p>
+        {(memory.mood || memory.tags?.length) && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {memory.mood && (
+              <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
+                {memory.mood}
+              </span>
+            )}
+            {memory.tags?.slice(0, 3).map((tag) => (
+              <span
+                key={`${memory.id}-archive-tag-${tag}`}
+                className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#A8C8DC]">
+          <MapPin className="h-3.5 w-3.5" />
+          {onOpen ? "查看回忆" : "回到地图"}
+        </p>
+      </div>
+    </article>
+  );
 
   return (
     <div className="group relative block rounded-[8px] border border-[#D8DDD8]/74 bg-[#FAFBF7]/78 p-3 shadow-[0_12px_26px_rgba(90,102,112,0.055)] backdrop-blur transition hover:border-[#F5DCE0] hover:shadow-[0_16px_34px_rgba(90,102,112,0.10)]">
-      <Link
-        className="block"
-        href={city ? `/province/${city.provinceId}?city=${memory.cityId}` : "/"}
-      >
-        <article className={compact ? "grid grid-cols-[92px_1fr] gap-3" : "grid grid-cols-[112px_1fr] gap-4"}>
-          <div className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
-            <MemoryImage memory={memory} />
-          </div>
-          <div className="min-w-0 py-1">
-            <div className="flex items-baseline gap-2">
-              <h3 className="truncate text-lg font-semibold text-[#5A6670]">{memory.title || memory.city}</h3>
-              <span className="shrink-0 text-sm text-[#5A6670]/46">{memory.date}</span>
-            </div>
-            {(memory.title || memory.placeName) && (
-              <p className="mt-1 truncate text-xs font-semibold text-[#A8C8DC]">
-                {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
-              </p>
-            )}
-            <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5A6670]/70">{memory.text}</p>
-            {(memory.mood || memory.tags?.length) && (
-              <div className="mt-2 flex flex-wrap gap-1">
-                {memory.mood && (
-                  <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
-                    {memory.mood}
-                  </span>
-                )}
-                {memory.tags?.slice(0, 3).map((tag) => (
-                  <span
-                    key={`${memory.id}-archive-tag-${tag}`}
-                    className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-[#A8C8DC]">
-              <MapPin className="h-3.5 w-3.5" />
-              回到地图
-            </p>
-          </div>
-        </article>
-      </Link>
-      {onDelete && (
+      {onOpen ? (
+        <button className="block w-full text-left" type="button" onClick={() => onOpen(item)}>
+          {cardInner}
+        </button>
+      ) : (
+        <Link className="block" href={href}>
+          {cardInner}
+        </Link>
+      )}
+      {showDelete && (
         <button
-          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-red-100 bg-[#FAFBF7]/95 px-2.5 py-2 text-xs font-semibold text-red-500 shadow-lg transition hover:bg-red-50"
+          className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-red-100 bg-[#FAFBF7]/95 px-2.5 py-2 text-xs font-semibold text-red-500 shadow-lg transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-45"
           type="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
+            if (!canDelete) return;
             if (confirm("确定要删除这条回忆吗？")) {
-              onDelete(memory.id);
+              onDelete?.(memory.id);
             }
           }}
+          disabled={!canDelete}
           title="删除回忆"
         >
           <Trash2 className="h-4 w-4" />
@@ -715,8 +731,11 @@ export default function MemoryArchive() {
   const [view, setView] = useState<ArchiveView>("city");
   const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
   const canEdit = useContentEditAccess();
+  const isMobile = useIsMobile();
+  // 移动端原地展开的回忆详情（不跳转到地图页）。
+  const [selectedItem, setSelectedItem] = useState<MemoryItem | null>(null);
 
-  const localMemories = data?.memories ?? {};
+  const localMemories = useMemo(() => data?.memories ?? {}, [data?.memories]);
 
   useEffect(() => {
     const handleMemoryUpdate = (event: Event) => {
@@ -741,6 +760,81 @@ export default function MemoryArchive() {
     const data = (await response.json()) as { memories: LocalMemoryStore };
     mutate({ memories: data.memories }, { revalidate: false });
     window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: data.memories }));
+    setSelectedItem((current) => (current?.memory.id === memoryId ? null : current));
+  };
+
+  const handleSaveMemory = async (cityId: string, memory: Memory) => {
+    if (!canEdit) return;
+
+    const response = await apiFetch("/api/v1/memories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...memory,
+        photos: memoryPhotosPayload(memory.photos ?? [memory.image]),
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to save memory");
+
+    const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
+    mutate({ memories: data.memories }, { revalidate: false });
+    window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: data.memories }));
+  };
+
+  const handleUpdateMemory = async (cityId: string, memoryId: string, memory: MemoryPatchPayload) => {
+    if (!canEdit) return;
+
+    const response = await apiFetch(`/memories/${memoryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(memory),
+    });
+
+    if (!response.ok) throw new Error("Failed to update memory");
+
+    const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
+    const nextMemories = data.memories;
+    mutate({ memories: nextMemories }, { revalidate: false });
+    window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: nextMemories }));
+    setSelectedItem((current) => {
+      if (!current || current.memory.id !== memoryId) return current;
+      const updatedMemory =
+        (Object.values(nextMemories) as Memory[][])
+          .flat()
+          .find((candidate) => candidate.id === memoryId) ?? data.memory ?? current.memory;
+
+      return { ...current, memory: updatedMemory };
+    });
+  };
+
+  const handleSetMemoryCover = async (cityId: string, memoryId: string, coverImage: string) => {
+    if (!canEdit) return;
+
+    const response = await apiFetch(`/memories/${memoryId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ coverImage }),
+    });
+
+    if (!response.ok) throw new Error("Failed to update memory cover");
+
+    const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
+    const nextMemories = data.memories;
+    mutate({ memories: nextMemories }, { revalidate: false });
+    window.dispatchEvent(new CustomEvent(memoryStoreUpdatedEvent, { detail: nextMemories }));
+    setSelectedItem((current) => {
+      if (!current || current.memory.id !== memoryId) return current;
+      const updatedMemory =
+        (Object.values(nextMemories) as Memory[][])
+          .flat()
+          .find((candidate) => candidate.id === memoryId) ?? data.memory ?? {
+          ...current.memory,
+          image: coverImage,
+        };
+
+      return { ...current, memory: updatedMemory };
+    });
   };
 
   const memoryItems = useMemo<MemoryItem[]>(() => {
@@ -892,6 +986,7 @@ export default function MemoryArchive() {
                           item={item}
                           compact
                           onDelete={canEdit ? (memoryId) => handleDeleteMemory(item.memory.cityId, memoryId) : undefined}
+                          onOpen={isMobile ? setSelectedItem : undefined}
                         />
                       ))}
                     </div>
@@ -914,6 +1009,7 @@ export default function MemoryArchive() {
                         key={item.memory.id}
                         item={item}
                         onDelete={canEdit ? (memoryId) => handleDeleteMemory(item.memory.cityId, memoryId) : undefined}
+                        onOpen={isMobile ? setSelectedItem : undefined}
                       />
                     ))}
                   </div>
@@ -921,6 +1017,22 @@ export default function MemoryArchive() {
               ))}
             </div>
           )}
+
+      {selectedItem?.city && (
+        <MemoryCitySheet
+          open={selectedItem != null}
+          onClose={() => setSelectedItem(null)}
+          city={selectedItem.city}
+          localMemories={localMemories[selectedItem.memory.cityId] ?? []}
+          selectedMemoryId={selectedItem.memory.id}
+          isLit={Boolean(localMemories[selectedItem.memory.cityId]?.length)}
+          isAdmin={canEdit}
+          onSave={handleSaveMemory}
+          onUpdate={handleUpdateMemory}
+          onDelete={handleDeleteMemory}
+          onSetCover={handleSetMemoryCover}
+        />
+      )}
     </MemoryPageShell>
   );
 }
