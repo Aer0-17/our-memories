@@ -28,6 +28,7 @@ import { MemoryContentView, MemoryThumb, photosOfMemory } from "@/components/mem
 import { MemoryCitySheet, type MemoryPatchPayload } from "@/components/memories/MemoryCitySheet";
 import { DatePicker } from "@/components/ui/input";
 import { apiFetch } from "@/lib/apiClient";
+import { adminModeUpdatedEvent } from "@/data/adminMode";
 import { normalizeDottedDate } from "@/lib/dateFormat";
 import { computeMemoryEditAccess, useContentEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -410,38 +411,54 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     };
   }, []);
 
-  const loadLocalState = async () => {
-      const [memoryResponse, assetResponse] = await Promise.all([
-        apiFetch("/api/v1/memories", { cache: "no-store" }).catch(() => null),
-        apiFetch("/api/v1/city-assets", { cache: "no-store" }).catch(() => null),
-      ]);
+  const loadLocalState = useCallback(async () => {
+    const [memoryResponse, assetResponse] = await Promise.all([
+      apiFetch("/api/v1/memories", { cache: "no-store" }).catch(() => null),
+      apiFetch("/api/v1/city-assets", { cache: "no-store" }).catch(() => null),
+    ]);
 
-      const memoryData = (await memoryResponse?.json().catch(() => null)) as
-        | { memories?: LocalMemoryStore }
-        | null;
-      const assetData = (await assetResponse?.json().catch(() => null)) as
-        | { assets?: CityAssetStore }
-        | null;
+    const memoryData = (await memoryResponse?.json().catch(() => null)) as
+      | { memories?: LocalMemoryStore }
+      | null;
+    const assetData = (await assetResponse?.json().catch(() => null)) as
+      | { assets?: CityAssetStore }
+      | null;
 
-      if (memoryData?.memories) setLocalMemories(memoryData.memories);
-      if (assetData?.assets) setCityAssets(assetData.assets);
-      return memoryData?.memories;
-  };
+    if (memoryData?.memories) setLocalMemories(memoryData.memories);
+    if (assetData?.assets) setCityAssets(assetData.assets);
+    return memoryData?.memories;
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-
-    const timer = window.setTimeout(() => {
+    const applyMemories = (memories: LocalMemoryStore) => {
+      if (cancelled) return;
+      localMemoriesRef.current = memories;
+      setLocalMemories(memories);
+    };
+    const reloadLocalState = () => {
       void loadLocalState().then((memories) => {
-        if (!cancelled && memories) localMemoriesRef.current = memories;
+        if (memories) applyMemories(memories);
       });
-    }, 0);
+    };
+    const handleMemoryUpdate = (event: Event) => {
+      const detail = (event as CustomEvent<LocalMemoryStore>).detail;
+      if (detail) applyMemories(detail);
+    };
+
+    const timer = window.setTimeout(reloadLocalState, 0);
+    window.addEventListener(memoryStoreUpdatedEvent, handleMemoryUpdate);
+    window.addEventListener(adminModeUpdatedEvent, reloadLocalState);
+    window.addEventListener("storage", reloadLocalState);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
+      window.removeEventListener(memoryStoreUpdatedEvent, handleMemoryUpdate);
+      window.removeEventListener(adminModeUpdatedEvent, reloadLocalState);
+      window.removeEventListener("storage", reloadLocalState);
     };
-  }, []);
+  }, [loadLocalState]);
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
@@ -1386,7 +1403,6 @@ function MemoryCard({
         !photoError &&
         !isSaving
       : canAnnotate &&
-        editingMemory != null &&
         editingMemory != null &&
         partnerNote.trim() !== (editingMemory.partnerNote ?? "").trim() &&
         (partnerNote.trim().length > 0 || Boolean(editingMemory.partnerNote?.trim())) &&

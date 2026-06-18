@@ -134,7 +134,7 @@ func CreateMemory(c *gin.Context) {
 		Mood        string   `json:"mood"`
 		Tags        []string `json:"tags"`
 		Visibility  string   `json:"visibility"`
-			PartnerNote *string  `json:"partnerNote"`
+		PartnerNote string   `json:"partnerNote"`
 		PlaceName   string   `json:"placeName"`
 		Photos      []struct {
 			Key      string `json:"key"`
@@ -198,7 +198,7 @@ func UpdateMemory(c *gin.Context) {
 		Mood        string   `json:"mood"`
 		Tags        []string `json:"tags"`
 		Visibility  string   `json:"visibility"`
-		PartnerNote string   `json:"partnerNote"`
+		PartnerNote *string  `json:"partnerNote"`
 		PlaceName   string   `json:"placeName"`
 		CoverImage  string   `json:"coverImage"`
 		Photos      []struct {
