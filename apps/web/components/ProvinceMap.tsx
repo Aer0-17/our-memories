@@ -17,9 +17,11 @@ import {
   X,
 } from "lucide-react";
 import { chinaFeatures, makePath, makeProjectionForProvince, provinceIdOf } from "@/lib/geo";
+import { cityRegionPath, cityRegionsOfProvince } from "@/lib/cityGeo";
 import { cityFallbackSprite, getCitiesByProvince, type City } from "@/data/cities";
 import { getLatestMemory, sortMemoriesByTime, type Memory } from "@/data/memories";
 import { getLitCityIds, memoryStoreUpdatedEvent, type LocalMemoryStore } from "@/data/progress";
+import { buildMemoryRoutePoints, curvedRoutePath } from "@/lib/memoryRoutes";
 import type { Province } from "@/data/provinces";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { MemoryContentView, MemoryThumb, photosOfMemory } from "@/components/memories/MemoryContentView";
@@ -464,6 +466,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const mapGeometry = useMemo(() => {
     const projection = makeProjectionForProvince(province.id, width, height, 88);
     const path = makePath(projection);
+    const cityRegions = cityRegionsOfProvince(province.id);
     const cityPoint = (city: Pick<City, "lng" | "lat">) => {
       const [x, y] = projection([city.lng, city.lat]) ?? [width / 2, height / 2];
 
@@ -485,6 +488,11 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
           y,
         };
       }),
+      cityRegions: cityRegions.map((region) => ({
+        city: region.city,
+        wholeProvince: region.wholeProvince,
+        d: cityRegionPath(region, projection),
+      })),
     };
   }, [height, province.id, provinceCities, width]);
 
@@ -515,18 +523,18 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     [cityAssets, litCityIds, localMemories, mapGeometry.cities],
   );
 
-  const travelRoute = useMemo(() => {
-    const points = mapCities
-      .filter((city) => city.lit && city.memoryCount > 0 && city.earliestDate)
-      .sort((a, b) => (a.earliestDate ?? "").localeCompare(b.earliestDate ?? ""))
-      .map((city) => ({ id: city.id, x: city.x, y: city.y }));
+  const routePoints = useMemo(() => {
+    const pointByCityId = new Map(mapCities.map((city) => [city.id, { x: city.x, y: city.y }]));
 
-    if (points.length < 2) return null;
+    return buildMemoryRoutePoints(localMemories, province.id)
+      .map((point) => {
+        const projected = pointByCityId.get(point.city.id);
+        return projected ? { ...point, ...projected } : null;
+      })
+      .filter(Boolean) as Array<ReturnType<typeof buildMemoryRoutePoints>[number] & { x: number; y: number }>;
+  }, [localMemories, mapCities, province.id]);
 
-    return points
-      .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-      .join(" ");
-  }, [mapCities]);
+  const travelRoute = useMemo(() => curvedRoutePath(routePoints), [routePoints]);
 
   const selectedPoint = mapCities.find((city) => city.id === selectedCityId);
   const cardAnchor = selectedPoint
@@ -838,6 +846,20 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
+              <filter id="cityRegionGlow" x="-18%" y="-18%" width="136%" height="136%">
+                <feGaussianBlur stdDeviation="3" result="blur" />
+                <feFlood floodColor={colors.sky} floodOpacity="0.34" />
+                <feComposite in2="blur" operator="in" />
+                <feMerge>
+                  <feMergeNode />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+              <linearGradient id={`provinceRouteGradient-${province.id}`} x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stopColor={colors.bloom} stopOpacity="0.74" />
+                <stop offset="54%" stopColor={colors.sky} stopOpacity="0.82" />
+                <stop offset="100%" stopColor="#D4E8D0" stopOpacity="0.72" />
+              </linearGradient>
             </defs>
 
             {mapGeometry.paths.map((path) => (
@@ -854,21 +876,80 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
               />
             ))}
 
+            {mapGeometry.cityRegions.map((region) => {
+              if (!region.d) return null;
+              const lit = litCityIds.has(region.city.id);
+              const selected = selectedCityId === region.city.id;
+              const hovered = previewCityId === region.city.id;
+
+              return (
+                <motion.path
+                  key={`${region.city.id}-region`}
+                  d={region.d}
+                  fill={lit ? colors.sakura : colors.cream}
+                  fillOpacity={selected ? 0.74 : lit ? 0.58 : 0.28}
+                  stroke={selected ? colors.bloom : lit ? colors.bloom : colors.ink}
+                  strokeOpacity={selected ? 0.96 : lit ? 0.64 : 0.16}
+                  strokeWidth={selected ? 2.8 : hovered ? 2.2 : 1.05}
+                  strokeLinejoin="round"
+                  className="cursor-pointer outline-none transition duration-300"
+                  filter={selected || hovered ? "url(#cityRegionGlow)" : undefined}
+                  whileHover={{ fillOpacity: lit ? 0.7 : 0.42 }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${region.city.name}城市区块，${lit ? "查看回忆" : "添加回忆"}`}
+                  onMouseEnter={() => setPreviewCityId(region.city.id)}
+                  onMouseLeave={() => setPreviewCityId((current) => (current === region.city.id ? null : current))}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleSelectCity(region.city.id, lit);
+                  }}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    handleSelectCity(region.city.id, lit);
+                  }}
+                />
+              );
+            })}
+
             {travelRoute && (
               <motion.path
                 d={travelRoute}
                 fill="none"
-                stroke={colors.sky}
-                strokeWidth={3.2}
+                stroke={`url(#provinceRouteGradient-${province.id})`}
+                strokeWidth={3}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeDasharray="9 11"
-                strokeOpacity={0.58}
+                strokeDasharray="8 10"
+                strokeOpacity={0.72}
+                pointerEvents="none"
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.05, ease: "easeInOut" }}
               />
             )}
+
+            {routePoints.map((point) => (
+              <g key={`${point.memory.id}-route-node`} pointerEvents="none">
+                <circle cx={point.x} cy={point.y} r={8.5} fill={colors.cream} fillOpacity="0.92" />
+                <circle cx={point.x} cy={point.y} r={4.2} fill={colors.bloom} fillOpacity="0.88" />
+                {routePoints.length <= 9 && (
+                  <text
+                    x={point.x}
+                    y={point.y - 11}
+                    textAnchor="middle"
+                    fontSize="10"
+                    fontWeight="700"
+                    fill={colors.ink}
+                    fillOpacity="0.58"
+                  >
+                    {point.order}
+                  </text>
+                )}
+              </g>
+            ))}
 
           </svg>
 
@@ -880,10 +961,10 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
             const previewOpen = previewCityId === city.id && city.memoryCount > 0;
             const layout = getMarkerLayout(city, selected);
 
-            return (
-              <motion.button
-                key={city.id}
-                className="group absolute text-left transition duration-300"
+	            return (
+	              <motion.button
+	                key={city.id}
+	                className="group pointer-events-none absolute text-left transition duration-300 lg:pointer-events-auto"
                 initial={false}
                 animate={{
                   x: nudged ? [0, -3, 3, -2, 0] : 0,
@@ -1238,7 +1319,7 @@ function MemoryCard({
     ],
   );
   const memory = memories[0];
-  // 卡片级权限：基于「最新回忆」判断，决定卡片上显示「编辑/加批注/删除」哪个按钮。
+  // 卡片级权限：基于「最新回忆」判断，决定卡片上显示「编辑/添加补充/删除」哪个按钮。
   // useMemoryEditAccess 比较 memory.createdById === session.user.id（两者均为 UUID）。
   const access = useMemoryEditAccess(memory);
   const canEditMemory = isAdmin && access.canEdit;
@@ -1287,7 +1368,7 @@ function MemoryCard({
   // 同步计算可避免 startEdit 切换 editingMemory 后 1 帧的陈旧权限窗口。
   const editingAccess = computeMemoryEditAccess(editingMemory);
   // 新建模式（editingMemory 为 null）：任何登录者都可编辑全部字段（任何人都能创建新回忆并成为作者）。
-  // 编辑模式：创建者可编辑全部字段，非创建者只能加 partnerNote 批注。
+  // 编辑模式：创建者可编辑全部字段，非创建者只能添加补充回忆。
   const isCreating = editingMemory == null;
   const canEditFields = isAdmin && (isCreating || editingAccess.canEdit);
   const canAnnotate = isAdmin && !isCreating && editingAccess.canAddNote && !editingAccess.canEdit;
@@ -1296,7 +1377,7 @@ function MemoryCard({
   const trimmedText = text.trim();
   const normalizedDate = normalizeDottedDate(trimmedDate);
   const dateInvalid = trimmedDate.length > 0 && !normalizedDate;
-  // 创建者/新建：保存完整回忆（需日期+正文）；非创建者：仅保存 partnerNote 批注。
+  // 创建者/新建：保存完整回忆（需日期+正文）；非创建者：仅保存补充回忆。
   const canSave = isAdmin
     ? canEditFields
       ? Boolean(normalizedDate) &&
@@ -1306,7 +1387,9 @@ function MemoryCard({
         !isSaving
       : canAnnotate &&
         editingMemory != null &&
-        partnerNote.trim().length > 0 &&
+        editingMemory != null &&
+        partnerNote.trim() !== (editingMemory.partnerNote ?? "").trim() &&
+        (partnerNote.trim().length > 0 || Boolean(editingMemory.partnerNote?.trim())) &&
         !isSaving
     : false;
   const isEditing = Boolean(editingMemory);
@@ -1540,14 +1623,14 @@ function MemoryCard({
       return;
     }
     if (!canSave) return;
-    // 非创建者只保存 partnerNote 批注；创建者/新建保存完整回忆（需日期）。
+    // 非创建者只保存补充回忆；创建者/新建保存完整回忆（需日期）。
     if (canEditFields && !normalizedDate) return;
     setIsSaving(true);
     setSaveError("");
 
     try {
       if (editingMemory && canAnnotate && !canEditFields) {
-        await onUpdate(city.id, editingMemory.id, { partnerNote: partnerNote.trim() || undefined });
+        await onUpdate(city.id, editingMemory.id, { partnerNote: partnerNote.trim() });
         resetForm(true);
         setFormOpen(false);
         return;
@@ -1580,7 +1663,6 @@ function MemoryCard({
         mood: mood.trim() || undefined,
         tags: nextTags,
         visibility,
-        partnerNote: partnerNote.trim() || undefined,
         createdById: editingMemory?.createdById,
         createdAt: editingMemory?.createdAt,
       };
@@ -1605,7 +1687,6 @@ function MemoryCard({
         mood: mood.trim() || undefined,
         tags: nextTags,
         visibility,
-        partnerNote: partnerNote.trim() || undefined,
       });
       resetForm(true);
       setFormOpen(false);
@@ -1672,7 +1753,7 @@ function MemoryCard({
             <p className="mt-2 text-xs font-semibold text-[#5A6670]/42">登录后可以修改回忆</p>
           )}
           {isAdmin && memory && !access.canEdit && (
-            <p className="mt-2 text-xs font-semibold text-[#5A6670]/42">这是对方写的回忆，你可以加批注</p>
+            <p className="mt-2 text-xs font-semibold text-[#5A6670]/42">这是对方写的回忆，你可以添加补充</p>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -1839,7 +1920,7 @@ function MemoryCard({
                   onClick={() => startEdit(memory)}
                 >
                   <Pencil className="h-3.5 w-3.5" />
-                  加批注
+                  添加补充
                 </button>
               ) : null}
               <button
@@ -1923,7 +2004,7 @@ function MemoryCard({
                               className="grid h-6 w-6 place-items-center rounded-[5px] text-[#E8B8C2]/70 transition hover:bg-[#F5DCE0]/46 hover:text-[#E8B8C2]"
                               type="button"
                               onClick={() => startEdit(record)}
-                              aria-label={`给 ${record.city} ${record.date} 回忆加批注`}
+                              aria-label={`给 ${record.city} ${record.date} 回忆添加补充`}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
@@ -2224,7 +2305,7 @@ function MemoryCard({
 
               {canAnnotate && (
                 <label className="block">
-                  <span className="text-xs font-medium text-[#5A6670]/70">给对方的批注</span>
+                  <span className="text-xs font-medium text-[#5A6670]/70">补充回忆</span>
                   <textarea
                     className="mt-1.5 w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
                     rows={4}
@@ -2243,7 +2324,7 @@ function MemoryCard({
                   onClick={handleSave}
                   disabled={!canSave}
                 >
-                  {isSaving ? "保存中" : canAnnotate ? "保存批注" : isEditing ? "保存修改" : "保存回忆"}
+                  {isSaving ? "保存中" : canAnnotate ? "保存补充" : isEditing ? "保存修改" : "保存回忆"}
                 </button>
                 <button
                   className="rounded-[6px] px-3 py-2 text-sm text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28 hover:text-[#5A6670]"

@@ -12,6 +12,7 @@ export interface Memory {
   tags?: string[];
   visibility?: "both" | "me" | "her";
   partnerNote?: string;
+  partnerNoteAuthorId?: string;
   placeName?: string;
   createdById?: string;
   createdAt?: string;

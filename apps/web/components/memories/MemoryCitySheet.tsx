@@ -11,6 +11,7 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { DatePicker } from "@/components/ui/input";
 import { apiFetch } from "@/lib/apiClient";
 import { normalizeDottedDate } from "@/lib/dateFormat";
+import { memorySupplementLabel } from "@/lib/memorySupplement";
 import { computeMemoryEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
 
 export type MemoryPatchPayload = Omit<Partial<Memory>, "photos"> & {
@@ -390,7 +391,7 @@ export function MemoryCitySheet({
   const startAnnotate = (record: Memory) => {
     const recordAccess = computeMemoryEditAccess(record);
     if (!isAdmin || !localMemoryIds.has(record.id) || !recordAccess.canAddNote || recordAccess.canEdit) {
-      setNoteError("只有另一位成员可以给这条回忆加批注");
+      setNoteError("只有另一位成员可以给这条回忆添加补充");
       return;
     }
 
@@ -432,7 +433,7 @@ export function MemoryCitySheet({
   const handleSaveNote = async (record: Memory) => {
     const recordAccess = computeMemoryEditAccess(record);
     if (!isAdmin || !localMemoryIds.has(record.id) || !recordAccess.canAddNote || recordAccess.canEdit) {
-      setNoteError("只有另一位成员可以给这条回忆加批注");
+      setNoteError("只有另一位成员可以给这条回忆添加补充");
       return;
     }
     if (!canSaveNote) return;
@@ -441,12 +442,12 @@ export function MemoryCitySheet({
     setNoteError("");
 
     try {
-      await onUpdate(city.id, record.id, { partnerNote: noteText || undefined });
+      await onUpdate(city.id, record.id, { partnerNote: noteText });
       if (mountedRef.current) {
         flushSync(() => resetAnnotation());
       }
     } catch {
-      setNoteError("批注保存失败，请稍后再试");
+      setNoteError("补充保存失败，请稍后再试");
     } finally {
       if (mountedRef.current) setNoteSaving(false);
     }
@@ -598,7 +599,7 @@ export function MemoryCitySheet({
 
     try {
       if (editingMemory && canAnnotate && !canEditFields) {
-        await onUpdate(city.id, editingMemory.id, { partnerNote: partnerNote.trim() || undefined });
+        await onUpdate(city.id, editingMemory.id, { partnerNote: partnerNote.trim() });
         resetForm(true);
         setFormOpen(false);
         return;
@@ -630,7 +631,6 @@ export function MemoryCitySheet({
         mood: mood.trim() || undefined,
         tags: nextTags,
         visibility,
-        partnerNote: partnerNote.trim() || undefined,
         createdById: editingMemory?.createdById,
         createdAt: editingMemory?.createdAt,
       };
@@ -655,7 +655,6 @@ export function MemoryCitySheet({
           mood: mood.trim() || undefined,
           tags: nextTags,
           visibility,
-          partnerNote: partnerNote.trim() || undefined,
         });
       }
       resetForm(true);
@@ -693,7 +692,7 @@ export function MemoryCitySheet({
     >
       <label className="block">
         <span className="flex items-center justify-between gap-3 text-xs font-semibold text-[#B85D70]">
-          给对方的批注
+          补充回忆
           <span className="font-normal text-[#5A6670]/45">{noteDraft.length}/500</span>
         </span>
         <textarea
@@ -716,7 +715,7 @@ export function MemoryCitySheet({
           disabled={!canSaveNote}
         >
           {noteSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {noteSaving ? "保存中" : record.partnerNote ? "保存修改" : "保存批注"}
+          {noteSaving ? "保存中" : record.partnerNote ? "保存修改" : "保存补充"}
         </button>
         <button
           className="min-h-10 rounded-[7px] border border-[#D8DDD8] px-4 text-sm font-semibold text-[#5A6670]/62 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
@@ -741,7 +740,7 @@ export function MemoryCitySheet({
           disabled={!canSave}
         >
           {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
-          {isSaving ? "保存中" : canAnnotate ? "保存批注" : isEditing ? "保存修改" : "保存回忆"}
+          {isSaving ? "保存中" : canAnnotate ? "保存补充" : isEditing ? "保存修改" : "保存回忆"}
         </button>
         <button
           className="min-h-11 rounded-[8px] border border-[#D8DDD8] px-4 text-sm font-semibold text-[#5A6670]/62 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
@@ -778,7 +777,7 @@ export function MemoryCitySheet({
             <p className="mt-0.5 truncate text-xs font-medium text-[#5A6670]/52">
               {formOpen
                 ? canAnnotate
-                  ? "给这段回忆加批注"
+                  ? "给这段回忆添加补充"
                   : isEditing
                     ? "编辑这段回忆"
                     : "添加新的城市回忆"
@@ -919,17 +918,6 @@ export function MemoryCitySheet({
             )}
             {coverError && <p className="text-xs text-[#E8B8C2]">{coverError}</p>}
 
-            {memory ? (
-              <MemoryContentView memory={memory} cityName={city.name} showPhotos={false} showTitle />
-            ) : (
-              <div className="rounded-[8px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7]/70 px-4 py-6 text-center">
-                <p className="text-sm font-semibold text-[#5A6670]">这座城市还没有回忆</p>
-                <p className="mt-2 text-xs leading-5 text-[#5A6670]/52">
-                  {isAdmin ? "写下第一段回忆后，这座城市会被点亮。" : "登录后可以添加第一段回忆。"}
-                </p>
-              </div>
-            )}
-
             {memory && localMemoryIds.has(memory.id) && (
               <div className="flex gap-2">
                 {canEditMemory ? (
@@ -948,7 +936,7 @@ export function MemoryCitySheet({
                     onClick={() => startAnnotate(memory)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                    加批注
+                    添加补充
                   </button>
                 ) : null}
                 {canEditMemory && (
@@ -967,6 +955,17 @@ export function MemoryCitySheet({
             {deleteError && <p className="text-xs text-[#E8B8C2]">{deleteError}</p>}
             {memory && annotatingMemoryId === memory.id && renderNoteEditor(memory)}
             {noteError && !annotatingMemoryId && <p className="text-xs text-[#E8B8C2]">{noteError}</p>}
+
+            {memory ? (
+              <MemoryContentView memory={memory} cityName={city.name} showPhotos={false} showTitle />
+            ) : (
+              <div className="rounded-[8px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7]/70 px-4 py-6 text-center">
+                <p className="text-sm font-semibold text-[#5A6670]">这座城市还没有回忆</p>
+                <p className="mt-2 text-xs leading-5 text-[#5A6670]/52">
+                  {isAdmin ? "写下第一段回忆后，这座城市会被点亮。" : "登录后可以添加第一段回忆。"}
+                </p>
+              </div>
+            )}
 
             <button
               className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#D8DDD8] px-3 py-3 text-sm font-semibold text-[#5A6670]/68 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC] disabled:cursor-not-allowed disabled:opacity-45"
@@ -1037,7 +1036,7 @@ export function MemoryCitySheet({
                                 aria-label={
                                   canEditRecord
                                     ? `编辑 ${record.city} ${record.date} 回忆`
-                                    : `给 ${record.city} ${record.date} 回忆加批注`
+                                    : `给 ${record.city} ${record.date} 回忆添加补充`
                                 }
                               >
                                 <Pencil className="h-3.5 w-3.5" />
@@ -1094,7 +1093,7 @@ export function MemoryCitySheet({
                     {record.partnerNote && (
                       <div className="mt-3 rounded-[7px] border border-[#F5DCE0]/70 bg-[#F5DCE0]/24 px-3 py-2">
                         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#E8B8C2]/80">
-                          对方的批注
+                          {memorySupplementLabel(record)}
                         </p>
                         <p className="text-xs leading-5 text-[#5A6670]/70">{record.partnerNote}</p>
                       </div>
@@ -1324,9 +1323,9 @@ export function MemoryCitySheet({
               </>
             )}
 
-            {canAnnotate && (
-              <label className="block">
-                <span className="text-xs font-medium text-[#5A6670]/70">给对方的批注</span>
+              {canAnnotate && (
+                <label className="block">
+                <span className="text-xs font-medium text-[#5A6670]/70">补充回忆</span>
                 <textarea
                   className="mt-1.5 w-full resize-none rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
                   rows={4}

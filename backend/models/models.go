@@ -19,24 +19,25 @@ type User struct {
 }
 
 type Memory struct {
-	ID            string   `json:"id"`
-	SpaceID       string   `json:"spaceId"`
-	CityID        string   `json:"cityId"`
-	City          string   `json:"city"`
-	CityEn        string   `json:"cityEn"`
-	Title         string   `json:"title,omitempty"`
-	Date          string   `json:"date"`
-	Text          string   `json:"text"`
-	Mood          string   `json:"mood,omitempty"`
-	Tags          []string `json:"tags"`
-	Visibility    string   `json:"visibility"`
-	PartnerNote   string   `json:"partnerNote,omitempty"`
-	PlaceName     string   `json:"placeName,omitempty"`
-	CoverPhotoID  string   `json:"coverPhotoId,omitempty"`
-	CreatedByID   string   `json:"createdById,omitempty"`
-	CreatedAt     string   `json:"createdAt"`
-	UpdatedAt     string   `json:"updatedAt"`
-	Photos        []Photo  `json:"photos,omitempty"`
+	ID                  string   `json:"id"`
+	SpaceID             string   `json:"spaceId"`
+	CityID              string   `json:"cityId"`
+	City                string   `json:"city"`
+	CityEn              string   `json:"cityEn"`
+	Title               string   `json:"title,omitempty"`
+	Date                string   `json:"date"`
+	Text                string   `json:"text"`
+	Mood                string   `json:"mood,omitempty"`
+	Tags                []string `json:"tags"`
+	Visibility          string   `json:"visibility"`
+	PartnerNote         string   `json:"partnerNote,omitempty"`
+	PartnerNoteAuthorID string   `json:"partnerNoteAuthorId,omitempty"`
+	PlaceName           string   `json:"placeName,omitempty"`
+	CoverPhotoID        string   `json:"coverPhotoId,omitempty"`
+	CreatedByID         string   `json:"createdById,omitempty"`
+	CreatedAt           string   `json:"createdAt"`
+	UpdatedAt           string   `json:"updatedAt"`
+	Photos              []Photo  `json:"photos,omitempty"`
 }
 
 type Photo struct {
@@ -68,13 +69,13 @@ type AnniversaryCard struct {
 }
 
 type Whisper struct {
-	ID          string          `json:"id"`
-	SpaceID     string          `json:"spaceId"`
-	Title       string          `json:"title"`
-	CreatedByID string          `json:"createdById"`
-	CreatedAt   string          `json:"createdAt"`
-	UpdatedAt   string          `json:"updatedAt"`
-	Messages    []WhisperReply  `json:"messages,omitempty"`
+	ID          string         `json:"id"`
+	SpaceID     string         `json:"spaceId"`
+	Title       string         `json:"title"`
+	CreatedByID string         `json:"createdById"`
+	CreatedAt   string         `json:"createdAt"`
+	UpdatedAt   string         `json:"updatedAt"`
+	Messages    []WhisperReply `json:"messages,omitempty"`
 }
 
 type WhisperReply struct {

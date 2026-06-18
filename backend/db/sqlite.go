@@ -74,6 +74,7 @@ func Migrate() {
 		tags TEXT,
 		visibility TEXT DEFAULT 'both',
 		partner_note TEXT,
+		partner_note_author_id TEXT,
 		place_name TEXT,
 		cover_photo_id TEXT,
 		created_by_id TEXT,
@@ -209,5 +210,34 @@ func Migrate() {
 
 	if _, err := DB.Exec(schema); err != nil {
 		log.Fatal("数据库迁移失败:", err)
+	}
+
+	ensureColumn("memories", "partner_note_author_id", "TEXT")
+}
+
+func ensureColumn(tableName string, columnName string, definition string) {
+	rows, err := DB.Query(`PRAGMA table_info(` + tableName + `)`)
+	if err != nil {
+		log.Fatal("数据库字段检查失败:", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name string
+		var columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var primaryKey int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &primaryKey); err != nil {
+			log.Fatal("数据库字段读取失败:", err)
+		}
+		if name == columnName {
+			return
+		}
+	}
+
+	if _, err := DB.Exec(`ALTER TABLE ` + tableName + ` ADD COLUMN ` + columnName + ` ` + definition); err != nil {
+		log.Fatal("数据库字段迁移失败:", err)
 	}
 }

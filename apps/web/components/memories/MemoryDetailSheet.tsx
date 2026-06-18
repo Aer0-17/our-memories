@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, MapPin, Pencil } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
 import { featureOfProvince, makePath, makeProjectionForProvince } from "@/lib/geo";
 import type { City } from "@/data/cities";
 import { provinces } from "@/data/provinces";
@@ -71,9 +70,9 @@ export function MemoryDetailSheet({
     return { outlineD, point };
   }, [city, province]);
 
-  const provinceHref = city ? `/province/${city.provinceId}?city=${memory?.cityId ?? city.id}` : "/map";
   const trimmedNote = note.trim();
-  const canSaveNote = canAddNote && trimmedNote.length > 0 && trimmedNote !== (memory?.partnerNote ?? "").trim() && !savingNote;
+  const originalNote = (memory?.partnerNote ?? "").trim();
+  const canSaveNote = canAddNote && trimmedNote !== originalNote && (trimmedNote.length > 0 || originalNote.length > 0) && !savingNote;
 
   const handleSaveNote = async () => {
     if (!memory || !onUpdatePartnerNote || !canSaveNote) return;
@@ -83,7 +82,7 @@ export function MemoryDetailSheet({
       await onUpdatePartnerNote(memory, trimmedNote);
       setNoteOpen(false);
     } catch {
-      setNoteError("批注保存失败，请稍后再试");
+      setNoteError("补充保存失败，请稍后再试");
     } finally {
       setSavingNote(false);
     }
@@ -142,7 +141,7 @@ export function MemoryDetailSheet({
                 type="button"
                 onClick={() => setNoteOpen((value) => !value)}
               >
-                <span>{memory.partnerNote ? "修改批注" : "加批注"}</span>
+                <span>{memory.partnerNote ? "修改补充" : "添加补充"}</span>
                 <Pencil className="h-4 w-4" />
               </button>
               {noteOpen && (
@@ -166,7 +165,7 @@ export function MemoryDetailSheet({
                       disabled={!canSaveNote}
                     >
                       {savingNote && <Loader2 className="h-4 w-4 animate-spin" />}
-                      {savingNote ? "保存中" : "保存批注"}
+                      {savingNote ? "保存中" : "保存补充"}
                     </button>
                     <button
                       className="min-h-9 rounded-[6px] px-3 text-sm font-semibold text-[#5A6670]/58 transition hover:bg-[#D8DDD8]/28"
@@ -185,16 +184,6 @@ export function MemoryDetailSheet({
               )}
             </div>
           )}
-
-          {/* 去地图编辑/查看入口 */}
-          <Link
-            className="flex items-center justify-center gap-1.5 rounded-[8px] border border-[#A8C8DC] bg-[#D6E8F0]/30 px-3 py-2.5 text-sm font-semibold text-[#A8C8DC] transition hover:bg-[#D6E8F0]/55"
-            href={provinceHref}
-            onClick={onClose}
-          >
-            <MapPin className="h-4 w-4" />
-            去地图查看 / 编辑
-          </Link>
         </div>
       )}
     </BottomSheet>

@@ -18,6 +18,7 @@ import {
   memoryStoreUpdatedEvent,
   type LocalMemoryStore,
 } from "@/data/progress";
+import { buildMemoryRoutePoints, curvedRoutePath } from "@/lib/memoryRoutes";
 import { provinces } from "@/data/provinces";
 import { apiFetch } from "@/lib/apiClient";
 
@@ -147,6 +148,27 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
     });
   }, [height, width]);
 
+  const route = useMemo(() => {
+    const projection = makeProjection(width, height, 24);
+    const points = buildMemoryRoutePoints(localMemories)
+      .map((point) => {
+        const projected = projection([point.city.lng, point.city.lat]);
+        if (!projected) return null;
+
+        return {
+          ...point,
+          x: stableCoordinate(projected[0]),
+          y: stableCoordinate(projected[1]),
+        };
+      })
+      .filter(Boolean) as Array<ReturnType<typeof buildMemoryRoutePoints>[number] & { x: number; y: number }>;
+
+    return {
+      points,
+      d: curvedRoutePath(points),
+    };
+  }, [height, localMemories, width]);
+
   const hoveredPath = mapPaths.find((path) => path.id === hoveredId);
   const zoomProgress = ((zoom - minZoom) / (maxZoom - minZoom)) * 100;
   const setClampedZoom = (nextZoom: number) => {
@@ -238,6 +260,11 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
                 <path d="M0 0h2v2H0z" fill={colors.cream} opacity="0.26" />
                 <path d="M5 5h1.5v1.5H5z" fill={colors.sky} opacity="0.08" />
               </pattern>
+              <linearGradient id="memoryRouteGradient" x1="0%" x2="100%" y1="15%" y2="85%">
+                <stop offset="0%" stopColor={colors.bloom} stopOpacity="0.78" />
+                <stop offset="48%" stopColor={colors.sky} stopOpacity="0.86" />
+                <stop offset="100%" stopColor="#D4E8D0" stopOpacity="0.75" />
+              </linearGradient>
             </defs>
 
             <g shapeRendering="geometricPrecision">
@@ -329,6 +356,43 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
                   />
                 ) : null,
               )}
+
+              {route.d && (
+                <motion.path
+                  d={route.d}
+                  fill="none"
+                  stroke="url(#memoryRouteGradient)"
+                  strokeWidth="2.6"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray="8 10"
+                  strokeOpacity="0.76"
+                  pointerEvents="none"
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1.15, ease: "easeInOut" }}
+                />
+              )}
+
+              {route.points.map((point) => (
+                <g key={`${point.memory.id}-china-route-node`} pointerEvents="none">
+                  <circle cx={point.x} cy={point.y} r="7" fill={colors.cream} fillOpacity="0.92" />
+                  <circle cx={point.x} cy={point.y} r="3.6" fill={colors.bloom} fillOpacity="0.88" />
+                  {route.points.length <= 12 && (
+                    <text
+                      x={point.x}
+                      y={point.y - 9}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fontWeight="700"
+                      fill={colors.ink}
+                      fillOpacity="0.58"
+                    >
+                      {point.order}
+                    </text>
+                  )}
+                </g>
+              ))}
             </g>
           </svg>
 

@@ -2,6 +2,7 @@
 
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import type { Memory } from "@/data/memories";
+import { memorySupplementLabel } from "@/lib/memorySupplement";
 
 const isBrowserImageUrl = (url?: string | null): url is string =>
   typeof url === "string" && (url.startsWith("data:image/") || url.startsWith("https://") || url.startsWith("blob:"));
@@ -77,7 +78,9 @@ export function MemoryContentView({
 
       {memory.partnerNote && (
         <div className="rounded-[7px] border border-[#F5DCE0]/70 bg-[#F5DCE0]/24 px-3 py-2">
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#E8B8C2]/80">对方的批注</p>
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#E8B8C2]/80">
+            {memorySupplementLabel(memory)}
+          </p>
           <p className="text-xs leading-5 text-[#5A6670]/70">{memory.partnerNote}</p>
         </div>
       )}

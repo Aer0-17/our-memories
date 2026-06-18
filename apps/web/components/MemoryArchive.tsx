@@ -59,7 +59,6 @@ type AddMemoryForm = {
   mood: string;
   tags: string;
   visibility: "both" | "me" | "her";
-  partnerNote: string;
 };
 
 type PhotoDraft = {
@@ -76,7 +75,6 @@ const defaultAddMemoryForm = (): AddMemoryForm => ({
   mood: "",
   tags: "",
   visibility: "both",
-  partnerNote: "",
 });
 
 const readBlobAsDataUrl = (blob: Blob) =>
@@ -314,7 +312,6 @@ function AddMemoryPanel({
           mood: form.mood.trim(),
           tags,
           visibility: form.visibility,
-          partnerNote: form.partnerNote.trim(),
           photos: memoryPhotosPayload(photoUrls.length > 0 ? photoUrls : [fallbackPhoto]),
         }),
       });
@@ -521,17 +518,6 @@ function AddMemoryPanel({
               />
             </label>
           </div>
-
-          <label className="block text-xs font-semibold text-[#5A6670]/58">
-            双方补充语
-            <Textarea
-              className="mt-1 min-h-[72px] bg-white/70"
-              value={form.partnerNote}
-              onChange={(event) => setForm({ ...form, partnerNote: event.target.value })}
-              placeholder="留给另一个人的一句补充..."
-              maxLength={500}
-            />
-          </label>
 
           <div>
             <span className="text-xs font-semibold text-[#5A6670]/58">可见性</span>

@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -42,8 +43,8 @@ func loadMemoryStore(spaceID string, userID string) (map[string][]gin.H, error) 
 	rows, err := db.DB.Query(`
 		SELECT id, space_id, city_id, city, city_en, COALESCE(title, ''), date, text,
 		       COALESCE(mood, ''), COALESCE(tags, '[]'), visibility, COALESCE(partner_note, ''),
-		       COALESCE(place_name, ''), COALESCE(cover_photo_id, ''), COALESCE(created_by_id, ''),
-		       created_at, updated_at
+		       COALESCE(partner_note_author_id, ''), COALESCE(place_name, ''),
+		       COALESCE(cover_photo_id, ''), COALESCE(created_by_id, ''), created_at, updated_at
 		FROM memories
 		WHERE space_id = ? AND (visibility = 'both' OR created_by_id = ?)
 		ORDER BY date DESC, created_at DESC
@@ -58,8 +59,8 @@ func loadMemoryStore(spaceID string, userID string) (map[string][]gin.H, error) 
 		var m models.Memory
 		var tagsJSON string
 		err := rows.Scan(&m.ID, &m.SpaceID, &m.CityID, &m.City, &m.CityEn, &m.Title, &m.Date, &m.Text,
-			&m.Mood, &tagsJSON, &m.Visibility, &m.PartnerNote, &m.PlaceName, &m.CoverPhotoID, &m.CreatedByID,
-			&m.CreatedAt, &m.UpdatedAt)
+			&m.Mood, &tagsJSON, &m.Visibility, &m.PartnerNote, &m.PartnerNoteAuthorID, &m.PlaceName,
+			&m.CoverPhotoID, &m.CreatedByID, &m.CreatedAt, &m.UpdatedAt)
 		if err != nil {
 			continue
 		}
@@ -94,24 +95,25 @@ func loadMemoryStore(spaceID string, userID string) (map[string][]gin.H, error) 
 		}
 
 		memories[m.CityID] = append(memories[m.CityID], gin.H{
-			"id":          m.ID,
-			"cityId":      m.CityID,
-			"city":        m.City,
-			"cityEn":      m.CityEn,
-			"title":       m.Title,
-			"date":        m.Date,
-			"text":        m.Text,
-			"mood":        m.Mood,
-			"tags":        m.Tags,
-			"visibility":  m.Visibility,
-			"partnerNote": m.PartnerNote,
-			"placeName":   m.PlaceName,
-			"image":       image,
-			"photos":      photoURLs,
-			"photoItems":  photoItems,
-			"createdById": m.CreatedByID,
-			"createdAt":   m.CreatedAt,
-			"updatedAt":   m.UpdatedAt,
+			"id":                  m.ID,
+			"cityId":              m.CityID,
+			"city":                m.City,
+			"cityEn":              m.CityEn,
+			"title":               m.Title,
+			"date":                m.Date,
+			"text":                m.Text,
+			"mood":                m.Mood,
+			"tags":                m.Tags,
+			"visibility":          m.Visibility,
+			"partnerNote":         m.PartnerNote,
+			"partnerNoteAuthorId": m.PartnerNoteAuthorID,
+			"placeName":           m.PlaceName,
+			"image":               image,
+			"photos":              photoURLs,
+			"photoItems":          photoItems,
+			"createdById":         m.CreatedByID,
+			"createdAt":           m.CreatedAt,
+			"updatedAt":           m.UpdatedAt,
 		})
 	}
 
@@ -132,7 +134,7 @@ func CreateMemory(c *gin.Context) {
 		Mood        string   `json:"mood"`
 		Tags        []string `json:"tags"`
 		Visibility  string   `json:"visibility"`
-		PartnerNote string   `json:"partnerNote"`
+			PartnerNote *string  `json:"partnerNote"`
 		PlaceName   string   `json:"placeName"`
 		Photos      []struct {
 			Key      string `json:"key"`
@@ -154,9 +156,15 @@ func CreateMemory(c *gin.Context) {
 		req.Visibility = "both"
 	}
 
-	_, err := db.DB.Exec(`INSERT INTO memories (id, space_id, city_id, city, city_en, title, date, text, mood, tags, visibility, partner_note, place_name, created_by_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		memoryID, spaceID, req.CityID, req.City, req.CityEn, req.Title, req.Date, req.Text, req.Mood, tagsJSON, req.Visibility, req.PartnerNote, req.PlaceName, userID)
+	partnerNote := strings.TrimSpace(req.PartnerNote)
+	partnerNoteAuthorID := ""
+	if partnerNote != "" {
+		partnerNoteAuthorID = userID
+	}
+
+	_, err := db.DB.Exec(`INSERT INTO memories (id, space_id, city_id, city, city_en, title, date, text, mood, tags, visibility, partner_note, partner_note_author_id, place_name, created_by_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		memoryID, spaceID, req.CityID, req.City, req.CityEn, req.Title, req.Date, req.Text, req.Mood, tagsJSON, req.Visibility, partnerNote, partnerNoteAuthorID, req.PlaceName, userID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to create memory")
 		return
@@ -218,24 +226,35 @@ func UpdateMemory(c *gin.Context) {
 	// 判断是否为创建者
 	isCreator := createdByID == userID
 
-	// 非创建者只能更新 partner_note，前端会发送最小 payload：{ partnerNote }。
+	// 非创建者只能更新补充回忆，前端会发送最小 payload：{ partnerNote }。
 	if !isCreator {
-		_, err := db.DB.Exec(`UPDATE memories SET partner_note = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND space_id = ?`,
-			req.PartnerNote, id, spaceID)
+		if req.PartnerNote == nil {
+			utils.Error(c, 403, "Only supplement updates are allowed")
+			return
+		}
+
+		partnerNote := strings.TrimSpace(*req.PartnerNote)
+		partnerNoteAuthorID := userID
+		if partnerNote == "" {
+			partnerNoteAuthorID = ""
+		}
+
+		_, err := db.DB.Exec(`UPDATE memories SET partner_note = ?, partner_note_author_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND space_id = ?`,
+			partnerNote, partnerNoteAuthorID, id, spaceID)
 		if err != nil {
 			utils.Error(c, 500, "Failed to update partner note")
 			return
 		}
 	} else if req.Date != "" || req.Text != "" {
-		// 创建者可以更新所有字段
+		// 创建者可以更新核心字段，但不能覆盖另一位成员的补充回忆。
 		tagsJSON, _ := json.Marshal(req.Tags)
 		if req.Visibility == "" {
 			req.Visibility = "both"
 		}
 
-		_, err := db.DB.Exec(`UPDATE memories SET title = ?, date = ?, text = ?, mood = ?, tags = ?, visibility = ?, partner_note = ?, place_name = ?, updated_at = CURRENT_TIMESTAMP
+		_, err := db.DB.Exec(`UPDATE memories SET title = ?, date = ?, text = ?, mood = ?, tags = ?, visibility = ?, place_name = ?, updated_at = CURRENT_TIMESTAMP
 			WHERE id = ? AND space_id = ?`,
-			req.Title, req.Date, req.Text, req.Mood, tagsJSON, req.Visibility, req.PartnerNote, req.PlaceName, id, spaceID)
+			req.Title, req.Date, req.Text, req.Mood, tagsJSON, req.Visibility, req.PlaceName, id, spaceID)
 		if err != nil {
 			utils.Error(c, 500, "Failed to update memory")
 			return
