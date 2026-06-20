@@ -1,5 +1,19 @@
 # syntax=docker/dockerfile:1
 
+FROM node:22-alpine AS web-builder
+
+WORKDIR /src
+
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json packages/shared/package.json
+COPY apps/web/package.json apps/web/package.json
+RUN npm ci --workspace @map-of-us/web --workspace @map-of-us/shared --include-workspace-root=false
+
+COPY packages/shared packages/shared
+COPY apps/web apps/web
+RUN npm run build:shared
+RUN npm run build -w @map-of-us/web
+
 FROM node:22-alpine AS admin-builder
 
 WORKDIR /src
@@ -34,6 +48,7 @@ RUN apk add --no-cache ca-certificates tzdata \
 WORKDIR /app
 
 COPY --from=builder /out/our-memories-api ./our-memories-api
+COPY --from=web-builder /src/apps/web/out ./public/web
 COPY --from=admin-builder /src/apps/admin/out ./public/admin
 
 ENV PORT=8080 \

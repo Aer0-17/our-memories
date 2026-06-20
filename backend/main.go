@@ -2,8 +2,11 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/config"
@@ -115,35 +118,111 @@ func main() {
 		}
 	}
 
-	// 静态文件服务：管理后台
-	adminDistPath := filepath.Join(".", "public", "admin")
-	if stat, err := os.Stat(adminDistPath); err == nil && stat.IsDir() {
-		log.Printf("Serving admin panel from %s at /admin", adminDistPath)
-
-		// 静态资源（CSS, JS, 图片等）
-		r.Static("/admin/_next", filepath.Join(adminDistPath, "_next"))
-		r.StaticFile("/admin/favicon.ico", filepath.Join(adminDistPath, "favicon.ico"))
-
-		// SPA 路由：所有 /admin/* 路径都返回 index.html
-		adminGroup := r.Group("/admin")
-		{
-			adminGroup.GET("/*path", func(c *gin.Context) {
-				indexPath := filepath.Join(adminDistPath, "index.html")
-				if _, err := os.Stat(indexPath); err == nil {
-					c.File(indexPath)
-				} else {
-					c.JSON(404, gin.H{"error": "Admin panel index.html not found"})
-				}
-			})
-		}
-	} else {
-		log.Printf("Admin panel not found at %s, skipping static file serving", adminDistPath)
-	}
+	registerStaticApps(r)
 
 	log.Printf("Server starting on port %s", config.Get().Port)
 	log.Printf("API endpoints: http://localhost:%s/api/v1", config.Get().Port)
+	log.Printf("Web app: http://localhost:%s", config.Get().Port)
 	log.Printf("Admin panel: http://localhost:%s/admin", config.Get().Port)
 	if err := r.Run(":" + config.Get().Port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
+}
+
+func registerStaticApps(r *gin.Engine) {
+	webDistPath := filepath.Join(".", "public", "web")
+	adminDistPath := filepath.Join(".", "public", "admin")
+
+	if stat, err := os.Stat(webDistPath); err == nil && stat.IsDir() {
+		log.Printf("Serving web app from %s at /", webDistPath)
+	} else {
+		log.Printf("Web app not found at %s, skipping static file serving", webDistPath)
+	}
+
+	if stat, err := os.Stat(adminDistPath); err == nil && stat.IsDir() {
+		log.Printf("Serving admin panel from %s at /admin", adminDistPath)
+	} else {
+		log.Printf("Admin panel not found at %s, skipping static file serving", adminDistPath)
+	}
+
+	r.NoRoute(func(c *gin.Context) {
+		requestPath := c.Request.URL.Path
+		if strings.HasPrefix(requestPath, "/api/") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+			return
+		}
+
+		if serveStaticApp(c, adminDistPath, "/admin") {
+			return
+		}
+		if serveStaticApp(c, webDistPath, "") {
+			return
+		}
+
+		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
+	})
+}
+
+func serveStaticApp(c *gin.Context, distPath, prefix string) bool {
+	if stat, err := os.Stat(distPath); err != nil || !stat.IsDir() {
+		return false
+	}
+
+	requestPath := c.Request.URL.Path
+	if prefix != "" {
+		if requestPath != prefix && !strings.HasPrefix(requestPath, prefix+"/") {
+			return false
+		}
+		requestPath = strings.TrimPrefix(requestPath, prefix)
+	}
+
+	cleanPath := path.Clean("/" + strings.TrimPrefix(requestPath, "/"))
+	if cleanPath == "/" {
+		cleanPath = "/index.html"
+	}
+
+	filePath := filepath.Join(distPath, filepath.FromSlash(strings.TrimPrefix(cleanPath, "/")))
+	if !isPathInside(distPath, filePath) {
+		c.Status(http.StatusNotFound)
+		return true
+	}
+
+	if stat, err := os.Stat(filePath); err == nil {
+		if stat.IsDir() {
+			indexPath := filepath.Join(filePath, "index.html")
+			if _, err := os.Stat(indexPath); err == nil {
+				c.File(indexPath)
+				return true
+			}
+		} else {
+			c.File(filePath)
+			return true
+		}
+	}
+
+	if filepath.Ext(cleanPath) != "" {
+		c.Status(http.StatusNotFound)
+		return true
+	}
+
+	indexPath := filepath.Join(distPath, "index.html")
+	if _, err := os.Stat(indexPath); err == nil {
+		c.File(indexPath)
+		return true
+	}
+
+	c.Status(http.StatusNotFound)
+	return true
+}
+
+func isPathInside(root, target string) bool {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	absTarget, err := filepath.Abs(target)
+	if err != nil {
+		return false
+	}
+	return absTarget == absRoot || strings.HasPrefix(absTarget, absRoot+string(os.PathSeparator))
 }

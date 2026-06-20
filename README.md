@@ -209,3 +209,13 @@ cd backend && go run main.go
 ```
 
 详见 [SAME_PORT_DEPLOYMENT.md](./SAME_PORT_DEPLOYMENT.md)
+
+## 📱 Android 在线版 APK
+
+在线版 APK 会直接加载线上 Web 地址，后续更新前端只需要重新部署网站，不需要重新打包 APK：
+
+```bash
+CAPACITOR_SERVER_URL=https://your-domain.com npm run mobile:android:build:online
+```
+
+要求线上地址使用 HTTPS，并且同域部署时 `/api/v1` 由同一个域名提供服务；如果前后端分域部署，再在 Web 构建时设置 `NEXT_PUBLIC_API_BASE_URL`。

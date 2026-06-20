@@ -1,7 +1,7 @@
 import { clearSession, readSession, updateAccessToken, writeSession } from "@/lib/authStore";
 import { clearApiCache } from "@/lib/apiCacheStorage";
 
-const defaultApiBaseUrl = "http://localhost:8080";
+const localApiBaseUrl = "http://localhost:8080";
 
 export const apiBaseUrl = () => {
   const envValue = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -9,8 +9,11 @@ export const apiBaseUrl = () => {
   if (typeof window !== "undefined") {
     const injected = (window as unknown as { MAP_OF_US_API_BASE_URL?: string }).MAP_OF_US_API_BASE_URL;
     if (injected) return injected.replace(/\/$/, "");
+    if (window.location.protocol === "http:" && /^localhost$|^127\.0\.0\.1$/.test(window.location.hostname)) {
+      return localApiBaseUrl;
+    }
   }
-  return defaultApiBaseUrl;
+  return "";
 };
 
 type ApiOptions = RequestInit & {

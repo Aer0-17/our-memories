@@ -7,6 +7,8 @@
     "sync": "npm run build -w @map-of-us/web && capacitor sync",
     "android:sync": "npm run build -w @map-of-us/web && capacitor sync android",
     "android:build": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:sync:online": "capacitor sync android",
+    "android:build:online": "node scripts/build-online-apk.mjs",
     "android": "npm run build -w @map-of-us/web && capacitor run android",
     "ios": "npm run build -w @map-of-us/web && capacitor run ios"
   },
