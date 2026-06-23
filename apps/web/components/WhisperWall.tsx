@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { MessageCircle, Plus, X } from "lucide-react";
+import { MessageCircle, Plus } from "lucide-react";
 import { MemoryPageShell } from "@/components/MemoryNav";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Modal } from "@/components/ui/modal";
+import { Spinner } from "@/components/ui/spinner";
+import { useToast } from "@/components/ui/toast";
 import { apiJson } from "@/lib/apiClient";
 import { useApi } from "@/lib/swr";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
@@ -30,67 +33,95 @@ export function WhisperWall() {
   const [replyOpen, setReplyOpen] = useState("");
   const [form, setForm] = useState({ title: "", content: "" });
   const [replyContent, setReplyContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [replyingId, setReplyingId] = useState("");
+  const { toast } = useToast();
   const isAdmin = useContentEditAccess();
   const { data, mutate } = useApi<{ whispers: Whisper[] }>("/api/v1/whispers");
   const whispers = data?.whispers ?? [];
 
-  const create = async () => {
-    if (!form.title.trim()) return;
-    await apiJson("/api/v1/whispers", {
-      method: "POST",
-      body: JSON.stringify(form),
-    });
-    setForm({ title: "", content: "" });
+  const closeDialog = () => {
     setOpen(false);
-    void mutate();
+    setForm({ title: "", content: "" });
+  };
+
+  const create = async () => {
+    if (!form.title.trim()) {
+      toast("请填写标题", "warning");
+      return;
+    }
+    if (saving) return;
+    setSaving(true);
+    try {
+      await apiJson("/api/v1/whispers", {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
+      setForm({ title: "", content: "" });
+      setOpen(false);
+      void mutate();
+    } catch {
+      toast("创建失败，请稍后再试", "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const reply = async (whisperId: string) => {
-    if (!replyContent.trim()) return;
-    await apiJson(`/api/v1/whispers/${whisperId}/reply`, {
-      method: "POST",
-      body: JSON.stringify({ content: replyContent }),
-    });
-    setReplyContent("");
+    if (!replyContent.trim()) {
+      toast("回复内容不能为空", "warning");
+      return;
+    }
+    if (replyingId) return;
+    setReplyingId(whisperId);
+    try {
+      await apiJson(`/api/v1/whispers/${whisperId}/reply`, {
+        method: "POST",
+        body: JSON.stringify({ content: replyContent }),
+      });
+      setReplyContent("");
+      setReplyOpen("");
+      void mutate();
+    } catch {
+      toast("回复失败，请稍后再试", "error");
+    } finally {
+      setReplyingId("");
+    }
+  };
+
+  const cancelReply = () => {
     setReplyOpen("");
-    void mutate();
+    setReplyContent("");
   };
 
   return (
     <MemoryPageShell active="whispers">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[#273846]">💌 悄悄话</h1>
+        <h1 className="text-2xl font-bold text-slate">💌 悄悄话</h1>
       </header>
 
       <button
-        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl active:scale-95 disabled:opacity-50 lg:bottom-6"
+        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-bloom text-white shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl active:scale-95 disabled:opacity-50 lg:bottom-6"
         onClick={() => setOpen(true)}
         disabled={!isAdmin}
       >
         <Plus className="h-6 w-6" />
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/20 px-4 animate-in fade-in duration-200"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">新建悄悄话</h2>
-              <button onClick={() => setOpen(false)}><X className="h-5 w-5" /></button>
-            </div>
-            <div className="space-y-3">
-              <Input placeholder="标题" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-              <Textarea placeholder="第一条留言（可选）" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
-              <Button className="w-full" onClick={create}>创建</Button>
-            </div>
-          </div>
+      <Modal
+        open={open}
+        onClose={() => { if (!saving) closeDialog(); }}
+        title="新建悄悄话"
+        closeOnOverlay={!saving}
+      >
+        <div className="space-y-3">
+          <Input placeholder="标题" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} disabled={saving} />
+          <Textarea placeholder="第一条留言（可选）" value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} disabled={saving} />
+          <Button className="w-full" onClick={create} disabled={!isAdmin || saving}>
+            {saving ? <Spinner size="sm" /> : "创建"}
+          </Button>
         </div>
-      )}
+      </Modal>
 
       <section className="mt-6 grid gap-4 md:grid-cols-2">
         {whispers.length === 0 ? (
@@ -114,9 +145,11 @@ export function WhisperWall() {
               </div>
               {replyOpen === w.id ? (
                 <div className="flex gap-2">
-                  <Input placeholder="回复..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)} />
-                  <Button onClick={() => reply(w.id)}>发送</Button>
-                  <Button variant="ghost" onClick={() => setReplyOpen("")}>取消</Button>
+                  <Input placeholder="回复..." value={replyContent} onChange={(e) => setReplyContent(e.target.value)} disabled={!!replyingId} />
+                  <Button onClick={() => reply(w.id)} disabled={!!replyingId}>
+                    {replyingId === w.id ? <Spinner size="sm" /> : "发送"}
+                  </Button>
+                  <Button variant="ghost" onClick={cancelReply} disabled={!!replyingId}>取消</Button>
                 </div>
               ) : (
                 <Button variant="secondary" onClick={() => setReplyOpen(w.id)} disabled={!isAdmin}>回复</Button>

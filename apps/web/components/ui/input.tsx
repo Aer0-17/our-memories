@@ -2,7 +2,7 @@ import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { dottedDateToInputDate, inputDateToDottedDate } from "@/lib/dateFormat";
 
 const fieldClass =
-  "min-h-10 w-full rounded-[7px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/76 px-3 text-sm text-[#5A6670] outline-none transition placeholder:text-[#5A6670]/36 focus:border-[#A8C8DC] focus:bg-white disabled:opacity-50";
+  "min-h-10 w-full rounded-[7px] border border-dim/80 bg-cream/76 px-3 text-sm text-ink outline-none transition placeholder:text-ink/36 focus:border-sky focus:bg-white disabled:opacity-50";
 
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${fieldClass} ${className}`} {...props} />;

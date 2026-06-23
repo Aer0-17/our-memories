@@ -3,10 +3,10 @@ import type { ButtonHTMLAttributes } from "react";
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: "border-[#F5DCE0] bg-[#F5DCE0] text-[#B85D70] hover:bg-[#E8B8C2] hover:text-[#FAFBF7]",
-  secondary: "border-[#D8DDD8] bg-[#FAFBF7]/78 text-[#5A6670] hover:border-[#A8C8DC] hover:text-[#A8C8DC]",
-  ghost: "border-transparent bg-transparent text-[#5A6670]/62 hover:bg-[#D8DDD8]/28 hover:text-[#5A6670]",
-  danger: "border-[#F5DCE0] bg-[#F5DCE0]/42 text-[#B85D70] hover:bg-[#E8B8C2] hover:text-[#FAFBF7]",
+  primary: "border-sakura bg-sakura text-rose-ink hover:bg-bloom hover:text-cream",
+  secondary: "border-dim bg-cream/78 text-ink hover:border-sky hover:text-sky",
+  ghost: "border-transparent bg-transparent text-ink/62 hover:bg-dim/28 hover:text-ink",
+  danger: "border-sakura bg-sakura/42 text-rose-ink hover:bg-bloom hover:text-cream",
 };
 
 export function Button({

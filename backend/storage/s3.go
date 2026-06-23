@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 )
 
 var s3Client *s3.S3
+var s3PathStyleClient *s3.S3
 
 // allowedFolders 限定对象 key 的二级目录，防止客户端传入任意 folder 造成注入/越界。
 var allowedFolders = map[string]bool{
@@ -44,14 +46,18 @@ func InitS3() {
 		return
 	}
 
+	s3Client = newS3Client(cfg, false)
+	s3PathStyleClient = newS3Client(cfg, true)
+}
+
+func newS3Client(cfg *config.Config, forcePathStyle bool) *s3.S3 {
 	sess := session.Must(session.NewSession(&aws.Config{
 		Endpoint:         aws.String(cfg.S3Endpoint),
 		Region:           aws.String(cfg.S3Region),
 		Credentials:      credentials.NewStaticCredentials(cfg.S3AccessKeyID, cfg.S3SecretAccessKey, ""),
-		S3ForcePathStyle: aws.Bool(false), // 阿里云OSS需要虚拟主机样式
+		S3ForcePathStyle: aws.Bool(forcePathStyle),
 	}))
-
-	s3Client = s3.New(sess)
+	return s3.New(sess)
 }
 
 // Enabled 报告对象存储是否已配置。
@@ -63,10 +69,11 @@ func buildKey(spaceID, folder, ext string) string {
 }
 
 func publicURLForKey(cfg *config.Config, key string) string {
+	key = strings.TrimLeft(key, "/")
 	if cfg.S3PublicBaseURL != "" {
-		return cfg.S3PublicBaseURL + "/" + key
+		return strings.TrimRight(cfg.S3PublicBaseURL, "/") + "/" + key
 	}
-	return fmt.Sprintf("%s/%s/%s", cfg.S3Endpoint, cfg.S3Bucket, key)
+	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(cfg.S3Endpoint, "/"), strings.Trim(cfg.S3Bucket, "/"), key)
 }
 
 // PresignPut 为前端直传签发一个 15 分钟有效的 PUT URL，并返回对象 key 与最终公共访问 URL。
@@ -98,19 +105,112 @@ func PresignPut(spaceID, folder, contentType string) (key, uploadURL, publicURL 
 
 // KeyFromURL 从公共访问 URL 反解出对象 key；非本 OSS 的 URL（外链/默认贴图）返回空串。
 func KeyFromURL(url string) string {
+	url = strings.TrimSpace(url)
 	if url == "" {
 		return ""
 	}
 	cfg := config.Get()
-	if cfg.S3PublicBaseURL != "" {
-		if prefix := cfg.S3PublicBaseURL + "/"; strings.HasPrefix(url, prefix) {
-			return strings.TrimPrefix(url, prefix)
+
+	for _, baseURL := range []string{
+		cfg.S3PublicBaseURL,
+		strings.TrimRight(cfg.S3Endpoint, "/") + "/" + strings.Trim(cfg.S3Bucket, "/"),
+	} {
+		if key := keyFromBaseURL(url, baseURL); key != "" {
+			return key
 		}
 	}
-	if prefix := fmt.Sprintf("%s/%s/", cfg.S3Endpoint, cfg.S3Bucket); strings.HasPrefix(url, prefix) {
-		return strings.TrimPrefix(url, prefix)
+
+	if key := keyFromVirtualHostedURL(url, cfg.S3Endpoint, cfg.S3Bucket); key != "" {
+		return key
 	}
 	return ""
+}
+
+func keyFromBaseURL(rawURL, baseURL string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if rawURL == "" || baseURL == "" {
+		return ""
+	}
+
+	parsedURL, urlErr := url.Parse(rawURL)
+	parsedBase, baseErr := url.Parse(baseURL)
+	if urlErr == nil && baseErr == nil && parsedURL.Scheme != "" && parsedBase.Scheme != "" {
+		if !strings.EqualFold(parsedURL.Scheme, parsedBase.Scheme) || !sameHost(parsedURL.Host, parsedBase.Host) {
+			return ""
+		}
+
+		basePath := strings.TrimRight(parsedBase.EscapedPath(), "/")
+		rawPath := parsedURL.EscapedPath()
+		if basePath == "" {
+			return cleanObjectKeyFromURLPath(strings.TrimPrefix(rawPath, "/"))
+		}
+		prefix := basePath + "/"
+		if !strings.HasPrefix(rawPath, prefix) {
+			return ""
+		}
+		return cleanObjectKeyFromURLPath(strings.TrimPrefix(rawPath, prefix))
+	}
+
+	prefix := baseURL + "/"
+	if !strings.HasPrefix(rawURL, prefix) {
+		return ""
+	}
+	key := strings.TrimPrefix(rawURL, prefix)
+	if cut := strings.IndexAny(key, "?#"); cut >= 0 {
+		key = key[:cut]
+	}
+	return cleanObjectKeyFromURLPath(key)
+}
+
+func keyFromVirtualHostedURL(rawURL, endpoint, bucket string) string {
+	if rawURL == "" || endpoint == "" || bucket == "" {
+		return ""
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil || parsedURL.Host == "" {
+		return ""
+	}
+	parsedEndpoint, err := url.Parse(endpoint)
+	if err != nil {
+		return ""
+	}
+	endpointHost := parsedEndpoint.Host
+	if endpointHost == "" {
+		endpointHost = parsedEndpoint.Path
+	}
+	if endpointHost == "" {
+		return ""
+	}
+
+	if !sameHost(parsedURL.Host, bucket+"."+endpointHost) {
+		return ""
+	}
+	return cleanObjectKeyFromURLPath(strings.TrimPrefix(parsedURL.EscapedPath(), "/"))
+}
+
+func sameHost(a, b string) bool {
+	return strings.EqualFold(strings.TrimSuffix(a, "."), strings.TrimSuffix(b, "."))
+}
+
+func cleanObjectKeyFromURLPath(value string) string {
+	value = strings.TrimLeft(value, "/")
+	if value == "" {
+		return ""
+	}
+	if unescaped, err := url.PathUnescape(value); err == nil {
+		value = unescaped
+	}
+	for _, segment := range strings.Split(value, "/") {
+		if segment == ".." {
+			return ""
+		}
+	}
+	value = path.Clean(value)
+	if value == "." || strings.HasPrefix(value, "../") {
+		return ""
+	}
+	return value
 }
 
 // KeyBelongsToSpace 校验 key 是否位于该 space 前缀下，供删除接口防越权。
@@ -124,41 +224,49 @@ func DeleteObject(key string) error {
 		return nil
 	}
 	cfg := config.Get()
-	_, err := s3Client.DeleteObject(&s3.DeleteObjectInput{
+	input := &s3.DeleteObjectInput{
 		Bucket: aws.String(cfg.S3Bucket),
 		Key:    aws.String(key),
-	})
+	}
+	_, err := s3Client.DeleteObject(input)
+	if err != nil && s3PathStyleClient != nil {
+		if _, fallbackErr := s3PathStyleClient.DeleteObject(input); fallbackErr == nil {
+			return nil
+		}
+	}
 	return err
 }
 
-// DeletePhotoObject 优先用持久化的 key 删除，缺失时回退从 url 反解。失败仅记录日志（尽力而为）。
-func DeletePhotoObject(key, url string) {
+// DeletePhotoObject 优先用持久化的 key 删除，缺失时回退从 url 反解。
+func DeletePhotoObject(key, url string) error {
 	if key == "" {
 		key = KeyFromURL(url)
 	}
 	if key == "" {
-		return
+		return nil
 	}
 	if err := DeleteObject(key); err != nil {
 		log.Printf("delete oss object failed (key=%s): %v", key, err)
+		return err
 	}
+	return nil
 }
 
 // DeleteObjectByURL 从公共 URL 反解 key 后删除（尽力而为）。
-func DeleteObjectByURL(url string) {
-	DeletePhotoObject("", url)
+func DeleteObjectByURL(url string) error {
+	return DeletePhotoObject("", url)
 }
 
-// UploadImage 旧的后端中转上传：仅在前端无法直传（未配置 S3 或回退）时被调用。
-// 非 data:image/ 前缀的值（已是 OSS URL / 外链）原样返回。
-func UploadImage(spaceID, folder, dataURL string) (string, error) {
+// UploadImageWithKey 旧的后端中转上传：仅在前端无法直传（未配置 S3 或回退）时被调用。
+// 非 data:image/ 前缀的值（已是 OSS URL / 外链）原样返回，并尽量从 URL 反解 key。
+func UploadImageWithKey(spaceID, folder, dataURL string) (string, string, error) {
 	if !strings.HasPrefix(dataURL, "data:image/") {
-		return dataURL, nil
+		return dataURL, KeyFromURL(dataURL), nil
 	}
 
 	parts := strings.SplitN(dataURL, ",", 2)
 	if len(parts) != 2 {
-		return "", fmt.Errorf("invalid data URL")
+		return "", "", fmt.Errorf("invalid data URL")
 	}
 
 	mimeType := strings.TrimPrefix(strings.TrimSuffix(parts[0], ";base64"), "data:")
@@ -169,7 +277,7 @@ func UploadImage(spaceID, folder, dataURL string) (string, error) {
 
 	data, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	if !allowedFolders[folder] {
@@ -190,11 +298,17 @@ func UploadImage(spaceID, folder, dataURL string) (string, error) {
 		}
 
 		if _, err = s3Client.PutObject(input); err != nil {
-			return "", err
+			return "", "", err
 		}
 
-		return publicURLForKey(cfg, key), nil
+		return publicURLForKey(cfg, key), key, nil
 	}
 
-	return dataURL, nil
+	return dataURL, "", nil
+}
+
+// UploadImage 返回上传后的公共 URL，保留给不需要持久化 object key 的调用方。
+func UploadImage(spaceID, folder, dataURL string) (string, error) {
+	url, _, err := UploadImageWithKey(spaceID, folder, dataURL)
+	return url, err
 }

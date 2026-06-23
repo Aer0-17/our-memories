@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ApiBaseScript } from "@/app/api-base-script";
 import { ApiCacheProvider } from "@/lib/apiCache";
+import { AuthProvider } from "@/lib/authContext";
+import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +22,11 @@ export default function RootLayout({
     >
       <body className="flex flex-col">
         <ApiBaseScript />
-        <ApiCacheProvider>{children}</ApiCacheProvider>
+        <ApiCacheProvider>
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
+        </ApiCacheProvider>
       </body>
     </html>
   );

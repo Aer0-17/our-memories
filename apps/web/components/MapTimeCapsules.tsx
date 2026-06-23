@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { Lock } from "lucide-react";
 import { useApi } from "@/lib/swr";
+import { daysUntil } from "@/lib/dateFormat";
 
 type TimeCapsule = {
   id: string;
@@ -10,13 +11,6 @@ type TimeCapsule = {
   openDate: string;
   createdAt: string;
 };
-
-function daysUntil(dateStr: string) {
-  const target = new Date(dateStr);
-  const now = new Date();
-  const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return diff;
-}
 
 export function MapTimeCapsules() {
   const { data } = useApi<{ timeCapsules: TimeCapsule[] }>("/api/v1/time-capsules");
@@ -37,7 +31,7 @@ export function MapTimeCapsules() {
         return (
           <div
             key={cap.id}
-            className="relative flex h-12 w-32 shrink-0 items-center justify-center rounded-full border-2 border-[#E8B8C2] bg-gradient-to-r from-[#F5DCE0] to-[#E8B8C2] px-4 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl animate-in fade-in slide-in-from-bottom-2"
+            className="relative flex h-12 w-32 shrink-0 items-center justify-center rounded-full border-2 border-bloom bg-gradient-to-r from-sakura to-bloom px-4 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl animate-in fade-in slide-in-from-bottom-2"
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <Lock className="absolute left-3 h-4 w-4 text-white/80" />

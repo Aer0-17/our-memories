@@ -15,6 +15,9 @@ type Config struct {
 	AllowedOrigins    []string
 	DefaultSpaceCode  string
 	DefaultPassword   string
+	AdminUsername     string
+	AdminPassword     string
+	AdminDisplayName  string
 	AutoSeed          bool
 	S3Endpoint        string
 	S3Region          string
@@ -37,6 +40,9 @@ func Load() {
 		AllowedOrigins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3002"), ","),
 		DefaultSpaceCode:  getEnv("DEFAULT_SPACE_CODE", "our-space-2026"),
 		DefaultPassword:   getEnv("DEFAULT_PASSWORD", "1234"),
+		AdminUsername:     getEnv("ADMIN_USERNAME", ""),
+		AdminPassword:     getEnv("ADMIN_PASSWORD", ""),
+		AdminDisplayName:  getEnv("ADMIN_DISPLAY_NAME", "Admin User"),
 		AutoSeed:          getEnv("AUTO_SEED", "true") == "true",
 		S3Endpoint:        getEnv("S3_ENDPOINT", ""),
 		S3Region:          getEnv("S3_REGION", "us-east-1"),

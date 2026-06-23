@@ -1,17 +1,25 @@
 "use client";
 
 import { type ChangeEvent, useRef, useState } from "react";
-import { Plus, X, Archive, Trash2, Edit, ImagePlus } from "lucide-react";
+import { Plus, Archive, Trash2, Edit, ImagePlus } from "lucide-react";
 import { LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { MemoryPageShell } from "@/components/MemoryNav";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Modal } from "@/components/ui/modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { useToast } from "@/components/ui/toast";
 import { apiJson } from "@/lib/apiClient";
+import { useAuth } from "@/lib/authContext";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
-import { readSession } from "@/lib/authStore";
+import { useTransientStatus } from "@/lib/useTransientStatus";
 import { useApi } from "@/lib/swr";
 import { deleteUploaded, uploadImages } from "@/lib/upload";
+import { photoPayload } from "@/lib/photoPayload";
+import { daysUntil, getTodayString } from "@/lib/dateFormat";
 
 type CapsulePhoto = {
   id?: string;
@@ -33,20 +41,6 @@ type TimeCapsule = {
 };
 
 const emptyForm = { title: "", openDate: "", content: "", photos: [] as string[] };
-const photoPayload = (photos: string[]) => photos.filter(Boolean).map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
-
-function daysUntil(dateStr: string) {
-  const target = new Date(dateStr);
-  const now = new Date();
-  const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return diff;
-}
-
-// 获取今天日期字符串（用于min限制）
-function getTodayString() {
-  const today = new Date();
-  return today.toISOString().split('T')[0];
-}
 
 export default function TimeCapsule() {
   const [open, setOpen] = useState(false);
@@ -55,10 +49,13 @@ export default function TimeCapsule() {
   const [photoKeys, setPhotoKeys] = useState<string[]>([]);
   const [photosDirty, setPhotosDirty] = useState(false);
   const [working, setWorking] = useState(false);
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useTransientStatus();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isAdmin = useContentEditAccess();
-  const session = readSession();
+  const { confirm, dialog: confirmDialog } = useConfirm();
+  const { toast } = useToast();
+  const { session } = useAuth();
   const { data, isLoading, mutate } = useApi<{ timeCapsules: TimeCapsule[] }>("/api/v1/time-capsules");
   const capsules = data?.timeCapsules ?? [];
 
@@ -102,7 +99,7 @@ export default function TimeCapsule() {
       if (previousKeys.length > 0) void deleteUploaded(previousKeys);
       setStatus("");
     } catch {
-      setStatus("照片上传失败，请重新选择。");
+      setStatus("照片上传失败，请重新选择。", { autoClear: true });
     } finally {
       setWorking(false);
       event.target.value = "";
@@ -112,16 +109,17 @@ export default function TimeCapsule() {
   const save = async () => {
     if (working) return;
     if (!form.title.trim() || !form.openDate || !form.content.trim()) {
-      setStatus("请填写所有必填项。");
+      setStatus("请填写所有必填项。", { autoClear: true });
       return;
     }
 
     // 验证日期必须是今天之后
-    const selectedDate = new Date(form.openDate);
+    const [sy, sm, sd] = form.openDate.split("-").map(Number);
+    const selectedDate = new Date(sy, sm - 1, sd);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (selectedDate <= today) {
-      setStatus("开启日期必须是今天之后。");
+      setStatus("开启日期必须是今天之后。", { autoClear: true });
       return;
     }
 
@@ -155,105 +153,104 @@ export default function TimeCapsule() {
       void mutate();
     } catch {
       await deleteUploaded(photoKeys);
-      setStatus("保存失败，请稍后再试。");
+      setStatus("保存失败，请稍后再试。", { autoClear: true });
     } finally {
       setWorking(false);
     }
   };
 
   const deleteCapsule = async (id: string) => {
-    if (!confirm("确定删除这个时光胶囊吗？")) return;
-    await apiJson(`/api/v1/time-capsules/${id}`, { method: "DELETE" });
-    void mutate();
+    if (!await confirm({ title: "确定删除这个时光胶囊吗？", danger: true, confirmText: "删除" })) return;
+    if (deletingId) return;
+    setDeletingId(id);
+    try {
+      await apiJson(`/api/v1/time-capsules/${id}`, { method: "DELETE" });
+      void mutate();
+      toast("时光胶囊已删除", "success");
+    } catch {
+      toast("删除失败，请稍后再试", "error");
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
     <MemoryPageShell active="capsule">
       <header>
-        <h1 className="text-2xl font-bold text-[#273846]">📦 时光宝盒</h1>
-        <p className="text-sm text-gray-500 mt-1">查看时光胶囊</p>
+        <h1 className="text-2xl font-bold text-slate">📦 时光宝盒</h1>
+        <p className="text-sm text-ink/60 mt-1">查看时光胶囊</p>
       </header>
 
       <button
-        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl active:scale-95 disabled:opacity-50 lg:bottom-6"
+        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-bloom text-white shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl active:scale-95 disabled:opacity-50 lg:bottom-6"
         onClick={() => openDialog()}
         disabled={!isAdmin}
       >
         <Plus className="h-6 w-6" />
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-black/20 px-4 animate-in fade-in duration-200"
-          onClick={closeDialog}
-        >
-          <div
-            className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">{editingId ? "编辑时光胶囊" : "埋下时光胶囊"}</h2>
-              <button onClick={closeDialog}><X className="h-5 w-5" /></button>
-            </div>
-            <div className="space-y-3">
-              <Input
-                placeholder="标题 *"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                required
-                className="transition-all duration-200 focus:ring-2 focus:ring-[#E8B8C2]"
-              />
-              <input
-                type="date"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#E8B8C2]"
-                value={form.openDate}
-                min={getTodayString()}
-                onChange={(e) => setForm({ ...form, openDate: e.target.value })}
-                required
-              />
-              <Textarea
-                placeholder="写给未来的话... *"
-                value={form.content}
-                onChange={(e) => setForm({ ...form, content: e.target.value })}
-                rows={5}
-                required
-                className="transition-all duration-200 focus:ring-2 focus:ring-[#E8B8C2]"
-              />
-              <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={pickPhotos} disabled={!isAdmin || working} />
-              <Button variant="secondary" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || working}>
-                <ImagePlus className="h-4 w-4" />
-                {form.photos.length ? `已选择 ${form.photos.length} 张照片` : "选择照片"}
-              </Button>
-              {form.photos.length > 0 && (
-                <div className="grid grid-cols-3 gap-2">
-                  {form.photos.map((photo, index) => (
-                    <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
-                      <LocalPrivacyImg className="h-full w-full object-cover" src={photo} alt={`时光胶囊照片 ${index + 1}`} />
-                    </div>
-                  ))}
+      <Modal
+        open={open}
+        onClose={() => { if (!working) closeDialog(); }}
+        title={editingId ? "编辑时光胶囊" : "埋下时光胶囊"}
+        closeOnOverlay={!working}
+      >
+        <div className="space-y-3">
+          <Input
+            placeholder="标题 *"
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            required
+          />
+          <input
+            type="date"
+            className="min-h-10 w-full rounded-[7px] border border-dim/80 bg-cream/76 px-3 text-sm text-ink outline-none transition focus:border-sky focus:bg-white"
+            value={form.openDate}
+            min={getTodayString()}
+            onChange={(e) => setForm({ ...form, openDate: e.target.value })}
+            required
+          />
+          <Textarea
+            placeholder="写给未来的话... *"
+            value={form.content}
+            onChange={(e) => setForm({ ...form, content: e.target.value })}
+            rows={5}
+            required
+          />
+          <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={pickPhotos} disabled={!isAdmin || working} />
+          <Button variant="secondary" className="w-full" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || working}>
+            <ImagePlus className="h-4 w-4" />
+            {form.photos.length ? `已选择 ${form.photos.length} 张照片` : "选择照片"}
+          </Button>
+          {form.photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2">
+              {form.photos.map((photo, index) => (
+                <div key={`${photo}-${index}`} className="relative aspect-square overflow-hidden rounded-[6px] border border-dim bg-mist/36">
+                  <LocalPrivacyImg className="h-full w-full object-cover" src={photo} alt={`时光胶囊照片 ${index + 1}`} />
                 </div>
-              )}
-              {status && <p className="rounded-[7px] border border-[#D8DDD8]/70 bg-white/42 px-3 py-2 text-xs leading-5 text-[#5A6670]/66">{status}</p>}
-              <Button className="w-full transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]" onClick={save} disabled={!isAdmin || working}>
-                {working ? "处理中" : editingId ? "保存" : "埋下胶囊"}
-              </Button>
+              ))}
             </div>
-          </div>
+          )}
+          {status && <p className="rounded-[7px] border border-dim/70 bg-white/42 px-3 py-2 text-xs leading-5 text-ink/66">{status}</p>}
+          <Button className="w-full" onClick={save} disabled={!isAdmin || working}>
+            {working ? <Spinner size="sm" /> : editingId ? "保存" : "埋下胶囊"}
+          </Button>
         </div>
-      )}
+      </Modal>
+
+      {confirmDialog}
 
       <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-          // 骨架屏
-          <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-                <div className="h-20 bg-gray-200 rounded"></div>
+              <div key={i} className="rounded-[8px] border border-dim/80 bg-cream p-5 shadow-[var(--shadow-card)]">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="mt-2 h-4 w-1/2" />
+                <Skeleton className="mt-3 h-20 w-full" />
               </div>
             ))}
-          </>
+          </div>
         ) : capsules.length === 0 ? (
           <EmptyState icon={<Archive className="h-7 w-7" />} title="还没有时光胶囊">
             创建第一个时光胶囊吧。
@@ -268,49 +265,50 @@ export default function TimeCapsule() {
             return (
               <div
                 key={cap.id}
-                className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1"
+                className="rounded-[8px] border border-dim/80 bg-cream p-5 shadow-[var(--shadow-card)] transition hover:shadow-[var(--shadow-card-strong)]"
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-lg">{cap.title}</h3>
+                  <h3 className="font-semibold text-lg text-ink">{cap.title}</h3>
                   {canEdit && isAdmin && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => openDialog(cap)}
-                        className="text-gray-400 transition-all duration-200 hover:text-blue-500 hover:scale-110 active:scale-95"
+                        className="text-ink/40 transition hover:text-sky"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => deleteCapsule(cap.id)}
-                        className="text-gray-400 transition-all duration-200 hover:text-red-500 hover:scale-110 active:scale-95"
+                        disabled={deletingId === cap.id}
+                        className="text-ink/40 transition hover:text-rose disabled:opacity-50"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingId === cap.id ? <Spinner size="sm" /> : <Trash2 className="h-4 w-4" />}
                       </button>
                     </div>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mb-3">开启日期：{cap.openDate}</p>
+                <p className="text-xs text-ink/50 mb-3">开启日期：{cap.openDate}</p>
 
                 {isLocked ? (
-                  <div className="rounded bg-blue-50 p-3 text-center border border-blue-200">
-                    <p className="text-2xl font-bold text-blue-600">{days}</p>
-                    <p className="text-xs text-gray-500">天后开启</p>
+                  <div className="rounded-[7px] border border-mist/80 bg-mist/28 p-3 text-center">
+                    <p className="text-2xl font-bold text-sky">{days}</p>
+                    <p className="text-xs text-ink/60">天后开启</p>
                   </div>
                 ) : (
                   <div>
                     {photos.length > 0 && (
                       <div className="mb-2 grid grid-cols-3 gap-2">
                         {photos.map((photo, index) => (
-                          <div key={`${cap.id}-photo-${index}`} className="relative aspect-square overflow-hidden rounded bg-[#D6E8F0]">
+                          <div key={`${cap.id}-photo-${index}`} className="relative aspect-square overflow-hidden rounded-[6px] bg-mist/36">
                             <LocalPrivacyImg className="h-full w-full object-cover" src={photo} alt={`${cap.title} 照片 ${index + 1}`} />
                           </div>
                         ))}
                       </div>
                     )}
-                    <div className="rounded bg-yellow-50 p-3 text-sm mb-2">
-                      <p className="whitespace-pre-wrap">{cap.content}</p>
+                    <div className="rounded-[7px] border border-bloom/30 bg-sakura/18 p-3 text-sm mb-2">
+                      <p className="whitespace-pre-wrap text-ink/80">{cap.content}</p>
                     </div>
-                    <p className="text-xs text-green-600 text-center">✓ 已打开</p>
+                    <p className="text-xs text-leaf text-center">✓ 已打开</p>
                   </div>
                 )}
               </div>

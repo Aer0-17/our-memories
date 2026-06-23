@@ -10,13 +10,13 @@ import { getLitCityIds, getLitProvinceIds, type LocalMemoryStore } from "@/data/
 import { provinces } from "@/data/provinces";
 
 const colors = {
-  cream: "#FAFBF7",
-  dim: "#D8DDD8",
-  ink: "#5A6670",
-  sakura: "#F5DCE0",
-  bloom: "#E8B8C2",
-  sky: "#A8C8DC",
-  mint: "#D4E8D0",
+  cream: "var(--color-cream)",
+  dim: "var(--color-dim)",
+  ink: "var(--color-ink)",
+  sakura: "var(--color-sakura)",
+  bloom: "var(--color-bloom)",
+  sky: "var(--color-sky)",
+  mint: "var(--color-mint)",
 };
 
 const demoMemories: LocalMemoryStore = {
@@ -79,7 +79,7 @@ const stableCoordinate = (value: number) => Number(value.toFixed(3));
 
 function DemoPhotoPlaceholder({ city }: Readonly<{ city?: string }>) {
   return (
-    <div className="relative grid h-full w-full place-items-center overflow-hidden bg-[#D6E8F0]/34">
+    <div className="relative grid h-full w-full place-items-center overflow-hidden bg-mist/34">
       <div
         className="absolute inset-0 opacity-40"
         style={{
@@ -89,10 +89,10 @@ function DemoPhotoPlaceholder({ city }: Readonly<{ city?: string }>) {
         }}
         aria-hidden="true"
       />
-      <div className="relative grid h-16 w-16 place-items-center rounded-[8px] border border-[#D8DDD8]/90 bg-[#FAFBF7]/72 text-[#A8C8DC] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+      <div className="relative grid h-16 w-16 place-items-center rounded-[8px] border border-dim/90 bg-cream/72 text-sky shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
         <Camera className="h-7 w-7" />
       </div>
-      <p className="absolute bottom-3 text-xs font-semibold text-[#5A6670]/45">
+      <p className="absolute bottom-3 text-xs font-semibold text-ink/45">
         {city ? `${city} 演示占位` : "演示占位"}
       </p>
     </div>
@@ -145,9 +145,9 @@ function DemoMap({
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
       style={{ aspectRatio: `${width} / ${height}` }}
     >
-      <div className="absolute left-3 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-2 rounded-full border border-[#D8DDD8]/85 bg-[#FAFBF7]/84 px-2 py-3 shadow-[0_12px_28px_rgba(90,102,112,0.1)] backdrop-blur">
+      <div className="absolute left-3 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-2 rounded-full border border-dim/85 bg-cream/84 px-2 py-3 shadow-[0_12px_28px_rgba(90,102,112,0.1)] backdrop-blur">
         <button
-          className="grid h-9 w-9 place-items-center rounded-full text-[#5A6670] transition hover:bg-[#D6E8F0]/42 disabled:opacity-35"
+          className="grid h-9 w-9 place-items-center rounded-full text-ink transition hover:bg-mist/42 disabled:opacity-35"
           type="button"
           onClick={() => setClampedZoom(zoom + 0.15)}
           disabled={zoom >= maxZoom}
@@ -167,12 +167,12 @@ function DemoMap({
             aria-label="拖动缩放演示地图"
             style={{ "--zoom-progress": `${zoomProgress}%` } as CSSProperties}
           />
-          <span className="text-[10px] font-semibold leading-none text-[#5A6670]/58">
+          <span className="text-[10px] font-semibold leading-none text-ink/58">
             {Math.round(zoom * 100)}%
           </span>
         </div>
         <button
-          className="grid h-9 w-9 place-items-center rounded-full text-[#5A6670] transition hover:bg-[#F5DCE0]/55 disabled:opacity-35"
+          className="grid h-9 w-9 place-items-center rounded-full text-ink transition hover:bg-sakura/55 disabled:opacity-35"
           type="button"
           onClick={() => setClampedZoom(zoom - 0.15)}
           disabled={zoom <= minZoom}
@@ -181,7 +181,7 @@ function DemoMap({
           <Minus className="h-4 w-4" />
         </button>
         <button
-          className="grid h-9 w-9 place-items-center rounded-full text-[#5A6670] transition hover:bg-[#D4E8D0]/48 disabled:opacity-35"
+          className="grid h-9 w-9 place-items-center rounded-full text-ink transition hover:bg-mint/48 disabled:opacity-35"
           type="button"
           onClick={() => setZoom(1)}
           disabled={zoom === 1}
@@ -276,7 +276,7 @@ function DemoMap({
 
         {hoveredPath?.province && (
           <motion.div
-            className="pointer-events-none absolute rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/90 px-3 py-2 text-sm text-[#5A6670] shadow-[0_10px_30px_rgba(90,102,112,0.12)] backdrop-blur"
+            className="pointer-events-none absolute rounded-[8px] border border-dim/80 bg-cream/90 px-3 py-2 text-sm text-ink shadow-[0_10px_30px_rgba(90,102,112,0.12)] backdrop-blur"
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             style={{
@@ -285,9 +285,9 @@ function DemoMap({
               transform: "translate(14px, -50%)",
             }}
           >
-            <span className="mr-2 inline-block h-2 w-2 rounded-sm bg-[#E8B8C2]" />
+            <span className="mr-2 inline-block h-2 w-2 rounded-sm bg-bloom" />
             {hoveredPath.province.name}
-            <span className="ml-2 text-[#5A6670]/60">{hoveredPath.province.nameEn}</span>
+            <span className="ml-2 text-ink/60">{hoveredPath.province.nameEn}</span>
           </motion.div>
         )}
       </motion.div>
@@ -302,16 +302,16 @@ function DemoCityPanel({ selectedProvinceId }: Readonly<{ selectedProvinceId: st
   const selectedProvince = provinceById.get(selectedProvinceId);
 
   return (
-    <aside className="z-20 flex h-full w-full max-w-[360px] shrink-0 flex-col border-l border-[#D8DDD8]/70 bg-[#FAFBF7]/76 px-5 py-6 shadow-[-18px_0_44px_rgba(90,102,112,0.07)] backdrop-blur-xl max-lg:hidden">
-      <div className="rounded-[8px] border border-[#D8DDD8]/80 bg-white/36 p-4 shadow-[0_14px_32px_rgba(90,102,112,0.08)]">
-        <div className="flex items-center gap-2 text-xs font-semibold text-[#5A6670]/60">
-          <LockKeyhole className="h-4 w-4 text-[#A8C8DC]" />
+    <aside className="z-20 flex h-full w-full max-w-[360px] shrink-0 flex-col border-l border-dim/70 bg-cream/76 px-5 py-6 shadow-[-18px_0_44px_rgba(90,102,112,0.07)] backdrop-blur-xl max-lg:hidden">
+      <div className="rounded-[8px] border border-dim/80 bg-white/36 p-4 shadow-[0_14px_32px_rgba(90,102,112,0.08)]">
+        <div className="flex items-center gap-2 text-xs font-semibold text-ink/60">
+          <LockKeyhole className="h-4 w-4 text-sky" />
           只读演示
         </div>
-        <h2 className="mt-2 text-2xl font-semibold leading-tight text-[#5A6670]">
+        <h2 className="mt-2 text-2xl font-semibold leading-tight text-ink">
           {selectedProvince?.name ?? "演示地图"}
         </h2>
-        <p className="mt-2 text-sm leading-6 text-[#5A6670]/62">
+        <p className="mt-2 text-sm leading-6 text-ink/62">
           使用静态样例数据展示点亮和城市记录，适合录制讲解流程。
         </p>
       </div>
@@ -323,11 +323,11 @@ function DemoCityPanel({ selectedProvinceId }: Readonly<{ selectedProvinceId: st
           ["0", "数据写入"],
         ].map(([value, label]) => (
           <div
-            className="rounded-[8px] border border-[#D8DDD8]/75 bg-white/34 px-3 py-3 text-center shadow-[0_10px_24px_rgba(90,102,112,0.06)]"
+            className="rounded-[8px] border border-dim/75 bg-white/34 px-3 py-3 text-center shadow-[0_10px_24px_rgba(90,102,112,0.06)]"
             key={label}
           >
-            <p className="text-xl font-semibold text-[#5A6670]">{value}</p>
-            <p className="mt-1 text-[11px] font-medium text-[#5A6670]/50">{label}</p>
+            <p className="text-xl font-semibold text-ink">{value}</p>
+            <p className="mt-1 text-[11px] font-medium text-ink/50">{label}</p>
           </div>
         ))}
       </div>
@@ -339,18 +339,18 @@ function DemoCityPanel({ selectedProvinceId }: Readonly<{ selectedProvinceId: st
 
           return (
             <article
-              className="overflow-hidden rounded-[8px] border border-[#D8DDD8]/80 bg-white/38 shadow-[0_14px_32px_rgba(90,102,112,0.08)]"
+              className="overflow-hidden rounded-[8px] border border-dim/80 bg-white/38 shadow-[0_14px_32px_rgba(90,102,112,0.08)]"
               key={city.id}
             >
-              <div className="relative aspect-[16/10] bg-[#D6E8F0]/36">
+              <div className="relative aspect-[16/10] bg-mist/36">
                 <DemoPhotoPlaceholder city={memory.city} />
               </div>
               <div className="p-3">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="min-w-0 truncate text-sm font-semibold text-[#5A6670]">{memory.city}</p>
-                  <span className="shrink-0 text-xs font-medium text-[#5A6670]/48">{memory.date}</span>
+                  <p className="min-w-0 truncate text-sm font-semibold text-ink">{memory.city}</p>
+                  <span className="shrink-0 text-xs font-medium text-ink/48">{memory.date}</span>
                 </div>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#5A6670]/60">{memory.text}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-ink/60">{memory.text}</p>
               </div>
             </article>
           );
@@ -363,10 +363,10 @@ function DemoCityPanel({ selectedProvinceId }: Readonly<{ selectedProvinceId: st
 function PixelSparkle({ className }: Readonly<{ className: string }>) {
   return (
     <span className={`pointer-events-none absolute h-4 w-4 opacity-75 ${className}`} aria-hidden="true">
-      <span className="absolute left-1.5 top-0 h-1.5 w-1.5 bg-[#D4E8D0]" />
-      <span className="absolute left-1.5 bottom-0 h-1.5 w-1.5 bg-[#D4E8D0]" />
-      <span className="absolute left-0 top-1.5 h-1.5 w-1.5 bg-[#D4E8D0]" />
-      <span className="absolute right-0 top-1.5 h-1.5 w-1.5 bg-[#D4E8D0]" />
+      <span className="absolute left-1.5 top-0 h-1.5 w-1.5 bg-mint" />
+      <span className="absolute left-1.5 bottom-0 h-1.5 w-1.5 bg-mint" />
+      <span className="absolute left-0 top-1.5 h-1.5 w-1.5 bg-mint" />
+      <span className="absolute right-0 top-1.5 h-1.5 w-1.5 bg-mint" />
     </span>
   );
 }
@@ -375,7 +375,7 @@ export default function DemoExperience() {
   const [selectedProvinceId, setSelectedProvinceId] = useState("henan");
 
   return (
-    <main className="relative h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#FAFBF7] text-[#5A6670]">
+    <main className="relative h-[100dvh] max-h-[100dvh] overflow-hidden bg-cream text-ink">
       <div className="map-mist-band" aria-hidden="true" />
       <Image
         className="pointer-events-none absolute left-[12%] top-[11%] w-28 opacity-24 pixelated"
@@ -397,21 +397,21 @@ export default function DemoExperience() {
       />
       <PixelSparkle className="left-[8%] top-[25%]" />
       <PixelSparkle className="right-[27%] top-[42%]" />
-      <span className="absolute left-[28%] bottom-[7%] h-2 w-2 bg-[#D4E8D0]" aria-hidden="true" />
-      <span className="absolute right-[11%] top-[19%] h-2 w-2 bg-[#D6E8F0]" aria-hidden="true" />
+      <span className="absolute left-[28%] bottom-[7%] h-2 w-2 bg-mint" aria-hidden="true" />
+      <span className="absolute right-[11%] top-[19%] h-2 w-2 bg-mist" aria-hidden="true" />
 
       <div className="relative z-10 flex h-full">
         <section className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden px-6 py-7 sm:px-9">
           <header className="flex items-start justify-between gap-5">
             <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-[#5A6670]/58">
-                <MapPinned className="h-4 w-4 text-[#E8B8C2]" />
+              <div className="flex items-center gap-2 text-sm font-semibold text-ink/58">
+                <MapPinned className="h-4 w-4 text-bloom" />
                 我们的回忆
               </div>
-              <h1 className="mt-2 text-[30px] font-semibold leading-tight text-[#5A6670]">录屏演示页</h1>
+              <h1 className="mt-2 text-[30px] font-semibold leading-tight text-ink">录屏演示页</h1>
             </div>
-            <div className="flex items-center gap-2 rounded-full border border-[#D8DDD8]/80 bg-[#FAFBF7]/76 px-4 py-2 text-sm font-semibold text-[#5A6670]/62 shadow-[0_10px_26px_rgba(90,102,112,0.08)] backdrop-blur">
-              <LockKeyhole className="h-4 w-4 text-[#A8C8DC]" />
+            <div className="flex items-center gap-2 rounded-full border border-dim/80 bg-cream/76 px-4 py-2 text-sm font-semibold text-ink/62 shadow-[0_10px_26px_rgba(90,102,112,0.08)] backdrop-blur">
+              <LockKeyhole className="h-4 w-4 text-sky" />
               不保存数据
             </div>
           </header>
@@ -421,34 +421,34 @@ export default function DemoExperience() {
           </div>
 
           <div className="absolute bottom-7 left-6 flex max-w-[calc(100%-3rem)] flex-wrap items-center gap-3 sm:left-9">
-            <div className="rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/72 px-4 py-3 text-sm text-[#5A6670]/72 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur">
+            <div className="rounded-[8px] border border-dim/80 bg-cream/72 px-4 py-3 text-sm text-ink/72 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur">
               <div className="flex items-center gap-3">
-                <span className="h-4 w-4 rounded-[2px] border border-[#E8B8C2] bg-[#F5DCE0]" />
+                <span className="h-4 w-4 rounded-[2px] border border-bloom bg-sakura" />
                 <span>样例已点亮</span>
               </div>
               <div className="mt-2 flex items-center gap-3">
-                <span className="h-4 w-4 rounded-[2px] border border-[#C8CEC8] bg-[#D8DDD8]/55" />
+                <span className="h-4 w-4 rounded-[2px] border border-dim-soft bg-dim/55" />
                 <span>未点亮</span>
               </div>
             </div>
-            <div className="hidden items-center gap-2 rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/72 px-4 py-3 text-sm font-medium text-[#5A6670]/62 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">
-              <MousePointer2 className="h-4 w-4 text-[#A8C8DC]" />
+            <div className="hidden items-center gap-2 rounded-[8px] border border-dim/80 bg-cream/72 px-4 py-3 text-sm font-medium text-ink/62 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">
+              <MousePointer2 className="h-4 w-4 text-sky" />
               点击省份只切换画面状态
             </div>
           </div>
 
           <aside className="absolute bottom-[4.75rem] right-[2.5rem] z-30 hidden w-[248px] rotate-[-1.5deg] xl:block">
-            <div className="rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/86 p-3 shadow-[0_22px_58px_rgba(90,102,112,0.15)] backdrop-blur-xl">
+            <div className="rounded-[8px] border border-dim/80 bg-cream/86 p-3 shadow-[0_22px_58px_rgba(90,102,112,0.15)] backdrop-blur-xl">
               <div className="mb-2.5 flex items-center gap-2">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[6px] border border-[#F5DCE0] bg-[#F5DCE0]/62 text-[#E8B8C2]">
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[6px] border border-sakura bg-sakura/62 text-bloom">
                   <Camera className="h-4 w-4" />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-[#5A6670]">演示相框</p>
-                  <p className="truncate text-xs font-medium text-[#5A6670]/48">无真实照片，不连接存储</p>
+                  <p className="truncate text-sm font-semibold text-ink">演示相框</p>
+                  <p className="truncate text-xs font-medium text-ink/48">无真实照片，不连接存储</p>
                 </div>
               </div>
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[6px] border border-[#D8DDD8]/80 bg-[#D6E8F0]/45">
+              <div className="relative aspect-[4/3] overflow-hidden rounded-[6px] border border-dim/80 bg-mist/45">
                 <DemoPhotoPlaceholder />
               </div>
             </div>

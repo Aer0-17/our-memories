@@ -35,13 +35,13 @@ const navItems = [
 
 export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
   return (
-    <aside className="hidden min-h-screen w-[260px] shrink-0 border-r border-[#D8DDD8]/78 bg-[#FAFBF7]/78 px-5 py-8 shadow-[12px_0_34px_rgba(90,102,112,0.04)] backdrop-blur lg:block">
+    <aside className="hidden min-h-screen w-[260px] shrink-0 border-r border-dim/78 bg-cream/78 px-5 py-8 shadow-[12px_0_34px_rgba(90,102,112,0.04)] backdrop-blur lg:block">
       <div className="text-center">
         <div className="mx-auto grid h-14 w-14 place-items-center">
-          <Heart className="h-10 w-10 fill-[#F5DCE0] text-[#E8B8C2]" />
+          <Heart className="h-10 w-10 fill-sakura text-bloom" />
         </div>
-        <p className="mt-2 text-lg font-semibold text-[#5A6670]">我们的回忆</p>
-        <p className="mt-1 text-xs text-[#5A6670]/52">只属于两个人的回忆</p>
+        <p className="mt-2 text-lg font-semibold text-ink">我们的回忆</p>
+        <p className="mt-1 text-xs text-ink/52">只属于两个人的回忆</p>
       </div>
 
       <nav className="mt-10 space-y-2">
@@ -54,8 +54,8 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
               key={item.key}
               className={`flex w-full items-center gap-3 rounded-[8px] border px-4 py-3 text-sm font-medium transition ${
                 selected
-                  ? "border-[#F5DCE0] bg-[#F5DCE0]/52 text-[#E8B8C2]"
-                  : "border-transparent text-[#5A6670]/72 hover:border-[#D8DDD8] hover:bg-[#FAFBF7]"
+                  ? "border-sakura bg-sakura/52 text-bloom"
+                  : "border-transparent text-ink/72 hover:border-dim hover:bg-cream"
               }`}
               href={item.href}
             >
@@ -66,24 +66,24 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
         })}
       </nav>
 
-      <div className="mt-10 rounded-[8px] border border-[#D8DDD8]/72 bg-[#FAFBF7]/72 p-4 text-sm leading-7 text-[#5A6670]/62 shadow-[0_12px_26px_rgba(90,102,112,0.05)]">
+      <div className="mt-10 rounded-[8px] border border-dim/72 bg-cream/72 p-4 text-sm leading-7 text-ink/62 shadow-[0_12px_26px_rgba(90,102,112,0.05)]">
         在线优先版本会把回忆、照片和 AI 草稿保存到你的后端空间。
-        <Heart className="ml-1 inline h-3.5 w-3.5 fill-[#F5DCE0] text-[#E8B8C2]" />
+        <Heart className="ml-1 inline h-3.5 w-3.5 fill-sakura text-bloom" />
       </div>
 
-      <div className="mt-4 rounded-[8px] border border-[#D8DDD8]/72 bg-[#FAFBF7]/72 p-4 shadow-[0_12px_26px_rgba(90,102,112,0.05)]">
+      <div className="mt-4 rounded-[8px] border border-dim/72 bg-cream/72 p-4 shadow-[0_12px_26px_rgba(90,102,112,0.05)]">
         <div className="flex items-center gap-2">
-          <Heart className="h-3.5 w-3.5 fill-[#F5DCE0] text-[#E8B8C2]" />
-          <p className="text-xs font-semibold text-[#5A6670]">关于这份地图</p>
+          <Heart className="h-3.5 w-3.5 fill-sakura text-bloom" />
+          <p className="text-xs font-semibold text-ink">关于这份地图</p>
         </div>
-        <p className="mt-2 text-xs leading-6 text-[#5A6670]/60">
+        <p className="mt-2 text-xs leading-6 text-ink/60">
           一期为私密双人空间，后续可用开通码扩展给其它情侣。
         </p>
 
-        <div className="mt-3 border-t border-[#D8DDD8]/54 pt-3">
-          <p className="text-[11px] font-semibold text-[#5A6670]/48">开源项目</p>
+        <div className="mt-3 border-t border-dim/54 pt-3">
+          <p className="text-[11px] font-semibold text-ink/48">开源项目</p>
           <a
-            className="mt-1.5 flex items-center justify-center gap-1.5 rounded-[7px] border border-[#F5DCE0] bg-[#F5DCE0]/40 px-3 py-2 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/70"
+            className="mt-1.5 flex items-center justify-center gap-1.5 rounded-[7px] border border-sakura bg-sakura/40 px-3 py-2 text-xs font-semibold text-bloom transition hover:bg-sakura/70"
             href={githubUrl}
             target="_blank"
             rel="noreferrer"
@@ -91,7 +91,7 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
             <Star className="h-3.5 w-3.5" />
             GitHub
           </a>
-          <p className="mt-1.5 select-text text-[11px] leading-5 text-[#5A6670]/55">
+          <p className="mt-1.5 select-text text-[11px] leading-5 text-ink/55">
             github.com/qq570850096/our-memories
           </p>
         </div>
@@ -121,10 +121,10 @@ export function MemoryPageShell({
   }, [active]);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#FAFBF7] text-[#5A6670]">
+    <main className="relative min-h-screen overflow-hidden bg-cream text-ink">
       <div className="map-mist-band" aria-hidden="true" />
-      <span className="absolute left-[38%] top-[9%] h-2 w-2 bg-[#F5DCE0]" aria-hidden="true" />
-      <span className="absolute right-[17%] top-[15%] h-2 w-2 bg-[#D6E8F0]" aria-hidden="true" />
+      <span className="absolute left-[38%] top-[9%] h-2 w-2 bg-sakura" aria-hidden="true" />
+      <span className="absolute right-[17%] top-[15%] h-2 w-2 bg-mist" aria-hidden="true" />
       <div className="relative z-10 flex min-h-screen">
         <MemorySidebar active={active} />
         <section className="memory-page-content min-w-0 flex-1 px-4 pb-20 pt-4 sm:px-10 sm:py-8 lg:pb-8">
@@ -135,7 +135,7 @@ export function MemoryPageShell({
       </div>
 
       {/* 底部导航固定在底部（仅移动端） */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D8DDD8]/78 bg-[#FAFBF7]/95 backdrop-blur-lg lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-dim/78 bg-cream/95 backdrop-blur-lg lg:hidden">
         <div className="grid grid-cols-5 gap-1 px-2 py-2">
           {navItems
             .filter((item) => ["map", "memories", "anniversaries", "whispers"].includes(item.key))
@@ -148,8 +148,8 @@ export function MemoryPageShell({
                   key={item.key}
                   className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2 transition ${
                     selected
-                      ? "bg-[#F5DCE0] text-[#B85D70]"
-                      : "text-[#5A6670]/54 hover:bg-white/58"
+                      ? "bg-sakura text-rose-ink"
+                      : "text-ink/54 hover:bg-white/58"
                   }`}
                   href={item.href}
                   onClick={() => setMoreOpen(false)}
@@ -162,7 +162,7 @@ export function MemoryPageShell({
 
           {/* 更多按钮 */}
           <button
-            className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[#5A6670]/54 transition hover:bg-white/58"
+            className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-ink/54 transition hover:bg-white/58"
             onClick={() => setMoreOpen(!moreOpen)}
           >
             <MoreHorizontal className="h-5 w-5" />
@@ -177,7 +177,7 @@ export function MemoryPageShell({
               className="fixed inset-0 z-40"
               onClick={() => setMoreOpen(false)}
             />
-            <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
+            <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-dim/85 bg-cream/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
               {navItems
                 .filter((item) => ["favorites", "capsule"].includes(item.key))
                 .map((item) => {
@@ -189,8 +189,8 @@ export function MemoryPageShell({
                       key={item.key}
                       className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2 transition ${
                         selected
-                          ? "bg-[#F5DCE0] text-[#B85D70]"
-                          : "text-[#5A6670]/64 hover:bg-white/60"
+                          ? "bg-sakura text-rose-ink"
+                          : "text-ink/64 hover:bg-white/60"
                       }`}
                       href={item.href}
                       onClick={() => setMoreOpen(false)}
@@ -216,7 +216,7 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
       {children}
 
       {/* 底部导航固定在底部（仅移动端） */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D8DDD8]/78 bg-[#FAFBF7]/95 backdrop-blur-lg lg:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-dim/78 bg-cream/95 backdrop-blur-lg lg:hidden">
         <div className="grid grid-cols-5 gap-1 px-2 py-2">
           {navItems
             .filter((item) => ["map", "memories", "anniversaries", "whispers"].includes(item.key))
@@ -229,8 +229,8 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
                   key={item.key}
                   className={`flex flex-col items-center gap-1 rounded-lg px-2 py-2 transition ${
                     selected
-                      ? "bg-[#F5DCE0] text-[#B85D70]"
-                      : "text-[#5A6670]/54 hover:bg-white/58"
+                      ? "bg-sakura text-rose-ink"
+                      : "text-ink/54 hover:bg-white/58"
                   }`}
                   href={item.href}
                   onClick={() => setMoreOpen(false)}
@@ -243,7 +243,7 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
 
           {/* 更多按钮 */}
           <button
-            className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[#5A6670]/54 transition hover:bg-white/58"
+            className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-ink/54 transition hover:bg-white/58"
             onClick={() => setMoreOpen(!moreOpen)}
           >
             <MoreHorizontal className="h-5 w-5" />
@@ -258,7 +258,7 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
               className="fixed inset-0 z-40"
               onClick={() => setMoreOpen(false)}
             />
-            <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
+            <div className="absolute bottom-full left-3 right-3 mb-2 grid grid-cols-3 gap-2 rounded-[8px] border border-dim/85 bg-cream/95 p-2 shadow-[0_18px_44px_rgba(90,102,112,0.14)] backdrop-blur-xl">
               {navItems
                 .filter((item) => ["favorites", "capsule"].includes(item.key))
                 .map((item) => {
@@ -267,7 +267,7 @@ export function MapPageShell({ children }: Readonly<{ children: ReactNode }>) {
                   return (
                     <Link
                       key={item.key}
-                      className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-[#5A6670]/64 transition hover:bg-white/60"
+                      className="flex flex-col items-center gap-1 rounded-lg px-2 py-2 text-ink/64 transition hover:bg-white/60"
                       href={item.href}
                       onClick={() => setMoreOpen(false)}
                     >

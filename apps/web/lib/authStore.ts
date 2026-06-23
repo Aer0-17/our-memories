@@ -1,4 +1,4 @@
-type StoredSession = {
+export type StoredSession = {
   accessToken: string;
   refreshToken: string;
   user?: {
@@ -17,7 +17,8 @@ type StoredSession = {
   };
 };
 
-const sessionKey = "mapofus:session";
+export const sessionKey = "mapofus:session";
+export const authSessionUpdatedEvent = "mapofus:session-updated";
 export const sessionScopeUpdatedEvent = "mapofus:session-scope-updated";
 
 export type SessionScopeUpdateDetail = {
@@ -25,6 +26,10 @@ export type SessionScopeUpdateDetail = {
   nextScope: string;
   clearPrevious: boolean;
 };
+
+function dispatchSessionUpdated(session: StoredSession | null) {
+  window.dispatchEvent(new CustomEvent<StoredSession | null>(authSessionUpdatedEvent, { detail: session }));
+}
 
 export function readSession(): StoredSession | null {
   if (typeof window === "undefined") return null;
@@ -50,6 +55,7 @@ export function writeSession(session: StoredSession) {
   window.dispatchEvent(new CustomEvent<boolean>("mapofus:admin-mode-updated", {
     detail: session.membership?.role === "owner",
   }));
+  dispatchSessionUpdated(session);
   const nextScope = sessionCacheScope();
   if (previousScope !== nextScope) {
     window.dispatchEvent(new CustomEvent<SessionScopeUpdateDetail>(sessionScopeUpdatedEvent, {
@@ -63,6 +69,8 @@ export function clearSession() {
   const previousScope = sessionCacheScope();
   window.localStorage.removeItem(sessionKey);
   window.sessionStorage.removeItem("mapofus:admin-unlocked");
+  window.dispatchEvent(new CustomEvent<boolean>("mapofus:admin-mode-updated", { detail: false }));
+  dispatchSessionUpdated(null);
   const nextScope = sessionCacheScope();
   if (previousScope !== nextScope) {
     window.dispatchEvent(new CustomEvent<SessionScopeUpdateDetail>(sessionScopeUpdatedEvent, {

@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Image, Text, View } from "@tarojs/components";
-import Taro from "@tarojs/taro";
+import Taro, { usePullDownRefresh } from "@tarojs/taro";
 import { anniversaryDisplayState, type AnniversaryCard } from "@map-of-us/shared";
 import { getAnniversaryCards, readSession } from "../../lib/api";
 import "./index.scss";
@@ -8,22 +8,38 @@ import "./index.scss";
 export default function AnniversariesPage() {
   const [cards, setCards] = useState<AnniversaryCard[]>([]);
   const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const loadCards = useCallback(async () => {
     if (!readSession()) {
       Taro.switchTab({ url: "/pages/index/index" });
       return;
     }
-    void getAnniversaryCards()
-      .then((data) => setCards(data.cards))
-      .catch(() => setStatus("纪念日墙读取失败，请稍后再试。"));
+    setLoading(true);
+    setStatus("");
+    try {
+      const data = await getAnniversaryCards();
+      setCards(data.cards);
+    } catch {
+      setStatus("纪念日墙读取失败，请稍后再试。");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadCards();
+  }, [loadCards]);
+
+  usePullDownRefresh(() => {
+    void loadCards().finally(() => Taro.stopPullDownRefresh());
+  });
 
   return (
     <View className="page anniversary-page">
       <View className="page-head">
         <Text className="title">纪念日墙</Text>
-        <Text className="subtitle">每张卡片都在替我们数日子。</Text>
+        <Text className="subtitle">{loading ? "同步中..." : "每张卡片都在替我们数日子。"}</Text>
       </View>
       {status && <Text className="status">{status}</Text>}
       {cards.length === 0 ? (

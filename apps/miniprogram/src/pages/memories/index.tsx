@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Image, Text, View } from "@tarojs/components";
-import Taro from "@tarojs/taro";
+import Taro, { usePullDownRefresh } from "@tarojs/taro";
 import type { Memory } from "@map-of-us/shared";
 import { getMemories, readSession } from "../../lib/api";
 import "./index.scss";
@@ -8,16 +8,32 @@ import "./index.scss";
 export default function MemoriesPage() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [status, setStatus] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const loadMemories = useCallback(async () => {
     if (!readSession()) {
       Taro.switchTab({ url: "/pages/index/index" });
       return;
     }
-    void getMemories()
-      .then((data) => setMemories(Object.values(data.memories).flat()))
-      .catch(() => setStatus("回忆读取失败，请重新登录后再试。"));
+    setLoading(true);
+    setStatus("");
+    try {
+      const data = await getMemories();
+      setMemories(Object.values(data.memories).flat());
+    } catch {
+      setStatus("回忆读取失败，请重新登录后再试。");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadMemories();
+  }, [loadMemories]);
+
+  usePullDownRefresh(() => {
+    void loadMemories().finally(() => Taro.stopPullDownRefresh());
+  });
 
   const sorted = useMemo(
     () => [...memories].sort((a, b) => b.date.localeCompare(a.date)),
@@ -28,7 +44,7 @@ export default function MemoriesPage() {
     <View className="page memories-page">
       <View className="page-head">
         <Text className="title">回忆记录</Text>
-        <Text className="subtitle">{sorted.length} 条 · 按时间排列</Text>
+        <Text className="subtitle">{loading ? "同步中..." : `${sorted.length} 条 · 按时间排列`}</Text>
       </View>
       {status && <Text className="status">{status}</Text>}
       {sorted.length === 0 ? (

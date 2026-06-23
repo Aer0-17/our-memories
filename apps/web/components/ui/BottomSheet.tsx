@@ -64,6 +64,16 @@ export function BottomSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // 打开时锁定背景滚动。
+  useEffect(() => {
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   const snapHeight = snapPoints[snapIndex] ?? snapPoints[0];
   const snapVh = `${snapHeight * 100}dvh`;
 
@@ -73,7 +83,7 @@ export function BottomSheet({
         <>
           {/* 遮罩：点击关闭 */}
           <motion.div
-            className="fixed inset-0 z-[60] bg-[#5A6670]/28 backdrop-blur-[2px] lg:hidden"
+            className="fixed inset-0 z-[60] bg-ink/28 backdrop-blur-[2px] lg:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -83,7 +93,7 @@ export function BottomSheet({
 
           <motion.div
             ref={sheetRef}
-            className={`fixed inset-x-0 bottom-0 z-[60] flex max-h-[96dvh] flex-col rounded-t-[16px] border border-[#D8DDD8] bg-[#FAFBF7] shadow-[0_-18px_44px_rgba(90,102,112,0.18)] lg:hidden ${sheetClassName}`}
+            className={`fixed inset-x-0 bottom-0 z-[60] flex max-h-[96dvh] flex-col rounded-t-[16px] border border-dim bg-cream shadow-[0_-18px_44px_rgba(90,102,112,0.18)] lg:hidden ${sheetClassName}`}
             style={{ height: snapVh, paddingBottom: "env(safe-area-inset-bottom)" }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
@@ -118,7 +128,7 @@ export function BottomSheet({
               className="flex shrink-0 cursor-grab touch-none flex-col items-center pt-2 active:cursor-grabbing"
               onPointerDown={(event) => dragControls.start(event)}
             >
-              <span className="h-1.5 w-10 rounded-full bg-[#D8DDD8]" />
+              <span className="h-1.5 w-10 rounded-full bg-dim" />
             </div>
 
             {header && (
@@ -133,7 +143,7 @@ export function BottomSheet({
             </div>
 
             {footer && (
-              <div className="shrink-0 border-t border-[#D8DDD8]/70 bg-[#FAFBF7]/96 px-5 py-3 shadow-[0_-10px_22px_rgba(250,251,247,0.86)] backdrop-blur">
+              <div className="shrink-0 border-t border-dim/70 bg-cream/96 px-5 py-3 shadow-[0_-10px_22px_rgba(250,251,247,0.86)] backdrop-blur">
                 {footer}
               </div>
             )}

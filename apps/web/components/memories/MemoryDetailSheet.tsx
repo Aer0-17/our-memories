@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { featureOfProvince, makePath, makeProjectionForProvince } from "@/lib/geo";
 import type { City } from "@/data/cities";
 import { provinces } from "@/data/provinces";
 import type { Memory } from "@/data/memories";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { MemoryContentView } from "@/components/memories/MemoryContentView";
+import { Spinner } from "@/components/ui/spinner";
 import { useContentEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
 
 type MemoryDetailSheetProps = {
@@ -98,10 +99,10 @@ export function MemoryDetailSheet({
         memory ? (
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-lg font-semibold text-[#5A6670]">
+              <h2 className="truncate text-lg font-semibold text-ink">
                 {memory.title || memory.city}
               </h2>
-              <p className="mt-0.5 text-xs font-medium text-[#5A6670]/52">
+              <p className="mt-0.5 text-xs font-medium text-ink/52">
                 {[memory.city, memory.date].filter(Boolean).join(" · ")}
               </p>
             </div>
@@ -113,21 +114,21 @@ export function MemoryDetailSheet({
         <div className="space-y-4 pb-2">
           {/* 迷你地图定位 */}
           {miniMap && (
-            <div className="overflow-hidden rounded-[10px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/72">
+            <div className="overflow-hidden rounded-[10px] border border-dim/80 bg-cream/72">
               <svg viewBox={`0 0 ${MINI_MAP_WIDTH} ${MINI_MAP_HEIGHT}`} className="h-auto w-full" role="img" aria-label={`${memory.city} 在${province?.name ?? ""}的位置`}>
                 {miniMap.outlineD && (
                   <path
                     d={miniMap.outlineD}
-                    fill={"#F5DCE0"}
+                    fill={"var(--color-sakura)"}
                     fillOpacity={0.32}
-                    stroke={"#E8B8C2"}
+                    stroke={"var(--color-bloom)"}
                     strokeOpacity={0.7}
                     strokeWidth={1.4}
                     strokeLinejoin="round"
                   />
                 )}
-                <circle cx={miniMap.point[0]} cy={miniMap.point[1]} r={14} fill={"#E8B8C2"} fillOpacity={0.28} />
-                <circle cx={miniMap.point[0]} cy={miniMap.point[1]} r={5} fill={"#E8B8C2"} stroke={"#FAFBF7"} strokeWidth={2} />
+                <circle cx={miniMap.point[0]} cy={miniMap.point[1]} r={14} fill={"var(--color-bloom)"} fillOpacity={0.28} />
+                <circle cx={miniMap.point[0]} cy={miniMap.point[1]} r={5} fill={"var(--color-bloom)"} stroke={"var(--color-cream)"} strokeWidth={2} />
               </svg>
             </div>
           )}
@@ -135,9 +136,9 @@ export function MemoryDetailSheet({
           <MemoryContentView memory={memory} cityName={city?.name} />
 
           {canAddNote && (
-            <div className="rounded-[7px] border border-[#F5DCE0]/70 bg-[#FAFBF7]/72 p-3">
+            <div className="rounded-[7px] border border-sakura/70 bg-cream/72 p-3">
               <button
-                className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-[#E8B8C2]"
+                className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-bloom"
                 type="button"
                 onClick={() => setNoteOpen((value) => !value)}
               >
@@ -147,7 +148,7 @@ export function MemoryDetailSheet({
               {noteOpen && (
                 <div className="mt-3 space-y-2">
                   <textarea
-                    className="min-h-[88px] w-full resize-none rounded-[6px] border border-[#D8DDD8] bg-white/70 px-3 py-2 text-sm leading-6 text-[#5A6670] outline-none transition focus:border-[#E8B8C2]"
+                    className="min-h-[88px] w-full resize-none rounded-[6px] border border-dim bg-white/70 px-3 py-2 text-sm leading-6 text-ink outline-none transition focus:border-bloom"
                     value={note}
                     onChange={(event) => {
                       setNote(event.target.value);
@@ -156,19 +157,19 @@ export function MemoryDetailSheet({
                     maxLength={500}
                     placeholder="写给对方的一句补充..."
                   />
-                  {noteError && <p className="text-xs font-semibold text-[#D86F82]">{noteError}</p>}
+                  {noteError && <p className="text-xs font-semibold text-rose">{noteError}</p>}
                   <div className="flex items-center gap-2">
                     <button
-                      className="inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-[6px] bg-[#F5DCE0] px-3 text-sm font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7] disabled:cursor-not-allowed disabled:opacity-45"
+                      className="inline-flex min-h-9 flex-1 items-center justify-center gap-2 rounded-[6px] bg-sakura px-3 text-sm font-semibold text-bloom transition hover:bg-bloom hover:text-cream disabled:cursor-not-allowed disabled:opacity-45"
                       type="button"
                       onClick={handleSaveNote}
                       disabled={!canSaveNote}
                     >
-                      {savingNote && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {savingNote && <Spinner size="sm" />}
                       {savingNote ? "保存中" : "保存补充"}
                     </button>
                     <button
-                      className="min-h-9 rounded-[6px] px-3 text-sm font-semibold text-[#5A6670]/58 transition hover:bg-[#D8DDD8]/28"
+                      className="min-h-9 rounded-[6px] px-3 text-sm font-semibold text-ink/58 transition hover:bg-dim/28"
                       type="button"
                       onClick={() => {
                         setNote(memory.partnerNote ?? "");

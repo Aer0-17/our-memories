@@ -32,12 +32,12 @@ interface ChinaMapProps {
 }
 
 const colors = {
-  cream: "#FAFBF7",
-  dim: "#D8DDD8",
-  ink: "#5A6670",
-  sakura: "#F5DCE0",
-  bloom: "#E8B8C2",
-  sky: "#A8C8DC",
+  cream: "var(--color-cream)",
+  dim: "var(--color-dim)",
+  ink: "var(--color-ink)",
+  sakura: "var(--color-sakura)",
+  bloom: "var(--color-bloom)",
+  sky: "var(--color-sky)",
 };
 
 const provinceById = new Map(provinces.map((province) => [province.id, province]));
@@ -64,7 +64,7 @@ export function SouthChinaSeaInset({ compact = false }: Readonly<{ compact?: boo
   if (!inset || !inset.d) return null;
 
   return (
-    <div className="w-fit shrink-0 rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/70 p-1 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur">
+    <div className="w-fit shrink-0 rounded-[8px] border border-dim/80 bg-cream/70 p-1 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur">
       <svg
         width={inset.width}
         height={inset.height}
@@ -209,9 +209,9 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
       style={{ aspectRatio: `${width} / ${height}` }}
     >
-      <div className="absolute right-2 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1 rounded-full border border-[#D8DDD8]/85 bg-[#FAFBF7]/86 px-1.5 py-1.5 shadow-[0_12px_28px_rgba(90,102,112,0.1)] backdrop-blur sm:left-4 sm:right-auto sm:gap-2 sm:px-2 sm:py-3">
+      <div className="absolute right-2 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1 rounded-full border border-dim/85 bg-cream/86 px-1.5 py-1.5 shadow-[0_12px_28px_rgba(90,102,112,0.1)] backdrop-blur sm:left-4 sm:right-auto sm:gap-2 sm:px-2 sm:py-3">
         <button
-          className="grid h-8 w-8 place-items-center rounded-full text-[#5A6670] transition hover:bg-[#D6E8F0]/42 disabled:opacity-35 sm:h-9 sm:w-9"
+          className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-mist/42 disabled:opacity-35 sm:h-9 sm:w-9"
           type="button"
           onClick={() => setClampedZoom(zoom + 0.15)}
           disabled={zoom >= maxZoom}
@@ -231,12 +231,12 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
             aria-label="拖动缩放中国地图"
             style={{ "--zoom-progress": `${zoomProgress}%` } as CSSProperties}
           />
-          <span className="text-[10px] font-semibold leading-none text-[#5A6670]/58">
+          <span className="text-[10px] font-semibold leading-none text-ink/58">
             {Math.round(zoom * 100)}%
           </span>
         </div>
         <button
-          className="grid h-8 w-8 place-items-center rounded-full text-[#5A6670] transition hover:bg-[#F5DCE0]/55 disabled:opacity-35 sm:h-9 sm:w-9"
+          className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-sakura/55 disabled:opacity-35 sm:h-9 sm:w-9"
           type="button"
           onClick={() => setClampedZoom(zoom - 0.15)}
           disabled={zoom <= minZoom}
@@ -245,7 +245,7 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
           <Minus className="h-4 w-4" />
         </button>
         <button
-          className="grid h-8 w-8 place-items-center rounded-full text-[#5A6670] transition hover:bg-[#D4E8D0]/48 disabled:opacity-35 sm:h-9 sm:w-9"
+          className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-mint/48 disabled:opacity-35 sm:h-9 sm:w-9"
           type="button"
           onClick={() => setZoom(1)}
           disabled={zoom === 1}
@@ -288,7 +288,7 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
               <linearGradient id="memoryRouteGradient" x1="0%" x2="100%" y1="15%" y2="85%">
                 <stop offset="0%" stopColor={colors.bloom} stopOpacity="0.78" />
                 <stop offset="48%" stopColor={colors.sky} stopOpacity="0.86" />
-                <stop offset="100%" stopColor="#D4E8D0" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="var(--color-mint)" stopOpacity="0.75" />
               </linearGradient>
             </defs>
 
@@ -460,7 +460,7 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
           {activePath?.province && (
             <motion.div
               key={activePath.id}
-              className={`absolute z-40 w-[212px] overflow-hidden rounded-[8px] border border-[#D8DDD8]/85 bg-[#FAFBF7]/96 text-[#5A6670] shadow-[0_14px_32px_rgba(90,102,112,0.14)] backdrop-blur ${isMobile ? "" : "pointer-events-none"}`}
+              className={`absolute z-40 w-[212px] overflow-hidden rounded-[8px] border border-dim/85 bg-cream/96 text-ink shadow-[0_14px_32px_rgba(90,102,112,0.14)] backdrop-blur ${isMobile ? "" : "pointer-events-none"}`}
               initial={{ opacity: 0, y: 6, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.16 }}
@@ -481,43 +481,43 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
                     width={48}
                     height={48}
                     unoptimized
-                    className="pixelated h-12 w-12 shrink-0 rounded-[6px] border border-[#D8DDD8] object-cover"
+                    className="pixelated h-12 w-12 shrink-0 rounded-[6px] border border-dim object-cover"
                   />
                 ) : (
-                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[6px] border border-[#D8DDD8] bg-[#D8DDD8]/40 text-[10px] font-medium text-[#5A6670]/45">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[6px] border border-dim bg-dim/40 text-[10px] font-medium text-ink/45">
                     未点亮
                   </span>
                 )}
                 <div className="min-w-0 flex-1 py-0.5">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="truncate text-sm font-semibold text-[#5A6670]">
+                    <span className="truncate text-sm font-semibold text-ink">
                       {activePath.province.name}
                     </span>
-                    <span className="truncate text-[11px] text-[#5A6670]/55">
+                    <span className="truncate text-[11px] text-ink/55">
                       {activePath.province.nameEn}
                     </span>
                   </div>
                   {activeStats ? (
                     <>
-                      <div className="mt-1 text-[11px] font-medium text-[#E8B8C2]">
+                      <div className="mt-1 text-[11px] font-medium text-bloom">
                         {activeStats.count} 条回忆 · 点亮 {activeStats.cities.size} 城
                       </div>
                       {activeStats.latest && (
-                        <div className="mt-0.5 truncate text-[11px] text-[#5A6670]/55">
+                        <div className="mt-0.5 truncate text-[11px] text-ink/55">
                           {activeStats.latest.title || activeStats.latest.text || "最近的回忆"}
                           {activeStats.latest.date ? ` · ${activeStats.latest.date}` : ""}
                         </div>
                       )}
                     </>
                   ) : (
-                    <div className="mt-1 text-[11px] text-[#5A6670]/55">还没有回忆，去点亮 →</div>
+                    <div className="mt-1 text-[11px] text-ink/55">还没有回忆，去点亮 →</div>
                   )}
                 </div>
               </div>
               {isMobile && (
                 <button
                   type="button"
-                  className="block w-full border-t border-[#D8DDD8]/64 bg-white/45 px-3 py-2 text-center text-[12px] font-semibold text-[#5A6670] transition hover:bg-[#F5DCE0]/45"
+                  className="block w-full border-t border-dim/64 bg-white/45 px-3 py-2 text-center text-[12px] font-semibold text-ink transition hover:bg-sakura/45"
                   onClick={(event) => {
                     event.stopPropagation();
                     goProvince(activeId!);

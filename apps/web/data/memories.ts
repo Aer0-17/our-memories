@@ -19,10 +19,6 @@ export interface Memory {
   draft?: boolean;
 }
 
-export const memories: Memory[] = [];
-
-export const recentMemories: Memory[] = memories.filter((memory) => !memory.draft).slice(0, 3);
-
 export const memoryTime = (memory: Pick<Memory, "date" | "createdAt">) => {
   if (/^\d{4}\.\d{2}\.\d{2}$/.test(memory.date)) {
     const [year, month, day] = memory.date.split(".").map(Number);
@@ -35,10 +31,3 @@ export const memoryTime = (memory: Pick<Memory, "date" | "createdAt">) => {
 
 export const sortMemoriesByTime = <T extends Pick<Memory, "date" | "createdAt">>(items: T[]) =>
   [...items].sort((a, b) => memoryTime(b) - memoryTime(a));
-
-export const recentTimelineMemories: Memory[] = sortMemoriesByTime(
-  memories.filter((memory) => !memory.draft),
-).slice(0, 5);
-
-export const getLatestMemory = (cityId: string): Memory | undefined =>
-  sortMemoriesByTime(memories.filter((memory) => memory.cityId === cityId && !memory.draft))[0];

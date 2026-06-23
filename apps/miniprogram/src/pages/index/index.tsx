@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Input, Text, View } from "@tarojs/components";
-import Taro from "@tarojs/taro";
+import Taro, { usePullDownRefresh } from "@tarojs/taro";
 import { claimActivation, login } from "../../lib/api";
 import "./index.scss";
 
@@ -19,6 +19,11 @@ export default function IndexPage() {
   const [secondPassword, setSecondPassword] = useState("");
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState(false);
+
+  usePullDownRefresh(() => {
+    setStatus("");
+    Taro.stopPullDownRefresh();
+  });
 
   const submitLogin = async () => {
     if (working) return;

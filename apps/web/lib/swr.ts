@@ -1,11 +1,11 @@
 import useSWR from "swr";
 import type { SWRConfiguration } from "swr";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, throwApiError } from "@/lib/apiClient";
 import type { LocalMemoryStore } from "@/data/progress";
 
 const defaultFetcher = async (url: string) => {
   const response = await apiFetch(url);
-  if (!response.ok) throw new Error(`API error: ${response.status}`);
+  if (!response.ok) await throwApiError(response, url);
   return response.json();
 };
 

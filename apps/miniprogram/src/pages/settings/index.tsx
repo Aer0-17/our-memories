@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Text, View } from "@tarojs/components";
-import Taro from "@tarojs/taro";
+import Taro, { usePullDownRefresh } from "@tarojs/taro";
 import { bindWechat, clearSession, readSession, type Session } from "../../lib/api";
 import "./index.scss";
 
@@ -12,6 +12,12 @@ export default function SettingsPage() {
   useEffect(() => {
     setSession(readSession());
   }, []);
+
+  usePullDownRefresh(() => {
+    setSession(readSession());
+    setStatus("");
+    Taro.stopPullDownRefresh();
+  });
 
   const bind = async () => {
     if (working) return;

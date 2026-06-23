@@ -2,20 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  Archive,
   CalendarDays,
   Heart,
   Pencil,
   Plus,
   Trash2,
-  X,
 } from "lucide-react";
 import { cities } from "@/data/cities";
 import { MemoryPageShell, type MemoryNavKey } from "@/components/MemoryNav";
 import { DatePicker } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/apiClient";
 import { useApi } from "@/lib/swr";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
+import { useTransientStatus } from "@/lib/useTransientStatus";
 
 type StoredItem = {
   id: string;
@@ -34,7 +35,7 @@ type ToolConfig = {
   title: string;
   subtitle: string;
   storageKey: string;
-  kind: "favorite" | "anniversary" | "capsule";
+  kind: "favorite" | "anniversary";
 };
 
 const configs = {
@@ -53,14 +54,6 @@ const configs = {
     subtitle: "把重要的日子放在这里，慢慢倒数。",
     storageKey: "mapofus:anniversaries",
     kind: "anniversary",
-  },
-  capsule: {
-    active: "capsule",
-    icon: Archive,
-    title: "悄悄话",
-    subtitle: "只属于我们的对话，记录彼此的心里话。",
-    storageKey: "mapofus:capsules",
-    kind: "capsule",
   },
 } satisfies Record<string, ToolConfig>;
 
@@ -141,6 +134,7 @@ const daysUntil = (value?: string) => {
 function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
   const Icon = config.icon;
   const canEdit = useContentEditAccess();
+  const { toast } = useToast();
   const { data: auxiliaryData, mutate } = useApi<AuxiliaryPayload>(auxiliaryEndpoint(config.kind));
   const [items, setItems] = useState<StoredItem[]>(() => readItems(config.storageKey));
   const [open, setOpen] = useState(false);
@@ -149,7 +143,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
   const [note, setNote] = useState("");
   const [cityId, setCityId] = useState(cities[0]?.id ?? "");
   const [editingId, setEditingId] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useTransientStatus();
   const [isWorking, setIsWorking] = useState(false);
 
   useEffect(() => {
@@ -186,7 +180,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
 
   const save = async () => {
     if (!canEdit) {
-      setStatus("请先登录后再保存。");
+      setStatus("请先登录后再保存。", { autoClear: true });
       return;
     }
     if (!canSave) return;
@@ -215,7 +209,8 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
         setItems(nextItems);
         writeItems(config.storageKey, nextItems);
         resetForm();
-        setStatus("已保存修改。");
+        setStatus("已保存修改。", { autoClear: true });
+      toast("已保存修改", "success");
       } else {
         // 创建新项
         const item = {
@@ -236,13 +231,13 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
         setItems(nextItems);
         writeItems(config.storageKey, nextItems);
         resetForm();
-        setStatus("已保存。");
+        setStatus("已保存。", { autoClear: true });
       }
 
       // 刷新缓存
       void mutate();
     } catch {
-      setStatus("保存失败，请确认网络和登录状态后重试。");
+      setStatus("保存失败，请确认网络和登录状态后重试。", { autoClear: true });
     } finally {
       setIsWorking(false);
     }
@@ -260,7 +255,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
 
   const remove = async (id: string) => {
     if (!canEdit) {
-      setStatus("请先登录后再删除。");
+      setStatus("请先登录后再删除。", { autoClear: true });
       return;
     }
     setIsWorking(true);
@@ -274,10 +269,10 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
       setItems(nextItems);
       writeItems(config.storageKey, nextItems);
       if (editingId === id) resetForm();
-      setStatus("已删除。");
+      setStatus("已删除。", { autoClear: true });
       void mutate();
     } catch {
-      setStatus("删除失败，请稍后再试。");
+      setStatus("删除失败，请稍后再试。", { autoClear: true });
     } finally {
       setIsWorking(false);
     }
@@ -288,12 +283,12 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
       <header className="flex flex-wrap items-start justify-between gap-4 sm:gap-5">
         <div>
           <div className="flex items-center gap-3">
-            <Icon className="h-6 w-6 fill-[#F5DCE0] text-[#E8B8C2] sm:h-8 sm:w-8" />
-            <h1 className="text-2xl font-semibold leading-tight text-[#5A6670] sm:text-[34px]">{config.title}</h1>
+            <Icon className="h-6 w-6 fill-sakura text-bloom sm:h-8 sm:w-8" />
+            <h1 className="text-2xl font-semibold leading-tight text-ink sm:text-[34px]">{config.title}</h1>
           </div>
-          <p className="mt-2 hidden text-sm font-medium text-[#5A6670]/58 sm:block">{config.subtitle}</p>
+          <p className="mt-2 hidden text-sm font-medium text-ink/58 sm:block">{config.subtitle}</p>
         </div>
-        <div className="rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/72 px-4 py-2 text-sm font-semibold text-[#5A6670]/62 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur">
+        <div className="rounded-[8px] border border-dim/80 bg-cream/72 px-4 py-2 text-sm font-semibold text-ink/62 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur">
           {items.length} 条
         </div>
       </header>
@@ -307,17 +302,17 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
             return (
               <article
                 key={item.id}
-                className="rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] backdrop-blur sm:p-5"
+                className="rounded-[8px] border border-dim/78 bg-cream/76 p-4 shadow-[0_12px_28px_rgba(90,102,112,0.06)] backdrop-blur sm:p-5"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="text-lg font-semibold text-[#5A6670]">{item.title}</h2>
-                    {city && <p className="mt-1 text-sm text-[#A8C8DC]">{city.name}</p>}
-                    {item.date && <p className="mt-1 text-sm text-[#5A6670]/54">{item.date}</p>}
+                    <h2 className="text-lg font-semibold text-ink">{item.title}</h2>
+                    {city && <p className="mt-1 text-sm text-sky">{city.name}</p>}
+                    {item.date && <p className="mt-1 text-sm text-ink/54">{item.date}</p>}
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/42 transition hover:bg-[#D6E8F0]/34 hover:text-[#A8C8DC]"
+                      className="grid h-8 w-8 place-items-center rounded-[6px] text-ink/42 transition hover:bg-mist/34 hover:text-sky"
                       type="button"
                       onClick={() => startEdit(item)}
                       aria-label="编辑"
@@ -326,7 +321,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/42 transition hover:bg-[#F5DCE0]/45 hover:text-[#E8B8C2]"
+                      className="grid h-8 w-8 place-items-center rounded-[6px] text-ink/42 transition hover:bg-sakura/45 hover:text-bloom"
                       type="button"
                       onClick={() => void remove(item.id)}
                       aria-label="删除"
@@ -337,16 +332,16 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
                   </div>
                 </div>
                 {leftDays !== null && (
-                  <p className="mt-3 text-sm font-semibold text-[#E8B8C2]">
+                  <p className="mt-3 text-sm font-semibold text-bloom">
                     {leftDays >= 0 ? `还有 ${leftDays} 天` : `已经过去 ${Math.abs(leftDays)} 天`}
                   </p>
                 )}
-                {item.note && <p className="mt-3 text-sm leading-6 text-[#5A6670]/68">{item.note}</p>}
+                {item.note && <p className="mt-3 text-sm leading-6 text-ink/68">{item.note}</p>}
               </article>
             );
           })}
           {items.length === 0 && (
-            <div className="rounded-[8px] border border-dashed border-[#D8DDD8] px-6 py-12 text-center text-sm text-[#5A6670]/54 md:col-span-2">
+            <div className="rounded-[8px] border border-dashed border-dim px-6 py-12 text-center text-sm text-ink/54 md:col-span-2">
               这里还空着，先放下第一条吧。
             </div>
           )}
@@ -355,7 +350,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
 
       {/* 浮动添加按钮 */}
       <button
-        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-[#D86F82] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
+        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-bloom text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-rose active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
         type="button"
         onClick={() => {
           resetForm();
@@ -368,31 +363,18 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
       </button>
 
       {/* 弹窗表单 */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-[#273846]/32 px-4 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-[8px] border border-[#D8DDD8] bg-[#FAFBF7] shadow-[0_28px_90px_rgba(39,56,70,0.24)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#D8DDD8] bg-white/90 px-5 py-4 backdrop-blur">
-              <h2 className="text-lg font-semibold text-[#5A6670]">{editingId ? "编辑" : "新增"}</h2>
-              <button
-                className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28"
-                type="button"
-                onClick={() => setOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <label className="block text-xs font-semibold text-[#5A6670]/58">
+      <Modal
+        open={open}
+        onClose={() => { if (!isWorking) resetForm(); }}
+        title={editingId ? "编辑" : "新增"}
+        size="md"
+        closeOnOverlay={!isWorking}
+      >
+        <div className="space-y-4">
+              <label className="block text-xs font-semibold text-ink/58">
                 {config.kind === "favorite" ? "地点" : "标题"}
                 <input
-                  className="mt-1 w-full rounded-[7px] border border-[#D8DDD8] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
+                  className="mt-1 w-full rounded-[7px] border border-dim bg-white px-3 py-2 text-sm outline-none transition focus:border-bloom"
                   value={title}
                   onChange={(event) => setTitle(event.target.value)}
                   placeholder={config.kind === "favorite" ? "想去的地方" : "标题"}
@@ -401,10 +383,10 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
               </label>
 
               {config.kind === "favorite" && (
-                <label className="block text-xs font-semibold text-[#5A6670]/58">
+                <label className="block text-xs font-semibold text-ink/58">
                   城市
                   <select
-                    className="mt-1 w-full rounded-[7px] border border-[#D8DDD8] bg-white px-3 py-2 text-sm outline-none transition focus:border-[#E8B8C2]"
+                    className="mt-1 w-full rounded-[7px] border border-dim bg-white px-3 py-2 text-sm outline-none transition focus:border-bloom"
                     value={cityId}
                     onChange={(event) => setCityId(event.target.value)}
                     disabled={isWorking}
@@ -419,10 +401,10 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
               )}
 
               {config.kind !== "favorite" && (
-                <label className="block text-xs font-semibold text-[#5A6670]/58">
+                <label className="block text-xs font-semibold text-ink/58">
                   日期
                   <DatePicker
-                    className="mt-1 border-[#D8DDD8] bg-white focus:border-[#E8B8C2]"
+                    className="mt-1 border-dim bg-white focus:border-bloom"
                     value={date}
                     onChange={setDate}
                     disabled={isWorking}
@@ -430,10 +412,10 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
                 </label>
               )}
 
-              <label className="block text-xs font-semibold text-[#5A6670]/58">
+              <label className="block text-xs font-semibold text-ink/58">
                 备注
                 <textarea
-                  className="mt-1 w-full resize-none rounded-[7px] border border-[#D8DDD8] bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-[#E8B8C2]"
+                  className="mt-1 w-full resize-none rounded-[7px] border border-dim bg-white px-3 py-2 text-sm leading-6 outline-none transition focus:border-bloom"
                   rows={4}
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
@@ -443,7 +425,7 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
               </label>
 
               <button
-                className="flex w-full items-center justify-center gap-2 rounded-[7px] bg-[#E8B8C2] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#D86F82] disabled:opacity-50"
+                className="flex w-full items-center justify-center gap-2 rounded-[7px] bg-bloom px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose disabled:opacity-50"
                 type="button"
                 onClick={() => void save()}
                 disabled={!canSave || isWorking}
@@ -451,12 +433,10 @@ function MemoryToolPage({ config }: Readonly<{ config: ToolConfig }>) {
                 {isWorking ? "保存中" : editingId ? "保存修改" : "保存"}
               </button>
             </div>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {status && (
-        <p className="mt-5 rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/72 px-4 py-3 text-sm text-[#5A6670]/66">
+        <p className="mt-5 rounded-[8px] border border-dim/78 bg-cream/72 px-4 py-3 text-sm text-ink/66">
           {status}
         </p>
       )}
@@ -470,8 +450,4 @@ export function FavoritesPage() {
 
 export function AnniversariesPage() {
   return <MemoryToolPage config={configs.anniversary} />;
-}
-
-export function TimeCapsulePage() {
-  return <MemoryToolPage config={configs.capsule} />;
 }

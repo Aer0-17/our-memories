@@ -195,13 +195,16 @@ func DeleteTimeCapsule(c *gin.Context) {
 	}
 
 	photos := collectPhotos(`SELECT key, url FROM time_capsule_photos WHERE time_capsule_id = ?`, id)
+	if err := deletePhotos(spaceID, photos); err != nil {
+		utils.Error(c, 500, "Failed to delete time capsule photos")
+		return
+	}
 
 	_, err = db.DB.Exec(`DELETE FROM time_capsules WHERE id = ? AND space_id = ?`, id, spaceID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to delete time capsule")
 		return
 	}
-	deletePhotos(photos)
 
 	clearTimeCapsulesCache(spaceID)
 	utils.Success(c, gin.H{"ok": true})
@@ -277,7 +280,11 @@ func UpdateTimeCapsule(c *gin.Context) {
 		return
 	}
 	if req.Photos != nil {
-		deleteRemovedPhotos(oldPhotos, *req.Photos)
+		if err := deleteRemovedPhotos(spaceID, oldPhotos, *req.Photos); err != nil {
+			clearTimeCapsulesCache(spaceID)
+			utils.Error(c, 500, "Failed to delete removed time capsule photos")
+			return
+		}
 	}
 
 	clearTimeCapsulesCache(spaceID)

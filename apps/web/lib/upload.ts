@@ -18,17 +18,6 @@ const MAX_DIMENSION = 1600;
 const JPEG_QUALITY = 0.82;
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024; // 压缩后硬上限，挡住超大文件
 
-const readBlobAsDataUrl = (blob: Blob) =>
-  new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => {
-      if (typeof reader.result === "string") resolve(reader.result);
-      else reject(new Error("Image read failed"));
-    });
-    reader.addEventListener("error", () => reject(reader.error ?? new Error("Image read failed")));
-    reader.readAsDataURL(blob);
-  });
-
 const loadImageFile = (file: Blob) =>
   new Promise<HTMLImageElement>((resolve, reject) => {
     const imageUrl = URL.createObjectURL(file);
@@ -54,6 +43,10 @@ const loadImageFile = (file: Blob) =>
 
 type CompressedImage = { blob: Blob; width: number; height: number; contentType: string };
 
+function readThemeColor(token: string) {
+  return window.getComputedStyle(document.documentElement).getPropertyValue(`--color-${token}`).trim();
+}
+
 // 把图片压成 JPEG（svg 直接透传），返回 blob + 尺寸 + contentType。
 async function compressImage(file: File): Promise<CompressedImage> {
   if (file.type === "image/svg+xml") {
@@ -71,7 +64,7 @@ async function compressImage(file: File): Promise<CompressedImage> {
   const context = canvas.getContext("2d");
   if (!context) return { blob: file, width, height, contentType: file.type || "image/jpeg" };
 
-  context.fillStyle = "#FAFBF7";
+  context.fillStyle = readThemeColor("cream") || "white";
   context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
 
@@ -85,8 +78,7 @@ async function compressImage(file: File): Promise<CompressedImage> {
 
 /**
  * 统一图片上传：压缩 → 向后端取预签名 PUT URL → 直传 OSS。
- * 当对象存储未配置或直传失败时，回退为 base64 data URL（由后端旧路径接收），保证功能不中断。
- * 回退时 key 为空字符串。
+ * 失败时抛出错误，由调用方用 toast/status 提示用户，避免静默保存大体积 data URL。
  */
 export async function uploadImage(file: File, folder: string): Promise<UploadedImage> {
   const { blob, width, height, contentType } = await compressImage(file);
@@ -110,10 +102,8 @@ export async function uploadImage(file: File, folder: string): Promise<UploadedI
 
     return { url: presign.publicUrl, key: presign.key, mimeType: contentType, width, height };
   } catch (error) {
-    console.warn("Direct image upload failed; falling back to base64 payload.", error);
-    // 回退：对象存储未配置 / 直传失败 → 用 base64 data URL，由后端转存或原样保存。
-    const dataUrl = await readBlobAsDataUrl(blob);
-    return { url: dataUrl, key: "", mimeType: contentType, width, height };
+    console.warn("Direct image upload failed.", error);
+    throw error instanceof Error ? error : new Error("图片上传失败，请稍后再试");
   }
 }
 

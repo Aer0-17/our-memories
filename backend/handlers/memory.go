@@ -341,7 +341,11 @@ func UpdateMemory(c *gin.Context) {
 			return
 		}
 		committed = true
-		deleteRemovedPhotos(oldPhotos, photos)
+		if err := deleteRemovedPhotos(spaceID, oldPhotos, photos); err != nil {
+			clearMemoriesCache(spaceID)
+			utils.Error(c, 500, "Failed to delete removed memory photos")
+			return
+		}
 	} else if isCreator && req.CoverImage != "" {
 		if err := setMemoryCoverPhoto(spaceID, id, req.CoverImage); err != nil {
 			if errors.Is(err, errCoverPhotoNotFound) {
@@ -458,15 +462,18 @@ func DeleteMemory(c *gin.Context) {
 		return
 	}
 
-	// 删除前先抓取图片对象（级联会删掉照片行），删库成功后再清理 OSS。
+	// 删除前先抓取并清理图片对象（级联会删掉照片行）。
 	photos := collectPhotos(`SELECT key, url FROM memory_photos WHERE memory_id = ?`, id)
+	if err := deletePhotos(spaceID, photos); err != nil {
+		utils.Error(c, 500, "Failed to delete memory photos")
+		return
+	}
 
 	_, err = db.DB.Exec(`DELETE FROM memories WHERE id = ? AND space_id = ?`, id, spaceID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to delete memory")
 		return
 	}
-	deletePhotos(photos)
 
 	clearMemoriesCache(spaceID)
 	memories, err := loadMemoryStore(spaceID, c.GetString("userID"))

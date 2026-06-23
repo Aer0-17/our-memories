@@ -46,7 +46,17 @@ go run main.go
 # 输出: Server starting on port 8080
 ```
 
-### 4. 创建管理员（首次）
+### 4. 配置管理员
+在 `.env` 中设置后，服务启动时会自动创建或更新管理端账号：
+
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=YourSecurePassword
+ADMIN_DISPLAY_NAME=Admin User
+```
+
+也可以手动创建：
+
 ```bash
 go run cmd/create_admin.go \
   -username=admin \

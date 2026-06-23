@@ -21,10 +21,88 @@ type ApiOptions = RequestInit & {
   retry?: boolean;
 };
 
+export type ApiErrorCode =
+  | "NETWORK_ERROR"
+  | "BAD_REQUEST"
+  | "UNAUTHORIZED"
+  | "PAYMENT_REQUIRED"
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "CONFLICT"
+  | "PAYLOAD_TOO_LARGE"
+  | "RATE_LIMITED"
+  | "SERVER_ERROR"
+  | "SERVICE_UNAVAILABLE"
+  | "HTTP_ERROR";
+
+export class ApiError extends Error {
+  readonly code: ApiErrorCode | string;
+  readonly status: number;
+  readonly path: string;
+
+  constructor({
+    code,
+    status,
+    path,
+    message,
+  }: {
+    code: ApiErrorCode | string;
+    status: number;
+    path: string;
+    message: string;
+  }) {
+    super(message);
+    this.name = "ApiError";
+    this.code = code;
+    this.status = status;
+    this.path = path;
+  }
+}
+
 function apiPath(path: string) {
   if (/^https?:\/\//.test(path)) return path;
   if (path === "/health" || path.startsWith("/api/")) return path;
   return `/api/v1${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function apiCodeForStatus(status: number): ApiErrorCode {
+  if (status === 400) return "BAD_REQUEST";
+  if (status === 401) return "UNAUTHORIZED";
+  if (status === 402) return "PAYMENT_REQUIRED";
+  if (status === 403) return "FORBIDDEN";
+  if (status === 404) return "NOT_FOUND";
+  if (status === 409) return "CONFLICT";
+  if (status === 413) return "PAYLOAD_TOO_LARGE";
+  if (status === 429) return "RATE_LIMITED";
+  if (status === 503) return "SERVICE_UNAVAILABLE";
+  if (status >= 500) return "SERVER_ERROR";
+  return "HTTP_ERROR";
+}
+
+async function readApiErrorPayload(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return (await response.clone().json().catch(() => null)) as { error?: string; message?: string; code?: string } | null;
+  }
+
+  const text = await response.clone().text().catch(() => "");
+  return text ? { error: text } : null;
+}
+
+export async function apiErrorFromResponse(response: Response, path: string) {
+  const payload = await readApiErrorPayload(response);
+  const message = payload?.error || payload?.message || `API ${path} failed (${response.status})`;
+
+  return new ApiError({
+    code: payload?.code ?? apiCodeForStatus(response.status),
+    status: response.status,
+    path,
+    message,
+  });
+}
+
+export async function throwApiError(response: Response, path: string): Promise<never> {
+  throw await apiErrorFromResponse(response, path);
 }
 
 function makeHeaders(headers?: HeadersInit, auth = true, body?: BodyInit | null) {
@@ -59,6 +137,13 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
   const response = await fetch(url, {
     ...init,
     headers: makeHeaders(init.headers, auth, init.body),
+  }).catch(() => {
+    throw new ApiError({
+      code: "NETWORK_ERROR",
+      status: 0,
+      path,
+      message: "网络连接失败，请稍后再试。",
+    });
   });
 
   if (response.status === 401 && auth && retry && (await refreshAccessToken())) {
@@ -71,7 +156,7 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
 
 export async function apiJson<T>(path: string, options: ApiOptions = {}) {
   const response = await apiFetch(path, options);
-  if (!response.ok) throw new Error(`API ${path} failed (${response.status})`);
+  if (!response.ok) await throwApiError(response, path);
   return (await response.json()) as T;
 }
 

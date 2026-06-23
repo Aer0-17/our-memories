@@ -26,26 +26,26 @@ export default async function ProvincePage({ params }: ProvincePageProps) {
   const cityTotal = provinceCityTotal || provinceCities.length;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#FAFBF7] text-[#5A6670]">
+    <main className="relative min-h-screen overflow-hidden bg-cream text-ink">
       <div className="map-mist-band" aria-hidden="true" />
-      <span className="absolute left-[12%] top-[19%] h-2 w-2 bg-[#D4E8D0]" aria-hidden="true" />
-      <span className="absolute right-[12%] top-[32%] h-2 w-2 bg-[#D6E8F0]" aria-hidden="true" />
+      <span className="absolute left-[12%] top-[19%] h-2 w-2 bg-mint" aria-hidden="true" />
+      <span className="absolute right-[12%] top-[32%] h-2 w-2 bg-mist" aria-hidden="true" />
 
       <div className="relative z-10 flex min-h-screen flex-col px-6 py-7 sm:px-9">
         <header className="relative z-[70] flex items-start justify-between gap-5">
           <div className="flex min-w-0 items-center gap-3 pl-16 sm:gap-5 sm:pl-0">
             <Link
-              className="fixed left-4 top-[calc(env(safe-area-inset-top)+0.85rem)] z-[80] grid h-12 w-12 place-items-center rounded-[8px] border border-[#5A6670]/35 bg-[#FAFBF7]/86 text-[#5A6670] shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur transition hover:border-[#A8C8DC] hover:text-[#A8C8DC] sm:static sm:z-auto sm:bg-[#FAFBF7]/76"
+              className="fixed left-4 top-[calc(env(safe-area-inset-top)+0.85rem)] z-[80] grid h-12 w-12 place-items-center rounded-[8px] border border-ink/35 bg-cream/86 text-ink shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur transition hover:border-sky hover:text-sky sm:static sm:z-auto sm:bg-cream/76"
               href="/map"
               aria-label="返回全国地图"
             >
               <ArrowLeft className="h-6 w-6" />
             </Link>
             <div className="flex min-w-0 items-baseline gap-2 sm:gap-3">
-              <h1 className="truncate text-2xl font-semibold tracking-normal text-[#5A6670] sm:text-[28px]">
+              <h1 className="truncate text-2xl font-semibold tracking-normal text-ink sm:text-[28px]">
                 {province.name}
               </h1>
-              <p className="hidden text-lg font-medium text-[#5A6670]/72 sm:block">{province.nameEn}</p>
+              <p className="hidden text-lg font-medium text-ink/72 sm:block">{province.nameEn}</p>
             </div>
             <ProvinceProgressBadge provinceId={province.id} total={cityTotal} />
           </div>
@@ -57,13 +57,13 @@ export default async function ProvincePage({ params }: ProvincePageProps) {
           <ProvinceMap province={province} />
         </section>
 
-        <div className="absolute bottom-8 left-6 z-40 rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/76 px-5 py-4 text-sm text-[#5A6670]/78 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur sm:left-9">
+        <div className="absolute bottom-8 left-6 z-40 rounded-[8px] border border-dim/80 bg-cream/76 px-5 py-4 text-sm text-ink/78 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur sm:left-9">
           <div className="flex items-center gap-3">
-            <span className="h-3.5 w-3.5 rounded-full bg-[#E8B8C2] shadow-[0_0_10px_rgba(232,184,194,0.55)]" />
+            <span className="h-3.5 w-3.5 rounded-full bg-bloom shadow-[0_0_10px_rgba(232,184,194,0.55)]" />
             <span>已探索</span>
           </div>
           <div className="mt-3 flex items-center gap-3">
-            <span className="h-3.5 w-3.5 rounded-full bg-[#B9BEC3]" />
+            <span className="h-3.5 w-3.5 rounded-full bg-stone" />
             <span>未探索</span>
           </div>
         </div>

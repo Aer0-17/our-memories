@@ -1,21 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafbf7;
-  --foreground: #5a6670;
+  --background: var(--color-cream);
+  --foreground: var(--color-ink);
 }
 
 @theme {
-  --color-cream: #fafbf7;
-  --color-mist: #d6e8f0;
-  --color-sky: #a8c8dc;
-  --color-mint: #d4e8d0;
-  --color-leaf: #a8c89a;
-  --color-sakura: #f5dce0;
-  --color-bloom: #e8b8c2;
-  --color-ink: #5a6670;
-  --color-dim: #d8ddd8;
+  /* 基础调色板 */
+  --color-cream: #fafbf7;        /* 主背景 */
+  --color-mist: #d6e8f0;         /* 雾蓝 */
+  --color-sky: #a8c8dc;          /* 天蓝（次强调） */
+  --color-mint: #d4e8d0;         /* 薄荷绿 */
+  --color-leaf: #a8c89a;         /* 叶绿 */
+  --color-sakura: #f5dce0;       /* 樱花粉（浅强调） */
+  --color-bloom: #e8b8c2;        /* 花开粉（主强调） */
+  --color-rose: #d86f82;         /* 深粉（强强调/CTA） */
+  --color-rose-ink: #b85d70;     /* 粉墨（强调文字/按钮文字） */
+  --color-ink: #5a6670;          /* 墨灰（主文字） */
+  --color-dim: #d8ddd8;          /* 暗灰（边框） */
+  --color-paper: #f9f6ec;        /* 纸质底（登录/入口页） */
+  --color-slate: #273846;        /* 深蓝灰（深色面板/标题） */
+  --color-slate-soft: #344451;   /* 软深蓝灰 */
+  --color-teal: #75a5a8;         /* 青绿（地图标记中性态） */
+  --color-dim-soft: #c8cec8;
+  --color-stone: #b9bec3;
+  --color-success: #7da88b;
+  --color-success-ink: #4a7a5a;
+  --color-warm-cream: #fefcf5;
+  --color-parchment: #fffaf3;
+  --color-warm-border: #e1d3c6;
+  --color-warm-dim: #dccfc1;
+  --color-clay: #8a796c;
+  --color-sepia: #6d5b4b;
+  --color-ink-soft: #61717a;
+  --color-night: #161f27;
+  --color-night-soft: #15212a;
+  --color-blush: #f5afc0;
+  --color-petal: #f2a6c0;
+  --color-amber: #ffb24a;
+  --color-sunshine: #ffcc63;
+  --color-sunlit: #ffe6a1;
+  --color-moon: #ffe08b;
+  --color-marigold: #ffd37a;
+  --color-dusk: #6d7382;
+  --color-lavender: #828bc4;
+  --color-cloud: #bac5d4;
+  --color-cloud-mid: #cfd6e1;
+  --color-cloud-light: #d8dee8;
+  --color-storm: #b9c1d3;
+  --color-storm-light: #c9d0df;
+  --color-storm-pale: #d3d8e5;
+  --color-storm-deep: #aeb7cb;
+  --color-sky-light: #e9f3ff;
+  --color-sky-pale: #f7fbff;
+  --color-rain-mist: #cfe4ff;
+  --color-rain: #5f82c3;
+  --color-rain-bright: #4d8ed8;
+  --color-frost: #7fa4d8;
+  --color-wind: #afc4ea;
+  --color-wind-ink: #7a8fc5;
+  --color-ember: #d8663d;
   --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+
+  /* 语义阴影：浮空卡片 / 弹窗 / 抽屉 */
+  --shadow-card: 0 14px 34px rgba(90, 102, 112, 0.08);
+  --shadow-card-strong: 0 18px 44px rgba(90, 102, 112, 0.12);
+  --shadow-popover: 0 28px 80px rgba(91, 71, 50, 0.18);
+  --shadow-sheet: 0 -18px 44px rgba(90, 102, 112, 0.18);
+  --shadow-rose: 0 8px 24px rgba(232, 184, 194, 0.45);
+  --shadow-rose-soft: 0 0 10px rgba(232, 184, 194, 0.42);
+  --shadow-warm-popover: 0 28px 80px rgba(91, 71, 50, 0.12);
+
+  /* 聚焦环 */
+  --color-ring: rgba(168, 200, 220, 0.58);
 }
 
 html,
@@ -70,9 +127,9 @@ button {
   background:
     linear-gradient(
       to bottom,
-      rgb(250 251 247 / 0) 0%,
-      rgb(214 232 240 / 0.28) 42%,
-      rgb(214 232 240 / 0.18) 100%
+      color-mix(in srgb, var(--color-cream) 0%, transparent) 0%,
+      color-mix(in srgb, var(--color-mist) 28%, transparent) 42%,
+      color-mix(in srgb, var(--color-mist) 18%, transparent) 100%
     );
 }
 
@@ -91,8 +148,8 @@ button {
   opacity: 0.12;
   background-size: 104px 84px;
   background-image:
-    linear-gradient(135deg, transparent 0 38%, #d6e8f0 38% 55%, transparent 55%),
-    linear-gradient(45deg, transparent 0 44%, #d6e8f0 44% 58%, transparent 58%);
+    linear-gradient(135deg, transparent 0 38%, var(--color-mist) 38% 55%, transparent 55%),
+    linear-gradient(45deg, transparent 0 44%, var(--color-mist) 44% 58%, transparent 58%);
 }
 
 .map-mist-band::after {
@@ -100,8 +157,8 @@ button {
   opacity: 0.1;
   background-size: 84px 76px;
   background-image:
-    linear-gradient(135deg, transparent 0 42%, #a8c8dc 42% 58%, transparent 58%),
-    linear-gradient(45deg, transparent 0 38%, #a8c8dc 38% 52%, transparent 52%);
+    linear-gradient(135deg, transparent 0 42%, var(--color-sky) 42% 58%, transparent 58%),
+    linear-gradient(45deg, transparent 0 38%, var(--color-sky) 38% 52%, transparent 52%);
 }
 
 .real-cover-grain {
@@ -122,10 +179,10 @@ button {
 
 .login-paper {
   background:
-    radial-gradient(circle at 14% 18%, rgb(245 220 224 / 0.8), transparent 26%),
-    radial-gradient(circle at 82% 78%, rgb(214 232 240 / 0.78), transparent 30%),
+    radial-gradient(circle at 14% 18%, color-mix(in srgb, var(--color-sakura) 80%, transparent), transparent 26%),
+    radial-gradient(circle at 82% 78%, color-mix(in srgb, var(--color-mist) 78%, transparent), transparent 30%),
     linear-gradient(135deg, rgb(255 255 255 / 0.62), transparent 40%),
-    #f9f6ec;
+    var(--color-paper);
 }
 
 .login-paper::before {
@@ -146,8 +203,8 @@ button {
   inset: 0;
   opacity: 0.17;
   background-image:
-    radial-gradient(circle at 18% 28%, #6d5b4b 0 1px, transparent 1px),
-    radial-gradient(circle at 72% 62%, #6d5b4b 0 1px, transparent 1px);
+    radial-gradient(circle at 18% 28%, var(--color-sepia) 0 1px, transparent 1px),
+    radial-gradient(circle at 72% 62%, var(--color-sepia) 0 1px, transparent 1px);
   background-size: 21px 21px, 31px 31px;
   mix-blend-mode: multiply;
 }
@@ -167,7 +224,7 @@ button {
   width: 150px;
   height: 150px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgb(255 223 185 / 0.92), rgb(216 111 130 / 0.18) 62%, transparent 72%);
+  background: radial-gradient(circle, rgb(255 223 185 / 0.92), color-mix(in srgb, var(--color-rose) 18%, transparent) 62%, transparent 72%);
   filter: blur(1px);
 }
 
@@ -204,8 +261,8 @@ button {
   border: 1px solid rgb(225 211 198 / 0.92);
   border-radius: 8px;
   background:
-    radial-gradient(circle, transparent 0 6px, rgb(216 111 130 / 0.16) 7px, transparent 8px),
-    rgb(250 251 247 / 0.72);
+    radial-gradient(circle, transparent 0 6px, color-mix(in srgb, var(--color-rose) 16%, transparent) 7px, transparent 8px),
+    color-mix(in srgb, var(--color-cream) 72%, transparent);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.74);
   transition:
     background-color 0.2s ease,
@@ -214,10 +271,10 @@ button {
 }
 
 .login-code-dot.is-filled {
-  border-color: rgb(232 184 194 / 0.95);
+  border-color: color-mix(in srgb, var(--color-bloom) 95%, transparent);
   background:
-    radial-gradient(circle, #d86f82 0 7px, transparent 8px),
-    rgb(245 220 224 / 0.7);
+    radial-gradient(circle, var(--color-rose) 0 7px, transparent 8px),
+    color-mix(in srgb, var(--color-sakura) 70%, transparent);
   transform: translateY(-1px);
 }
 
@@ -253,20 +310,20 @@ button {
 .login-stamp-ring {
   width: 34px;
   height: 34px;
-  background: rgb(216 111 130 / 0.16);
+  background: color-mix(in srgb, var(--color-rose) 16%, transparent);
   animation: entryPulse 2.2s ease-out infinite;
 }
 
 .login-stamp-ring.is-active {
-  background: rgb(216 111 130 / 0.3);
+  background: color-mix(in srgb, var(--color-rose) 30%, transparent);
 }
 
 .login-stamp-core {
   width: 13px;
   height: 13px;
-  border: 2px solid #fffaf3;
-  background: #75a5a8;
-  box-shadow: 0 6px 18px rgb(52 68 81 / 0.2);
+  border: 2px solid var(--color-parchment);
+  background: var(--color-teal);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-slate-soft) 20%, transparent);
   transition:
     width 0.2s ease,
     height 0.2s ease,
@@ -277,7 +334,7 @@ button {
 .login-stamp:hover .login-stamp-core {
   width: 18px;
   height: 18px;
-  background: #d86f82;
+  background: var(--color-rose);
 }
 
 .login-stamp-label {
@@ -288,8 +345,8 @@ button {
   overflow: hidden;
   border: 1px solid rgb(220 207 193 / 0.78);
   border-radius: 999px;
-  background: rgb(254 252 245 / 0.84);
-  color: #344451;
+  background: color-mix(in srgb, var(--color-warm-cream) 84%, transparent);
+  color: var(--color-slate-soft);
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
@@ -314,8 +371,8 @@ button {
   overflow: hidden;
   border: 1px solid rgb(225 211 198 / 0.9);
   border-radius: 8px;
-  background: rgb(250 251 247 / 0.74);
-  color: #61717a;
+  background: color-mix(in srgb, var(--color-cream) 74%, transparent);
+  color: var(--color-ink-soft);
   font-size: 13px;
   font-weight: 700;
   padding: 11px 8px;
@@ -330,9 +387,9 @@ button {
 
 .login-chip:hover,
 .login-chip.is-active {
-  border-color: rgb(216 111 130 / 0.52);
-  background: rgb(245 220 224 / 0.68);
-  color: #273846;
+  border-color: color-mix(in srgb, var(--color-rose) 52%, transparent);
+  background: color-mix(in srgb, var(--color-sakura) 68%, transparent);
+  color: var(--color-slate);
   transform: translateY(-1px);
 }
 
@@ -385,8 +442,8 @@ button {
 .login-dark-chip:hover,
 .login-dark-chip.is-active {
   transform: translateY(-2px);
-  border-color: rgb(245 220 224 / 0.58);
-  background: rgb(245 220 224 / 0.18);
+  border-color: color-mix(in srgb, var(--color-sakura) 58%, transparent);
+  background: color-mix(in srgb, var(--color-sakura) 18%, transparent);
 }
 
 .login-mini-photo {
@@ -394,9 +451,9 @@ button {
   width: clamp(66px, 7vw, 96px);
   height: clamp(54px, 5.8vw, 76px);
   overflow: hidden;
-  border: 2px solid rgb(254 252 245 / 0.88);
+  border: 2px solid color-mix(in srgb, var(--color-warm-cream) 88%, transparent);
   border-radius: 8px;
-  background: #fefcf5;
+  background: var(--color-warm-cream);
   padding: 3px;
   box-shadow: 0 18px 34px rgb(0 0 0 / 0.24);
   transition:
@@ -422,7 +479,7 @@ button {
 
 .login-mini-photo:hover,
 .login-mini-photo.is-active {
-  border-color: rgb(245 220 224 / 0.96);
+  border-color: color-mix(in srgb, var(--color-sakura) 96%, transparent);
   transform: translateY(-8px) rotate(0deg) scale(1.04);
   box-shadow: 0 24px 46px rgb(0 0 0 / 0.28);
 }
@@ -446,9 +503,9 @@ button {
 .entry-paper {
   background:
     radial-gradient(circle at 15% 18%, rgb(244 180 192 / 0.42), transparent 24%),
-    radial-gradient(circle at 86% 72%, rgb(117 165 168 / 0.32), transparent 28%),
+    radial-gradient(circle at 86% 72%, color-mix(in srgb, var(--color-teal) 32%, transparent), transparent 28%),
     linear-gradient(135deg, rgb(255 255 255 / 0.58), transparent 36%),
-    #f9f6ec;
+    var(--color-paper);
 }
 
 .entry-paper::before {
@@ -469,8 +526,8 @@ button {
   inset: 0;
   opacity: 0.18;
   background-image:
-    radial-gradient(circle at 18% 28%, #6d5b4b 0 1px, transparent 1px),
-    radial-gradient(circle at 72% 62%, #6d5b4b 0 1px, transparent 1px);
+    radial-gradient(circle at 18% 28%, var(--color-sepia) 0 1px, transparent 1px),
+    radial-gradient(circle at 72% 62%, var(--color-sepia) 0 1px, transparent 1px);
   background-size: 21px 21px, 31px 31px;
   mix-blend-mode: multiply;
 }
@@ -490,7 +547,7 @@ button {
   width: 170px;
   height: 170px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgb(255 223 185 / 0.95), rgb(216 111 130 / 0.18) 62%, transparent 72%);
+  background: radial-gradient(circle, rgb(255 223 185 / 0.95), color-mix(in srgb, var(--color-rose) 18%, transparent) 62%, transparent 72%);
   filter: blur(1px);
 }
 
@@ -522,9 +579,9 @@ button {
   width: 46px;
   height: 46px;
   place-items: center;
-  border: 1px solid rgb(216 111 130 / 0.24);
+  border: 1px solid color-mix(in srgb, var(--color-rose) 24%, transparent);
   border-radius: 999px;
-  color: #d86f82;
+  color: var(--color-rose);
   background: rgb(255 255 255 / 0.5);
   animation: entrySpin 12s linear infinite;
 }
@@ -592,20 +649,20 @@ button {
 .entry-stop-ping {
   width: 28px;
   height: 28px;
-  background: rgb(216 111 130 / 0.18);
+  background: color-mix(in srgb, var(--color-rose) 18%, transparent);
   animation: entryPulse 2.2s ease-out infinite;
 }
 
 .entry-stop-ping.is-active {
-  background: rgb(216 111 130 / 0.3);
+  background: color-mix(in srgb, var(--color-rose) 30%, transparent);
 }
 
 .entry-stop-core {
   width: 12px;
   height: 12px;
-  border: 2px solid #fffaf3;
-  background: #75a5a8;
-  box-shadow: 0 6px 18px rgb(52 68 81 / 0.2);
+  border: 2px solid var(--color-parchment);
+  background: var(--color-teal);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--color-slate-soft) 20%, transparent);
   transition:
     width 0.2s ease,
     height 0.2s ease,
@@ -616,7 +673,7 @@ button {
 .entry-stop:hover .entry-stop-core {
   width: 17px;
   height: 17px;
-  background: #d86f82;
+  background: var(--color-rose);
 }
 
 .entry-stop-label {
@@ -627,8 +684,8 @@ button {
   overflow: hidden;
   border: 1px solid rgb(220 207 193 / 0.78);
   border-radius: 999px;
-  background: rgb(254 252 245 / 0.82);
-  color: #344451;
+  background: color-mix(in srgb, var(--color-warm-cream) 82%, transparent);
+  color: var(--color-slate-soft);
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
@@ -768,16 +825,16 @@ button {
 
 .map-zoom-slider::-webkit-slider-runnable-track {
   width: 6px;
-  border: 1px solid rgb(216 221 216 / 0.82);
+  border: 1px solid color-mix(in srgb, var(--color-dim) 82%, transparent);
   border-radius: 999px;
   background: linear-gradient(
     to top,
-    #e8b8c2 0%,
-    #e8b8c2 var(--zoom-progress),
-    rgb(216 221 216 / 0.48) var(--zoom-progress),
-    rgb(216 221 216 / 0.48) 100%
+    var(--color-bloom) 0%,
+    var(--color-bloom) var(--zoom-progress),
+    color-mix(in srgb, var(--color-dim) 48%, transparent) var(--zoom-progress),
+    color-mix(in srgb, var(--color-dim) 48%, transparent) 100%
   );
-  box-shadow: inset 0 1px 2px rgb(90 102 112 / 0.08);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-ink) 8%, transparent);
 }
 
 .map-zoom-slider::-webkit-slider-thumb {
@@ -785,12 +842,12 @@ button {
   height: 18px;
   margin-left: -7px;
   appearance: none;
-  border: 2px solid #fafbf7;
+  border: 2px solid var(--color-cream);
   border-radius: 999px;
-  background: #e8b8c2;
+  background: var(--color-bloom);
   box-shadow:
-    0 3px 10px rgb(90 102 112 / 0.14),
-    0 0 0 3px rgb(245 220 224 / 0.72);
+    0 3px 10px color-mix(in srgb, var(--color-ink) 14%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-sakura) 72%, transparent);
 }
 
 .map-zoom-slider:focus-visible {
@@ -799,30 +856,30 @@ button {
 
 .map-zoom-slider:focus-visible::-webkit-slider-thumb {
   box-shadow:
-    0 3px 10px rgb(90 102 112 / 0.14),
-    0 0 0 4px rgb(168 200 220 / 0.58);
+    0 3px 10px color-mix(in srgb, var(--color-ink) 14%, transparent),
+    0 0 0 4px var(--color-ring);
 }
 
 .map-zoom-slider::-moz-range-track {
   width: 6px;
-  border: 1px solid rgb(216 221 216 / 0.82);
+  border: 1px solid color-mix(in srgb, var(--color-dim) 82%, transparent);
   border-radius: 999px;
-  background: rgb(216 221 216 / 0.48);
+  background: color-mix(in srgb, var(--color-dim) 48%, transparent);
 }
 
 .map-zoom-slider::-moz-range-progress {
   width: 6px;
   border-radius: 999px;
-  background: #e8b8c2;
+  background: var(--color-bloom);
 }
 
 .map-zoom-slider::-moz-range-thumb {
   width: 18px;
   height: 18px;
-  border: 2px solid #fafbf7;
+  border: 2px solid var(--color-cream);
   border-radius: 999px;
-  background: #e8b8c2;
+  background: var(--color-bloom);
   box-shadow:
-    0 3px 10px rgb(90 102 112 / 0.14),
-    0 0 0 3px rgb(245 220 224 / 0.72);
+    0 3px 10px color-mix(in srgb, var(--color-ink) 14%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--color-sakura) 72%, transparent);
 }

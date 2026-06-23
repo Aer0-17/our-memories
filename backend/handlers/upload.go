@@ -25,14 +25,14 @@ func UploadImage(c *gin.Context) {
 		req.Folder = "uploads"
 	}
 
-	url, err := storage.UploadImage(spaceID, req.Folder, req.DataURL)
+	url, key, err := storage.UploadImageWithKey(spaceID, req.Folder, req.DataURL)
 	if err != nil {
 		log.Printf("image upload failed: %v", err)
 		utils.Error(c, 500, "Upload failed")
 		return
 	}
 
-	utils.Success(c, gin.H{"url": url})
+	utils.Success(c, gin.H{"url": url, "key": key})
 }
 
 // PresignUpload 为前端直传 OSS 签发临时 PUT URL。

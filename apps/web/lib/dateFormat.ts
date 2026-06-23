@@ -34,3 +34,21 @@ export const inputDateToDottedDate = (value: string): string => {
   const [, year, month, day] = match;
   return `${year}.${month}.${day}`;
 };
+
+/** 距离某个 YYYY-MM-DD 日期的天数（正数为未来，负数为过去，今天为 0）。 */
+export function daysUntil(dateStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/** 返回今天的 YYYY-MM-DD 字符串（本地时区），用于 input[date] 的 min 属性等。 */
+export function getTodayString(): string {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}

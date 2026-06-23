@@ -11,6 +11,9 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002,capacitor://localhost,http://localhost,https://localhost}
       DEFAULT_SPACE_CODE: ${DEFAULT_SPACE_CODE:-our-space-2026}
       DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-1234}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Admin User}
       AUTO_SEED: ${AUTO_SEED:-true}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-us-east-1}

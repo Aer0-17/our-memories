@@ -1,17 +1,23 @@
 "use client";
 
 import { type ChangeEvent, useMemo, useRef, useState } from "react";
-import { CalendarHeart, ImagePlus, Pencil, Pin, Plus, Trash2, X } from "lucide-react";
+import { CalendarHeart, ImagePlus, Pencil, Pin, Plus, Trash2 } from "lucide-react";
 import { anniversaryDisplayState, type AnniversaryCard } from "@map-of-us/shared";
 import { MemoryPageShell } from "@/components/MemoryNav";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DatePicker, Input, Textarea } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { useConfirm } from "@/components/ui/use-confirm";
+import { useToast } from "@/components/ui/toast";
+import { photoPayload } from "@/lib/photoPayload";
+import { isBrowserImageUrl } from "@/lib/image";
 import { apiJson } from "@/lib/apiClient";
 import { uploadImages, deleteUploaded } from "@/lib/upload";
 import { useApi } from "@/lib/swr";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
+import { useTransientStatus } from "@/lib/useTransientStatus";
 
 const emptyForm = {
   title: "",
@@ -62,10 +68,6 @@ const normalizeCardsResponse = (data: {
   });
 };
 
-const photoPayload = (photos: string[]) => photos.filter(Boolean).map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
-
-const isBrowserImageUrl = (url: string) => url.startsWith("data:image/") || url.startsWith("https://");
-
 function AnniversaryImage({ src, alt }: Readonly<{ src: string; alt: string }>) {
   if (isBrowserImageUrl(src)) {
     return <LocalPrivacyImg className="h-full w-full object-cover" src={src} alt={alt} />;
@@ -77,13 +79,15 @@ function AnniversaryImage({ src, alt }: Readonly<{ src: string; alt: string }>) 
 export default function AnniversaryWall() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useTransientStatus();
   const [open, setOpen] = useState(false);
   const isAdmin = useContentEditAccess();
   const [working, setWorking] = useState(false);
   const [photoKeys, setPhotoKeys] = useState<string[]>([]);
   const [photosDirty, setPhotosDirty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { confirm, dialog: confirmDialog } = useConfirm();
+  const { toast } = useToast();
   const { data: cardsData, error: cardsError, mutate: mutateCards } =
     useApi<{ cards?: AnniversaryCard[]; anniversaryCards?: ServerAnniversaryCard[] }>("/api/v1/anniversary-cards");
   const cards = useMemo(() => normalizeCardsResponse(cardsData ?? {}), [cardsData]);
@@ -121,7 +125,7 @@ export default function AnniversaryWall() {
       setPhotosDirty(true);
       setStatus("");
     } catch {
-      setStatus("照片上传失败，请重新选择。");
+      setStatus("照片上传失败，请重新选择。", { autoClear: true });
     } finally {
       setWorking(false);
     }
@@ -129,12 +133,12 @@ export default function AnniversaryWall() {
 
   const save = async () => {
     if (!isAdmin) {
-      setStatus("请先登录后再保存。");
+      setStatus("请先登录后再保存。", { autoClear: true });
       return;
     }
     if (working) return;
     if (!form.title.trim() || !form.date.trim()) {
-      setStatus("请填写标题和日期。");
+      setStatus("请填写标题和日期。", { autoClear: true });
       return;
     }
     setWorking(true);
@@ -168,10 +172,10 @@ export default function AnniversaryWall() {
       }
       await mutateCards();
       resetForm();
-      setStatus(editingId ? "纪念日已更新。" : "纪念日已添加。");
+      toast(editingId ? "纪念日已更新" : "纪念日已添加", "success");
     } catch {
       await deleteUploaded(photoKeys);
-      setStatus("保存失败，请检查日期格式。");
+      setStatus("保存失败，请检查日期格式。", { autoClear: true });
     } finally {
       setWorking(false);
     }
@@ -193,24 +197,23 @@ export default function AnniversaryWall() {
     setPhotosDirty(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
     setOpen(true);
-    setStatus(photos.length > 0 ? "正在编辑，可重新选择照片替换原照片。" : "正在编辑，可选择照片。");
+    setStatus(photos.length > 0 ? "正在编辑，可重新选择照片替换原照片。" : "正在编辑，可选择照片。", { autoClear: true });
   };
 
   const remove = async (card: AnniversaryCard) => {
     if (!isAdmin) {
-      setStatus("请先登录后再删除。");
+      setStatus("请先登录后再删除。", { autoClear: true });
       return;
     }
     if (working) return;
-    const confirmed = window.confirm(`确定删除「${card.title}」吗？`);
-    if (!confirmed) return;
+    if (!await confirm({ title: `确定删除「${card.title}」吗？`, danger: true, confirmText: "删除" })) return;
     setWorking(true);
     try {
       await apiJson<{ ok: true }>(`/anniversary-cards/${card.id}`, { method: "DELETE" });
       await mutateCards();
-      setStatus("纪念日已删除。");
+      toast("纪念日已删除", "success");
     } catch {
-      setStatus("删除失败，请稍后再试。");
+      toast("删除失败，请稍后再试", "error");
     } finally {
       setWorking(false);
     }
@@ -221,14 +224,14 @@ export default function AnniversaryWall() {
       <header className="flex flex-wrap items-start justify-between gap-4 sm:gap-5">
         <div>
           <div className="flex items-center gap-3">
-            <CalendarHeart className="h-7 w-7 fill-[#F5DCE0] text-[#B85D70] sm:h-8 sm:w-8" />
-            <h1 className="text-2xl font-semibold leading-tight text-[#5A6670] sm:text-[34px]">纪念日墙</h1>
+            <CalendarHeart className="h-7 w-7 fill-sakura text-rose-ink sm:h-8 sm:w-8" />
+            <h1 className="text-2xl font-semibold leading-tight text-ink sm:text-[34px]">纪念日墙</h1>
           </div>
-          <p className="mt-2 hidden text-sm font-medium text-[#5A6670]/58 sm:block">
+          <p className="mt-2 hidden text-sm font-medium text-ink/58 sm:block">
             把重要的日子做成照片卡，看看它已经陪我们走了多久。
           </p>
         </div>
-        <div className="rounded-[8px] border border-[#D8DDD8]/80 bg-[#FAFBF7]/72 px-4 py-2 text-sm font-semibold text-[#5A6670]/62 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur">
+        <div className="rounded-[8px] border border-dim/80 bg-cream/72 px-4 py-2 text-sm font-semibold text-ink/62 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur">
           {stats.count} 个纪念日{stats.nearest?.valid ? ` · ${stats.nearest.label}` : ""}
         </div>
       </header>
@@ -240,9 +243,12 @@ export default function AnniversaryWall() {
 
       {/* 悬浮FAB按钮 */}
       <button
-        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-[#E8B8C2] text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-[#D86F82] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
+        className="fixed bottom-28 right-6 z-50 grid h-14 w-14 place-items-center rounded-full bg-bloom text-white shadow-[0_8px_24px_rgba(232,184,194,0.45)] transition hover:scale-105 hover:bg-rose active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 lg:bottom-6"
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          resetForm();
+          setOpen(true);
+        }}
         disabled={!isAdmin}
         aria-label="新增纪念日"
       >
@@ -250,60 +256,47 @@ export default function AnniversaryWall() {
       </button>
 
       {/* 弹窗表单 */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-[#273846]/32 px-4 backdrop-blur-sm"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[8px] border border-[#D8DDD8] bg-[#FAFBF7] shadow-[0_28px_90px_rgba(39,56,70,0.24)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#D8DDD8] bg-white/90 px-5 py-4 backdrop-blur">
-              <h2 className="text-lg font-semibold text-[#5A6670]">{editingId ? "编辑纪念日" : "新增纪念日"}</h2>
-              <button
-                className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28"
-                type="button"
-                onClick={() => setOpen(false)}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-3">
-              <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="例如：第一次见面" disabled={!isAdmin} />
-              <DatePicker value={form.date} onChange={(date) => setForm({ ...form, date })} disabled={!isAdmin} />
-              <Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="写一点那天的细节..." disabled={!isAdmin} />
-              <div className="grid gap-2 rounded-[7px] border border-[#D8DDD8]/70 bg-white/36 p-3">
-                <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">
-                  <input type="checkbox" checked={form.repeatYearly} onChange={(event) => setForm({ ...form, repeatYearly: event.target.checked })} disabled={!isAdmin} />
-                  每年重复计算下一次纪念日
-                </label>
-                <label className="flex items-center gap-2 text-sm font-medium text-[#5A6670]/72">
-                  <input type="checkbox" checked={form.pinned} onChange={(event) => setForm({ ...form, pinned: event.target.checked })} disabled={!isAdmin} />
-                  置顶在纪念日墙前面
-                </label>
-              </div>
-              <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={pickPhotos} disabled={!isAdmin || working} />
-              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || working}>
-                <ImagePlus className="h-4 w-4" />
-                {form.photos.length ? `已选择 ${form.photos.length} 张照片` : "选择照片"}
+      <Modal
+        open={open}
+        onClose={() => { if (!working) resetForm(); }}
+        title={editingId ? "编辑纪念日" : "新增纪念日"}
+        size="lg"
+        closeOnOverlay={!working}
+      >
+        <div className="space-y-3">
+          <Input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="例如：第一次见面" disabled={!isAdmin} />
+          <DatePicker value={form.date} onChange={(date) => setForm({ ...form, date })} disabled={!isAdmin} />
+          <Textarea value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="写一点那天的细节..." disabled={!isAdmin} />
+          <div className="grid gap-2 rounded-[7px] border border-dim/70 bg-white/36 p-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-ink/72">
+              <input type="checkbox" checked={form.repeatYearly} onChange={(event) => setForm({ ...form, repeatYearly: event.target.checked })} disabled={!isAdmin} />
+              每年重复计算下一次纪念日
+            </label>
+            <label className="flex items-center gap-2 text-sm font-medium text-ink/72">
+              <input type="checkbox" checked={form.pinned} onChange={(event) => setForm({ ...form, pinned: event.target.checked })} disabled={!isAdmin} />
+              置顶在纪念日墙前面
+            </label>
+          </div>
+          <input ref={fileInputRef} className="hidden" type="file" accept="image/*" multiple onChange={pickPhotos} disabled={!isAdmin || working} />
+          <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={!isAdmin || working}>
+            <ImagePlus className="h-4 w-4" />
+            {form.photos.length ? `已选择 ${form.photos.length} 张照片` : "选择照片"}
+          </Button>
+          {status && <p className="rounded-[7px] border border-dim/70 bg-white/42 px-3 py-2 text-xs leading-5 text-ink/66">{status}</p>}
+          <div className="flex gap-2">
+            <Button className="flex-1" onClick={save} disabled={!isAdmin || working}>
+              {working ? "处理中" : editingId ? "保存修改" : "添加到墙上"}
+            </Button>
+            {editingId && (
+              <Button variant="ghost" onClick={resetForm} disabled={working}>
+                取消
               </Button>
-              {status && <p className="rounded-[7px] border border-[#D8DDD8]/70 bg-white/42 px-3 py-2 text-xs leading-5 text-[#5A6670]/66">{status}</p>}
-              <div className="flex gap-2">
-                <Button className="flex-1" onClick={save} disabled={!isAdmin || working}>
-                  {working ? "处理中" : editingId ? "保存修改" : "添加到墙上"}
-                </Button>
-                {editingId && (
-                  <Button variant="ghost" onClick={resetForm} disabled={working}>
-                    取消
-                  </Button>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </Modal>
+
+      {confirmDialog}
 
       <section className="mt-6">
 
@@ -316,17 +309,17 @@ export default function AnniversaryWall() {
             {cards.map((card) => {
               const state = anniversaryDisplayState(card);
               return (
-                <article key={card.id} className="overflow-hidden rounded-[8px] border border-[#D8DDD8]/78 bg-[#FAFBF7]/80 shadow-[0_14px_30px_rgba(90,102,112,0.07)] backdrop-blur">
-                  <div className="relative aspect-[4/3] bg-[#D6E8F0]/36">
+                <article key={card.id} className="overflow-hidden rounded-[8px] border border-dim/78 bg-cream/80 shadow-[0_14px_30px_rgba(90,102,112,0.07)] backdrop-blur">
+                  <div className="relative aspect-[4/3] bg-mist/36">
                     {card.image ? (
                       <AnniversaryImage src={card.image} alt={`${card.title} 纪念日照片`} />
                     ) : (
-                      <div className="grid h-full place-items-center text-[#5A6670]/34">
+                      <div className="grid h-full place-items-center text-ink/34">
                         <CalendarHeart className="h-12 w-12" />
                       </div>
                     )}
                     {card.pinned && (
-                      <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/70 bg-[#FAFBF7]/82 px-2.5 py-1 text-xs font-semibold text-[#B85D70] backdrop-blur">
+                      <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/70 bg-cream/82 px-2.5 py-1 text-xs font-semibold text-rose-ink backdrop-blur">
                         <Pin className="h-3.5 w-3.5" />
                         置顶
                       </span>
@@ -335,31 +328,31 @@ export default function AnniversaryWall() {
                   <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h2 className="truncate text-xl font-semibold text-[#5A6670]">{card.title}</h2>
-                        <p className="mt-1 text-sm font-medium text-[#5A6670]/52">{card.date}</p>
+                        <h2 className="truncate text-xl font-semibold text-ink">{card.title}</h2>
+                        <p className="mt-1 text-sm font-medium text-ink/52">{card.date}</p>
                       </div>
                       <div className="flex shrink-0 gap-1">
-                        <button className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/46 transition hover:bg-[#D6E8F0]/34 hover:text-[#A8C8DC] disabled:opacity-35" type="button" onClick={() => startEdit(card)} disabled={!isAdmin}>
+                        <button className="grid h-8 w-8 place-items-center rounded-[6px] text-ink/46 transition hover:bg-mist/34 hover:text-sky disabled:opacity-35" type="button" onClick={() => startEdit(card)} disabled={!isAdmin}>
                           <Pencil className="h-4 w-4" />
                         </button>
-                        <button className="grid h-8 w-8 place-items-center rounded-[6px] text-[#5A6670]/46 transition hover:bg-[#F5DCE0]/45 hover:text-[#B85D70] disabled:opacity-35" type="button" onClick={() => void remove(card)} disabled={!isAdmin || working}>
+                        <button className="grid h-8 w-8 place-items-center rounded-[6px] text-ink/46 transition hover:bg-sakura/45 hover:text-rose-ink disabled:opacity-35" type="button" onClick={() => void remove(card)} disabled={!isAdmin || working}>
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </div>
                     {state.valid && (
                       <div className="mt-4 grid grid-cols-2 gap-2">
-                        <div className="rounded-[7px] border border-[#F5DCE0]/70 bg-[#F5DCE0]/30 px-3 py-2">
-                          <p className="text-[11px] font-semibold text-[#5A6670]/46">距今</p>
-                          <p className="mt-1 text-lg font-semibold text-[#B85D70]">{state.sinceLabel}</p>
+                        <div className="rounded-[7px] border border-sakura/70 bg-sakura/30 px-3 py-2">
+                          <p className="text-[11px] font-semibold text-ink/46">距今</p>
+                          <p className="mt-1 text-lg font-semibold text-rose-ink">{state.sinceLabel}</p>
                         </div>
-                        <div className="rounded-[7px] border border-[#D6E8F0]/80 bg-[#D6E8F0]/28 px-3 py-2">
-                          <p className="text-[11px] font-semibold text-[#5A6670]/46">下一次</p>
-                          <p className="mt-1 text-lg font-semibold text-[#5A6670]">{state.label}</p>
+                        <div className="rounded-[7px] border border-mist/80 bg-mist/28 px-3 py-2">
+                          <p className="text-[11px] font-semibold text-ink/46">下一次</p>
+                          <p className="mt-1 text-lg font-semibold text-ink">{state.label}</p>
                         </div>
                       </div>
                     )}
-                    {card.note && <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#5A6670]/68">{card.note}</p>}
+                    {card.note && <p className="mt-3 line-clamp-3 text-sm leading-6 text-ink/68">{card.note}</p>}
                   </div>
                 </article>
               );

@@ -178,56 +178,56 @@ function WeatherPixelIcon({
       <g>
         {hasSun && (
           <>
-            <rect x="14" y="7" width="6" height="6" fill="#FFB24A" />
-            <rect x="6" y="22" width="6" height="6" fill="#FFB24A" />
-            <rect x="28" y="22" width="6" height="6" fill="#FFB24A" />
-            <rect x="14" y="36" width="6" height="6" fill="#FFB24A" />
-            <rect x="12" y="17" width="16" height="16" fill="#FFCC63" />
-            <rect x="16" y="13" width="8" height="24" fill="#FFE6A1" />
-            <rect x="16" y="25" width="4" height="4" fill="#6D7382" />
-            <rect x="24" y="25" width="4" height="4" fill="#6D7382" />
-            <rect x="20" y="31" width="4" height="4" fill="#E8B8C2" />
+            <rect x="14" y="7" width="6" height="6" fill="var(--color-amber)" />
+            <rect x="6" y="22" width="6" height="6" fill="var(--color-amber)" />
+            <rect x="28" y="22" width="6" height="6" fill="var(--color-amber)" />
+            <rect x="14" y="36" width="6" height="6" fill="var(--color-amber)" />
+            <rect x="12" y="17" width="16" height="16" fill="var(--color-sunshine)" />
+            <rect x="16" y="13" width="8" height="24" fill="var(--color-sunlit)" />
+            <rect x="16" y="25" width="4" height="4" fill="var(--color-dusk)" />
+            <rect x="24" y="25" width="4" height="4" fill="var(--color-dusk)" />
+            <rect x="20" y="31" width="4" height="4" fill="var(--color-bloom)" />
           </>
         )}
         {isNight && (
           <>
-            <rect x="14" y="11" width="24" height="24" fill="#828BC4" />
-            <rect x="22" y="7" width="18" height="28" fill="#FFE08B" />
-            <rect x="30" y="7" width="12" height="20" fill="#828BC4" />
-            <rect x="10" y="10" width="4" height="4" fill="#FFD37A" />
-            <rect x="42" y="17" width="4" height="4" fill="#F5DCE0" />
-            <rect x="18" y="32" width="4" height="4" fill="#E8B8C2" />
+            <rect x="14" y="11" width="24" height="24" fill="var(--color-lavender)" />
+            <rect x="22" y="7" width="18" height="28" fill="var(--color-moon)" />
+            <rect x="30" y="7" width="12" height="20" fill="var(--color-lavender)" />
+            <rect x="10" y="10" width="4" height="4" fill="var(--color-marigold)" />
+            <rect x="42" y="17" width="4" height="4" fill="var(--color-sakura)" />
+            <rect x="18" y="32" width="4" height="4" fill="var(--color-bloom)" />
           </>
         )}
         {kind === "fog" && (
           <>
-            <rect x="8" y="18" width="34" height="5" fill="#CFD6E1" />
-            <rect x="20" y="27" width="34" height="5" fill="#BAC5D4" />
-            <rect x="8" y="36" width="40" height="5" fill="#D8DEE8" />
-            <rect x="16" y="45" width="26" height="5" fill="#BAC5D4" />
-            <rect x="49" y="13" width="4" height="4" fill="#F2A6C0" />
-            <rect x="53" y="17" width="4" height="4" fill="#F2A6C0" />
+            <rect x="8" y="18" width="34" height="5" fill="var(--color-cloud-mid)" />
+            <rect x="20" y="27" width="34" height="5" fill="var(--color-cloud)" />
+            <rect x="8" y="36" width="40" height="5" fill="var(--color-cloud-light)" />
+            <rect x="16" y="45" width="26" height="5" fill="var(--color-cloud)" />
+            <rect x="49" y="13" width="4" height="4" fill="var(--color-petal)" />
+            <rect x="53" y="17" width="4" height="4" fill="var(--color-petal)" />
           </>
         )}
         {kind === "wind" && (
           <>
-            <rect x="10" y="22" width="31" height="4" fill="#AFC4EA" />
-            <rect x="10" y="34" width="23" height="4" fill="#AFC4EA" />
-            <rect x="18" y="46" width="32" height="4" fill="#AFC4EA" />
-            <rect x="41" y="18" width="9" height="4" fill="#7A8FC5" />
-            <rect x="33" y="30" width="13" height="4" fill="#7A8FC5" />
-            <rect x="50" y="42" width="5" height="4" fill="#7A8FC5" />
-            <rect x="51" y="13" width="4" height="4" fill="#F2A6C0" />
-            <rect x="55" y="17" width="4" height="4" fill="#F2A6C0" />
+            <rect x="10" y="22" width="31" height="4" fill="var(--color-wind)" />
+            <rect x="10" y="34" width="23" height="4" fill="var(--color-wind)" />
+            <rect x="18" y="46" width="32" height="4" fill="var(--color-wind)" />
+            <rect x="41" y="18" width="9" height="4" fill="var(--color-wind-ink)" />
+            <rect x="33" y="30" width="13" height="4" fill="var(--color-wind-ink)" />
+            <rect x="50" y="42" width="5" height="4" fill="var(--color-wind-ink)" />
+            <rect x="51" y="13" width="4" height="4" fill="var(--color-petal)" />
+            <rect x="55" y="17" width="4" height="4" fill="var(--color-petal)" />
           </>
         )}
         {hasCloud && (
           <>
-            <rect x="14" y="25" width="38" height="18" fill={kind === "cloudy" || kind === "thunder" ? "#B9C1D3" : "#E9F3FF"} />
-            <rect x="20" y="17" width="24" height="12" fill={kind === "cloudy" || kind === "thunder" ? "#C9D0DF" : "#F7FBFF"} />
-            <rect x="10" y="31" width="46" height="12" fill={kind === "cloudy" || kind === "thunder" ? "#AEB7CB" : "#CFE4FF"} />
-            <rect x="16" y="29" width="34" height="10" fill={kind === "cloudy" || kind === "thunder" ? "#D3D8E5" : "#FFFFFF"} />
-            <rect x="11" y="41" width="44" height="4" fill="#5F82C3" opacity="0.65" />
+            <rect x="14" y="25" width="38" height="18" fill={kind === "cloudy" || kind === "thunder" ? "var(--color-storm)" : "var(--color-sky-light)"} />
+            <rect x="20" y="17" width="24" height="12" fill={kind === "cloudy" || kind === "thunder" ? "var(--color-storm-light)" : "var(--color-sky-pale)"} />
+            <rect x="10" y="31" width="46" height="12" fill={kind === "cloudy" || kind === "thunder" ? "var(--color-storm-deep)" : "var(--color-rain-mist)"} />
+            <rect x="16" y="29" width="34" height="10" fill={kind === "cloudy" || kind === "thunder" ? "var(--color-storm-pale)" : "white"} />
+            <rect x="11" y="41" width="44" height="4" fill="var(--color-rain)" opacity="0.65" />
           </>
         )}
         {Array.from({ length: rainDrops }).map((_, index) => (
@@ -237,20 +237,20 @@ function WeatherPixelIcon({
             y={48 + Math.floor(index / 3) * 8}
             width="4"
             height="8"
-            fill="#4D8ED8"
+            fill="var(--color-rain-bright)"
           />
         ))}
         {Array.from({ length: snowDrops }).map((_, index) => (
           <g key={`snow-${index}`} transform={`translate(${16 + (index % 3) * 14 + (index > 2 ? 3 : 0)} ${49 + Math.floor(index / 3) * 7})`}>
-            <rect x="3" y="0" width="3" height="9" fill="#7FA4D8" />
-            <rect x="0" y="3" width="9" height="3" fill="#7FA4D8" />
+            <rect x="3" y="0" width="3" height="9" fill="var(--color-frost)" />
+            <rect x="0" y="3" width="9" height="3" fill="var(--color-frost)" />
           </g>
         ))}
         {kind === "thunder" && (
           <>
-            <rect x="31" y="43" width="7" height="11" fill="#FFB24A" />
-            <rect x="25" y="52" width="13" height="5" fill="#FFB24A" />
-            <rect x="29" y="57" width="5" height="7" fill="#D8663D" />
+            <rect x="31" y="43" width="7" height="11" fill="var(--color-amber)" />
+            <rect x="25" y="52" width="13" height="5" fill="var(--color-amber)" />
+            <rect x="29" y="57" width="5" height="7" fill="var(--color-ember)" />
           </>
         )}
       </g>
@@ -261,9 +261,9 @@ function WeatherPixelIcon({
 function WeatherFrame(props: SVGProps<SVGSVGElement>) {
   return (
     <svg viewBox="0 0 128 8" aria-hidden="true" {...props}>
-      <rect x="0" y="3" width="128" height="2" fill="#D8DDD8" opacity="0.45" />
-      <rect x="14" y="2" width="14" height="4" fill="#F5DCE0" opacity="0.72" />
-      <rect x="88" y="2" width="8" height="4" fill="#D6E8F0" opacity="0.82" />
+      <rect x="0" y="3" width="128" height="2" fill="var(--color-dim)" opacity="0.45" />
+      <rect x="14" y="2" width="14" height="4" fill="var(--color-sakura)" opacity="0.72" />
+      <rect x="88" y="2" width="8" height="4" fill="var(--color-mist)" opacity="0.82" />
     </svg>
   );
 }
@@ -328,15 +328,15 @@ function WeatherCard() {
   }, [locationCities]);
 
   return (
-    <div className="mb-4 rounded-[8px] border border-[#D8DDD8]/70 bg-[#FAFBF7]/66 p-3 text-[#5A6670] shadow-[0_10px_24px_rgba(90,102,112,0.05)] backdrop-blur">
+    <div className="mb-4 rounded-[8px] border border-dim/70 bg-cream/66 p-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)] backdrop-blur">
       <div className="mb-2 flex items-center justify-between gap-3 px-1">
         <div>
-          <p className="text-xs font-semibold text-[#5A6670]/58">沿途天气</p>
-          <p className="text-[11px] text-[#5A6670]/42">
+          <p className="text-xs font-semibold text-ink/58">沿途天气</p>
+          <p className="text-[11px] text-ink/42">
             {updatedAt ? `${formatClock(updatedAt)} 更新` : "正在匹配"}
           </p>
         </div>
-        <RefreshCw className={`h-4 w-4 text-[#A8C8DC] ${isLoading ? "animate-spin" : ""}`} />
+        <RefreshCw className={`h-4 w-4 text-sky ${isLoading ? "animate-spin" : ""}`} />
       </div>
       <WeatherFrame className="mb-2 h-2 w-full" />
       <div className="grid grid-cols-3 gap-2">
@@ -351,15 +351,15 @@ function WeatherCard() {
           return (
             <div
               key={city.id}
-              className="min-w-0 rounded-[8px] border border-[#D8DDD8]/56 bg-white/36 px-2 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]"
+              className="min-w-0 rounded-[8px] border border-dim/56 bg-white/36 px-2 py-2 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]"
             >
-              <p className="truncate text-[11px] font-semibold leading-none text-[#5A6670]/70">{city.name}</p>
+              <p className="truncate text-[11px] font-semibold leading-none text-ink/70">{city.name}</p>
               <WeatherPixelIcon kind={item.kind} className="mx-auto mt-1 h-10 w-10" />
               <div className="mt-1 flex items-end justify-center gap-0.5 leading-none">
-                <span className="text-lg font-semibold text-[#5A6670]">{item.temp}</span>
-                <span className="pb-0.5 text-xs font-semibold text-[#5A6670]/52">°</span>
+                <span className="text-lg font-semibold text-ink">{item.temp}</span>
+                <span className="pb-0.5 text-xs font-semibold text-ink/52">°</span>
               </div>
-              <p className="mt-1 truncate text-[11px] font-semibold text-[#A8C8DC]">{item.label}</p>
+              <p className="mt-1 truncate text-[11px] font-semibold text-sky">{item.label}</p>
             </div>
           );
         })}
@@ -383,17 +383,17 @@ function DateTimeCard() {
   }, []);
 
   return (
-    <div className="mb-4 rounded-[8px] border border-[#D8DDD8]/70 bg-[#FAFBF7]/62 px-4 py-3 text-[#5A6670] shadow-[0_10px_24px_rgba(90,102,112,0.05)]">
+    <div className="mb-4 rounded-[8px] border border-dim/70 bg-cream/62 px-4 py-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-[11px] font-semibold leading-none text-[#5A6670]/54">今天</p>
-          <p className="mt-1 text-2xl font-semibold leading-none text-[#A8C8DC]">
+          <p className="text-[11px] font-semibold leading-none text-ink/54">今天</p>
+          <p className="mt-1 text-2xl font-semibold leading-none text-sky">
             {now ? formatClock(now) : "--:--"}
           </p>
         </div>
         <div className="text-right">
-          <CalendarDays className="ml-auto h-4 w-4 text-[#E8B8C2]" />
-          <p className="mt-2 text-xs font-semibold text-[#5A6670]/64">
+          <CalendarDays className="ml-auto h-4 w-4 text-bloom" />
+          <p className="mt-2 text-xs font-semibold text-ink/64">
             {now ? `${formatDate(now)} ${formatWeekday(now)}` : "加载中"}
           </p>
         </div>
@@ -406,18 +406,18 @@ function TogetherDaysCard() {
   const { days, label, startDate } = useTogetherDays();
 
   return (
-    <div className="mt-3 rounded-[8px] border border-[#D8DDD8]/70 bg-[#FAFBF7]/62 px-4 py-3 text-[#5A6670] shadow-[0_10px_24px_rgba(90,102,112,0.05)]">
+    <div className="mt-3 rounded-[8px] border border-dim/70 bg-cream/62 px-4 py-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)]">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold text-[#5A6670]/58">纪念日</p>
-          <p className="mt-1 text-sm font-semibold text-[#5A6670]">{label}</p>
+          <p className="text-xs font-semibold text-ink/58">纪念日</p>
+          <p className="mt-1 text-sm font-semibold text-ink">{label}</p>
         </div>
         <div className="flex items-end gap-1.5">
-          <span className="text-2xl font-semibold leading-none text-[#E8B8C2]">{days}</span>
-          <span className="pb-0.5 text-sm font-semibold text-[#5A6670]/56">天</span>
+          <span className="text-2xl font-semibold leading-none text-bloom">{days}</span>
+          <span className="pb-0.5 text-sm font-semibold text-ink/56">天</span>
         </div>
       </div>
-      <p className="mt-1 truncate text-xs text-[#5A6670]/45">从 {startDate} 开始</p>
+      <p className="mt-1 truncate text-xs text-ink/45">从 {startDate} 开始</p>
     </div>
   );
 }
@@ -427,14 +427,14 @@ export function TogetherDaysBadge({ compact = false }: Readonly<{ compact?: bool
 
   return (
     <div
-      className={`flex w-fit max-w-full items-center gap-1.5 rounded-full border border-[#D8DDD8]/80 bg-[#FAFBF7]/78 text-[#5A6670]/78 shadow-[0_8px_22px_rgba(90,102,112,0.08)] backdrop-blur ${
+      className={`flex w-fit max-w-full items-center gap-1.5 rounded-full border border-dim/80 bg-cream/78 text-ink/78 shadow-[0_8px_22px_rgba(90,102,112,0.08)] backdrop-blur ${
         compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
       }`}
     >
-      <CalendarDays className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} shrink-0 text-[#A8C8DC]`} />
+      <CalendarDays className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} shrink-0 text-sky`} />
       <span className="min-w-0 truncate">
         {compact ? "在一起" : label}
-        <strong className="mx-1 font-semibold text-[#E8B8C2]">{days}</strong>
+        <strong className="mx-1 font-semibold text-bloom">{days}</strong>
         天
       </span>
     </div>
@@ -448,45 +448,45 @@ function AlbumProgressCard() {
 
   return (
     <Link
-      className="group mt-3 block rounded-[8px] border border-[#D8DDD8]/70 bg-[#FAFBF7]/62 px-4 py-3 text-[#5A6670] shadow-[0_10px_24px_rgba(90,102,112,0.05)] transition hover:-translate-y-0.5 hover:border-[#F5DCE0] hover:bg-white/72"
+      className="group mt-3 block rounded-[8px] border border-dim/70 bg-cream/62 px-4 py-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)] transition hover:-translate-y-0.5 hover:border-sakura hover:bg-white/72"
       href="/memories"
     >
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border border-[#F5DCE0]/80 bg-[#F5DCE0]/42 text-[#E8B8C2] transition group-hover:bg-[#F5DCE0]/68">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[8px] border border-sakura/80 bg-sakura/42 text-bloom transition group-hover:bg-sakura/68">
             <Images className="h-4 w-4" />
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">回忆相册</span>
-            <span className="mt-0.5 block truncate text-xs text-[#5A6670]/48">看全部照片</span>
+            <span className="mt-0.5 block truncate text-xs text-ink/48">看全部照片</span>
           </span>
         </span>
-        <span className="text-lg leading-none text-[#5A6670]/34 transition group-hover:translate-x-0.5 group-hover:text-[#E8B8C2]">
+        <span className="text-lg leading-none text-ink/34 transition group-hover:translate-x-0.5 group-hover:text-bloom">
           →
         </span>
       </div>
 
-      <div className="mt-4 border-t border-[#D8DDD8]/54 pt-4">
+      <div className="mt-4 border-t border-dim/54 pt-4">
         <div className="mb-3 flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-[#5A6670]">我们的进度</p>
-            <p className="mt-0.5 text-xs text-[#5A6670]/52">我们的回忆</p>
+            <p className="text-sm font-semibold text-ink">我们的进度</p>
+            <p className="mt-0.5 text-xs text-ink/52">我们的回忆</p>
           </div>
-          <Heart className="h-5 w-5 fill-[#F5DCE0] text-[#E8B8C2]" />
+          <Heart className="h-5 w-5 fill-sakura text-bloom" />
         </div>
 
         <div className="space-y-3">
           <div>
             <div className="flex items-end justify-between gap-3">
-              <div className="text-sm text-[#5A6670]/68">已点亮省份</div>
-              <div className="text-sm font-semibold text-[#5A6670]">
-                <span className="text-xl text-[#E8B8C2]">{progress.provinceCount}</span>
-                <span className="ml-1 text-[#5A6670]/46">/ {TOTAL_PROVINCES}</span>
+              <div className="text-sm text-ink/68">已点亮省份</div>
+              <div className="text-sm font-semibold text-ink">
+                <span className="text-xl text-bloom">{progress.provinceCount}</span>
+                <span className="ml-1 text-ink/46">/ {TOTAL_PROVINCES}</span>
               </div>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#D8DDD8]/48">
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-dim/48">
               <div
-                className="h-full rounded-full bg-[#E8B8C2] shadow-[0_0_12px_rgba(232,184,194,0.45)]"
+                className="h-full rounded-full bg-bloom shadow-[0_0_12px_rgba(232,184,194,0.45)]"
                 style={{ width: `${provincePercent}%` }}
               />
             </div>
@@ -494,15 +494,15 @@ function AlbumProgressCard() {
 
           <div>
             <div className="flex items-end justify-between gap-3">
-              <div className="text-sm text-[#5A6670]/68">已留下回忆城市</div>
-              <div className="text-sm font-semibold text-[#5A6670]">
-                <span className="text-xl text-[#A8C8DC]">{progress.cityCount}</span>
-                <span className="ml-1 text-[#5A6670]/46">/ {cities.length}</span>
+              <div className="text-sm text-ink/68">已留下回忆城市</div>
+              <div className="text-sm font-semibold text-ink">
+                <span className="text-xl text-sky">{progress.cityCount}</span>
+                <span className="ml-1 text-ink/46">/ {cities.length}</span>
               </div>
             </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#D8DDD8]/48">
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-dim/48">
               <div
-                className="h-full rounded-full bg-[#A8C8DC] shadow-[0_0_12px_rgba(168,200,220,0.45)]"
+                className="h-full rounded-full bg-sky shadow-[0_0_12px_rgba(168,200,220,0.45)]"
                 style={{ width: `${cityPercent}%` }}
               />
             </div>
@@ -540,13 +540,13 @@ function CoupleLogo() {
           }`}
         />
         <button
-          className="absolute left-[15%] top-[23%] h-[42%] w-[31%] rounded-full outline-none transition hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-[#A8C8DC]/70 active:scale-[1.08]"
+          className="absolute left-[15%] top-[23%] h-[42%] w-[31%] rounded-full outline-none transition hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-sky/70 active:scale-[1.08]"
           type="button"
           aria-label="放大左边头像"
           onClick={() => popHead("left")}
         />
         <button
-          className="absolute right-[11%] top-[21%] h-[45%] w-[34%] rounded-full outline-none transition hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-[#E8B8C2]/70 active:scale-[1.08]"
+          className="absolute right-[11%] top-[21%] h-[45%] w-[34%] rounded-full outline-none transition hover:scale-[1.04] focus-visible:ring-2 focus-visible:ring-bloom/70 active:scale-[1.08]"
           type="button"
           aria-label="放大右边头像"
           onClick={() => popHead("right")}
@@ -575,10 +575,10 @@ export function ProgressBadge() {
   const progress = useProgress();
 
   return (
-    <div className="ml-5 hidden items-center gap-2 rounded-[8px] border border-[#D8DDD8]/90 bg-[#FAFBF7]/70 px-4 py-2.5 text-sm text-[#5A6670]/76 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">
-      <Heart className="h-4 w-4 fill-[#F5DCE0] text-[#E8B8C2]" />
+    <div className="ml-5 hidden items-center gap-2 rounded-[8px] border border-dim/90 bg-cream/70 px-4 py-2.5 text-sm text-ink/76 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">
+      <Heart className="h-4 w-4 fill-sakura text-bloom" />
       <span>已点亮</span>
-      <strong className="font-semibold text-[#E8B8C2]">{progress.provinceCount}</strong>
+      <strong className="font-semibold text-bloom">{progress.provinceCount}</strong>
       <span>/ {TOTAL_PROVINCES} 省份</span>
     </div>
   );
@@ -589,18 +589,18 @@ export function LegendProgress({ compact = false }: Readonly<{ compact?: boolean
 
   return (
     <div
-      className={`flex w-fit items-center border border-[#D8DDD8]/80 bg-[#FAFBF7]/70 text-sm text-[#5A6670]/80 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur ${
+      className={`flex w-fit items-center border border-dim/80 bg-cream/70 text-sm text-ink/80 shadow-[0_10px_28px_rgba(90,102,112,0.08)] backdrop-blur ${
         compact ? "gap-1.5 rounded-full px-2.5 py-1.5 text-xs" : "gap-3 rounded-[8px] px-5 py-3"
       }`}
     >
-      <Heart className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} fill-[#F5DCE0] text-[#E8B8C2]`} />
+      <Heart className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} fill-sakura text-bloom`} />
       {compact ? (
         <span className="whitespace-nowrap">
-          <strong className="font-semibold text-[#5A6670]">{progress.provinceCount}</strong> / {TOTAL_PROVINCES}
+          <strong className="font-semibold text-ink">{progress.provinceCount}</strong> / {TOTAL_PROVINCES}
         </span>
       ) : (
         <span>
-          <strong className="font-semibold text-[#5A6670]">{progress.provinceCount}</strong> /{" "}
+          <strong className="font-semibold text-ink">{progress.provinceCount}</strong> /{" "}
           {TOTAL_PROVINCES} provinces explored
         </span>
       )}
@@ -610,7 +610,7 @@ export function LegendProgress({ compact = false }: Readonly<{ compact?: boolean
 
 export function StatsPanel({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <aside className="hidden h-full w-[310px] shrink-0 flex-col overflow-y-auto border-l border-dashed border-[#D8DDD8] px-7 py-7 lg:flex">
+    <aside className="hidden h-full w-[310px] shrink-0 flex-col overflow-y-auto border-l border-dashed border-dim px-7 py-7 lg:flex">
       <DateTimeCard />
       <WeatherCard />
       <TripGuidesCard />
@@ -640,9 +640,9 @@ export function ProvinceProgressBadge({
   }, [data?.memories, provinceId]);
 
   return (
-    <div className="hidden items-center gap-2 rounded-[8px] border border-[#D8DDD8]/90 bg-[#FAFBF7]/70 px-4 py-2.5 text-sm text-[#5A6670]/76 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">
-      <Heart className="h-4 w-4 fill-[#F5DCE0] text-[#E8B8C2]" />
-      <strong className="font-semibold text-[#E8B8C2]">{count}</strong>
+    <div className="hidden items-center gap-2 rounded-[8px] border border-dim/90 bg-cream/70 px-4 py-2.5 text-sm text-ink/76 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">
+      <Heart className="h-4 w-4 fill-sakura text-bloom" />
+      <strong className="font-semibold text-bloom">{count}</strong>
       <span>/ {total} cities</span>
     </div>
   );

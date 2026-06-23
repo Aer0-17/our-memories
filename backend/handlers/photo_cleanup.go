@@ -1,6 +1,11 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"log"
+
 	"our-memories-backend/db"
 	"our-memories-backend/storage"
 )
@@ -21,48 +26,71 @@ func collectPhotos(query string, args ...interface{}) []storedPhoto {
 
 	var out []storedPhoto
 	for rows.Next() {
-		var p storedPhoto
-		if err := rows.Scan(&p.key, &p.url); err == nil {
-			out = append(out, p)
+		var key, url sql.NullString
+		if err := rows.Scan(&key, &url); err == nil {
+			out = append(out, storedPhoto{key: key.String, url: url.String})
 		}
 	}
 	return out
 }
 
-// deletePhotos 异步批量清理 OSS 对象（尽力而为）。
-func deletePhotos(photos []storedPhoto) {
-	if len(photos) == 0 {
-		return
+func storedPhotoKey(photo storedPhoto) string {
+	if photo.key != "" {
+		return photo.key
 	}
-	pending := append([]storedPhoto(nil), photos...)
-	go func() {
-		for _, p := range pending {
-			storage.DeletePhotoObject(p.key, p.url)
+	return storage.KeyFromURL(photo.url)
+}
+
+func photoInputKey(photo photoInput) string {
+	if photo.Key != "" {
+		return photo.Key
+	}
+	return storage.KeyFromURL(photo.URL)
+}
+
+// deletePhotos 同步批量清理 OSS 对象；删除失败会返回错误，避免父记录删除后留下孤儿对象。
+func deletePhotos(spaceID string, photos []storedPhoto) error {
+	if len(photos) == 0 {
+		return nil
+	}
+
+	seen := map[string]bool{}
+	errs := []error{}
+	for _, p := range photos {
+		key := storedPhotoKey(p)
+		if key == "" {
+			continue
 		}
-	}()
+		if !storage.KeyBelongsToSpace(key, spaceID) {
+			log.Printf("skip deleting object outside current space (space=%s key=%s)", spaceID, key)
+			continue
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		if err := storage.DeletePhotoObject(key, p.url); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", key, err))
+		}
+	}
+	return errors.Join(errs...)
 }
 
 // deleteRemovedPhotos 在编辑「删旧再插新」场景下，清理那些不在新集合里的旧对象。
-func deleteRemovedPhotos(old []storedPhoto, kept []photoInput) {
+func deleteRemovedPhotos(spaceID string, old []storedPhoto, kept []photoInput) error {
 	keep := map[string]bool{}
 	for _, p := range kept {
-		k := p.Key
-		if k == "" {
-			k = storage.KeyFromURL(p.URL)
-		}
+		k := photoInputKey(p)
 		if k != "" {
 			keep[k] = true
 		}
 	}
 	removed := []storedPhoto{}
 	for _, op := range old {
-		k := op.key
-		if k == "" {
-			k = storage.KeyFromURL(op.url)
-		}
+		k := storedPhotoKey(op)
 		if k != "" && !keep[k] {
 			removed = append(removed, op)
 		}
 	}
-	deletePhotos(removed)
+	return deletePhotos(spaceID, removed)
 }

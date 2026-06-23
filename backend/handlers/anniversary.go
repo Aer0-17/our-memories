@@ -216,7 +216,11 @@ func UpdateAnniversaryCard(c *gin.Context) {
 		return
 	}
 	if req.Photos != nil {
-		deleteRemovedPhotos(oldPhotos, *req.Photos)
+		if err := deleteRemovedPhotos(spaceID, oldPhotos, *req.Photos); err != nil {
+			clearAnniversaryCardsCache(spaceID)
+			utils.Error(c, 500, "Failed to delete removed anniversary photos")
+			return
+		}
 	}
 
 	clearAnniversaryCardsCache(spaceID)
@@ -241,13 +245,16 @@ func DeleteAnniversaryCard(c *gin.Context) {
 	}
 
 	photos := collectPhotos(`SELECT key, url FROM anniversary_photos WHERE anniversary_card_id = ?`, id)
+	if err := deletePhotos(spaceID, photos); err != nil {
+		utils.Error(c, 500, "Failed to delete anniversary photos")
+		return
+	}
 
 	_, err = db.DB.Exec(`DELETE FROM anniversary_cards WHERE id = ? AND space_id = ?`, id, spaceID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to delete anniversary card")
 		return
 	}
-	deletePhotos(photos)
 
 	clearAnniversaryCardsCache(spaceID)
 	utils.Success(c, gin.H{"ok": true})

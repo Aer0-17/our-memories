@@ -19,6 +19,7 @@ import (
 func main() {
 	config.Load()
 	db.Init()
+	db.EnsureAdminFromEnv()
 	storage.InitS3()
 
 	r := gin.Default()

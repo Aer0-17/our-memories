@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"strings"
 
 	"our-memories-backend/storage"
@@ -18,16 +19,26 @@ func uploadDataURL(spaceID, folder, value string) (string, error) {
 	if !strings.HasPrefix(value, "data:image/") {
 		return value, nil
 	}
-	return storage.UploadImage(spaceID, folder, value)
+	url, _, err := storage.UploadImageWithKey(spaceID, folder, value)
+	return url, err
 }
 
 func uploadPhotoInputs(spaceID, folder string, photos []photoInput) error {
 	for index := range photos {
-		url, err := uploadDataURL(spaceID, folder, photos[index].URL)
+		url, key, err := storage.UploadImageWithKey(spaceID, folder, photos[index].URL)
 		if err != nil {
 			return err
 		}
 		photos[index].URL = url
+		if key != "" {
+			photos[index].Key = key
+		}
+		if photos[index].Key == "" {
+			photos[index].Key = storage.KeyFromURL(photos[index].URL)
+		}
+		if photos[index].Key != "" && !storage.KeyBelongsToSpace(photos[index].Key, spaceID) {
+			return fmt.Errorf("photo key is outside current space")
+		}
 	}
 	return nil
 }

@@ -2,17 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { ImagePlus, Loader2, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ImagePlus, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import type { City } from "@/data/cities";
-import { getLatestMemory, sortMemoriesByTime, type Memory } from "@/data/memories";
-import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
+import { sortMemoriesByTime, type Memory } from "@/data/memories";
 import { MemoryContentView, photosOfMemory } from "@/components/memories/MemoryContentView";
+import { MemoryGallery } from "@/components/memories/MemoryGallery";
+import { MemoryHistory } from "@/components/memories/MemoryHistory";
+import { MobileMemoryImage } from "@/components/memories/MobileMemoryImage";
+import { LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { BottomSheet } from "@/components/ui/BottomSheet";
 import { DatePicker } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { apiFetch } from "@/lib/apiClient";
 import { uploadImage, uploadImages, deleteUploaded } from "@/lib/upload";
 import { normalizeDottedDate } from "@/lib/dateFormat";
-import { memorySupplementLabel } from "@/lib/memorySupplement";
+import { memoryPhotosPayload } from "@/lib/photoPayload";
 import { computeMemoryEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
 
 export type MemoryPatchPayload = Omit<Partial<Memory>, "photos"> & {
@@ -55,16 +60,9 @@ const revokeObjectUrl = (url?: string | null) => {
   if (isObjectUrl(url)) URL.revokeObjectURL(url);
 };
 
-const isBrowserImageUrl = (url?: string | null): url is string =>
-  typeof url === "string" &&
-  (url.startsWith("data:image/") || url.startsWith("https://") || url.startsWith("blob:"));
-
 const revokePhotoDrafts = (photos: PhotoDraft[]) => {
   photos.forEach((photo) => revokeObjectUrl(photo.previewUrl));
 };
-
-const memoryPhotosPayload = (photos: string[]) =>
-  photos.filter(Boolean).map((url) => ({ url, key: "", mimeType: "image/jpeg" }));
 
 export function MemoryCitySheet({
   open,
@@ -85,21 +83,15 @@ export function MemoryCitySheet({
   onDeleteLandmark,
 }: Readonly<MemoryCitySheetProps>) {
   const resolvedLandmarkImage = landmarkImage ?? city.sprite;
-  const defaultMemory = isLit ? getLatestMemory(city.id) : undefined;
   const memories = useMemo(
-    () =>
-      sortMemoriesByTime([
-        ...localMemories,
-        ...(defaultMemory && !localMemories.some((item) => item.id === defaultMemory.id)
-          ? [defaultMemory]
-          : []),
-      ]),
-    [defaultMemory, localMemories],
+    () => sortMemoriesByTime(localMemories),
+    [localMemories],
   );
   const localMemoryIds = useMemo(
     () => new Set(localMemories.map((item) => item.id)),
     [localMemories],
   );
+  const { confirm, dialog: confirmDialog } = useConfirm();
   const memory = (selectedMemoryId ? memories.find((item) => item.id === selectedMemoryId) : undefined) ?? memories[0];
   const access = useMemoryEditAccess(memory);
   const canEditMemory = Boolean(memory && localMemoryIds.has(memory.id) && isAdmin && access.canEdit);
@@ -327,8 +319,7 @@ export function MemoryCitySheet({
     }
 
     if (deletingMemoryId) return;
-    const confirmed = window.confirm(`确定删除 ${record.city} ${record.date} 的这条回忆吗？`);
-    if (!confirmed) return;
+    if (!await confirm({ title: `确定删除 ${record.city} ${record.date} 的这条回忆吗？`, danger: true, confirmText: "删除" })) return;
 
     setDeletingMemoryId(record.id);
     setDeleteError("");
@@ -461,8 +452,7 @@ export function MemoryCitySheet({
     }
 
     if (!hasCustomLandmark || landmarkSaving) return;
-    const confirmed = window.confirm(`确定删除 ${city.name} 的自定义地标图吗？`);
-    if (!confirmed) return;
+    if (!await confirm({ title: `确定删除 ${city.name} 的自定义地标图吗？`, danger: true, confirmText: "删除" })) return;
 
     setLandmarkSaving(true);
     setLandmarkError("");
@@ -591,15 +581,15 @@ export function MemoryCitySheet({
   const renderNoteEditor = (record: Memory) => (
     <div
       ref={noteEditorRef}
-      className="rounded-[8px] border border-[#F5DCE0]/78 bg-[#F5DCE0]/22 p-3 shadow-[0_8px_20px_rgba(232,184,194,0.08)]"
+      className="rounded-[8px] border border-sakura/78 bg-sakura/22 p-3 shadow-[0_8px_20px_rgba(232,184,194,0.08)]"
     >
       <label className="block">
-        <span className="flex items-center justify-between gap-3 text-xs font-semibold text-[#B85D70]">
+        <span className="flex items-center justify-between gap-3 text-xs font-semibold text-rose-ink">
           补充回忆
-          <span className="font-normal text-[#5A6670]/45">{noteDraft.length}/500</span>
+          <span className="font-normal text-ink/45">{noteDraft.length}/500</span>
         </span>
         <textarea
-          className="mt-2 w-full resize-none rounded-[7px] border border-[#F5DCE0] bg-[#FAFBF7] px-3 py-2.5 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+          className="mt-2 w-full resize-none rounded-[7px] border border-sakura bg-cream px-3 py-2.5 text-sm leading-6 text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
           rows={3}
           value={noteDraft}
           onChange={(event) => {
@@ -612,16 +602,16 @@ export function MemoryCitySheet({
       </label>
       <div className="mt-3 flex items-center gap-2">
         <button
-          className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-[7px] bg-[#273846] px-4 text-sm font-semibold text-white transition hover:bg-[#D86F82] disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-[7px] bg-slate px-4 text-sm font-semibold text-white transition hover:bg-rose disabled:cursor-not-allowed disabled:opacity-45"
           type="button"
           onClick={() => handleSaveNote(record)}
           disabled={!canSaveNote}
         >
-          {noteSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {noteSaving && <Spinner size="sm" />}
           {noteSaving ? "保存中" : record.partnerNote ? "保存修改" : "保存补充"}
         </button>
         <button
-          className="min-h-10 rounded-[7px] border border-[#D8DDD8] px-4 text-sm font-semibold text-[#5A6670]/62 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+          className="min-h-10 rounded-[7px] border border-dim px-4 text-sm font-semibold text-ink/62 transition hover:border-sky hover:text-sky"
           type="button"
           onClick={resetAnnotation}
           disabled={noteSaving}
@@ -629,7 +619,7 @@ export function MemoryCitySheet({
           取消
         </button>
       </div>
-      {noteError && <p className="mt-2 text-xs font-semibold text-[#D86F82]">{noteError}</p>}
+      {noteError && <p className="mt-2 text-xs font-semibold text-rose">{noteError}</p>}
     </div>
   );
 
@@ -637,16 +627,16 @@ export function MemoryCitySheet({
     <div className="space-y-2">
       <div className="flex items-center gap-2">
         <button
-          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[8px] bg-[#273846] px-4 text-sm font-semibold text-white transition hover:bg-[#D86F82] disabled:cursor-not-allowed disabled:opacity-45"
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[8px] bg-slate px-4 text-sm font-semibold text-white transition hover:bg-rose disabled:cursor-not-allowed disabled:opacity-45"
           type="button"
           onClick={handleSave}
           disabled={!canSave}
         >
-          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+          {isSaving && <Spinner size="sm" />}
           {isSaving ? "保存中" : canAnnotate ? "保存补充" : isEditing ? "保存修改" : "保存回忆"}
         </button>
         <button
-          className="min-h-11 rounded-[8px] border border-[#D8DDD8] px-4 text-sm font-semibold text-[#5A6670]/62 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+          className="min-h-11 rounded-[8px] border border-dim px-4 text-sm font-semibold text-ink/62 transition hover:border-sky hover:text-sky"
           type="button"
           disabled={isSaving}
           onClick={() => {
@@ -657,7 +647,7 @@ export function MemoryCitySheet({
           取消
         </button>
       </div>
-      {saveError && <p className="text-xs font-semibold text-[#D86F82]">{saveError}</p>}
+      {saveError && <p className="text-xs font-semibold text-rose">{saveError}</p>}
     </div>
   ) : undefined;
 
@@ -672,12 +662,12 @@ export function MemoryCitySheet({
       header={
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="flex items-center gap-2 truncate text-lg font-semibold text-[#5A6670]">
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${isLit ? "bg-[#E8B8C2]" : "bg-[#D8DDD8]"}`} />
+            <h2 className="flex items-center gap-2 truncate text-lg font-semibold text-ink">
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${isLit ? "bg-bloom" : "bg-dim"}`} />
               <span className="truncate">{city.name}</span>
-              <span className="truncate text-xs font-medium text-[#5A6670]/48">{city.nameEn}</span>
+              <span className="truncate text-xs font-medium text-ink/48">{city.nameEn}</span>
             </h2>
-            <p className="mt-0.5 truncate text-xs font-medium text-[#5A6670]/52">
+            <p className="mt-0.5 truncate text-xs font-medium text-ink/52">
               {formOpen
                 ? canAnnotate
                   ? "给这段回忆添加补充"
@@ -688,7 +678,7 @@ export function MemoryCitySheet({
             </p>
           </div>
           <button
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-[7px] text-[#5A6670]/62 transition hover:bg-[#D8DDD8]/28 hover:text-[#5A6670]"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-[7px] text-ink/62 transition hover:bg-dim/28 hover:text-ink"
             type="button"
             onClick={onClose}
             aria-label="关闭回忆弹窗"
@@ -698,9 +688,9 @@ export function MemoryCitySheet({
         </div>
       }
     >
-      <div className="space-y-4 pb-2 text-[#5A6670]">
+      <div className="space-y-4 pb-2 text-ink">
         {!formOpen && (
-          <div className="flex rounded-[8px] border border-[#D8DDD8]/72 bg-[#FAFBF7]/72 p-1 text-xs font-semibold text-[#5A6670]/58">
+          <div className="flex rounded-[8px] border border-dim/72 bg-cream/72 p-1 text-xs font-semibold text-ink/58">
             {([
               ["memory", "回忆"],
               ["gallery", "相册"],
@@ -709,7 +699,7 @@ export function MemoryCitySheet({
               <button
                 key={tab}
                 className={`flex-1 rounded-[7px] px-3 py-2 text-center transition ${
-                  activeTab === tab ? "bg-[#F5DCE0] text-[#E8B8C2]" : "hover:bg-[#D6E8F0]/30"
+                  activeTab === tab ? "bg-sakura text-bloom" : "hover:bg-mist/30"
                 }`}
                 type="button"
                 onClick={() => {
@@ -726,14 +716,14 @@ export function MemoryCitySheet({
         {showMemory && !formOpen && (
           <div className="space-y-4">
             {showLandmarkTools && (
-              <div className="rounded-[7px] border border-[#D8DDD8]/72 bg-[#FAFBF7]/72 p-3">
+              <div className="rounded-[7px] border border-dim/72 bg-cream/72 p-3">
                 <div className="flex items-center gap-3">
-                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]">
+                  <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[6px] border border-dim bg-mist">
                     <MobileMemoryImage src={resolvedLandmarkImage} alt={`${city.name} 地标图`} dim={!isLit} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-[#5A6670]/72">地图地标图</p>
-                    <p className="mt-1 text-[11px] leading-4 text-[#5A6670]/46">
+                    <p className="text-xs font-semibold text-ink/72">地图地标图</p>
+                    <p className="mt-1 text-[11px] leading-4 text-ink/46">
                       上传后会显示在省份地图里，不需要先点亮城市。
                     </p>
                   </div>
@@ -748,7 +738,7 @@ export function MemoryCitySheet({
                 />
                 <div className="mt-3 flex gap-2">
                   <button
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[6px] border border-[#A8C8DC] px-3 py-2 text-xs font-semibold text-[#A8C8DC] transition hover:bg-[#D6E8F0]/34 disabled:opacity-45"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[6px] border border-sky px-3 py-2 text-xs font-semibold text-sky transition hover:bg-mist/34 disabled:opacity-45"
                     type="button"
                     onClick={() => landmarkInputRef.current?.click()}
                     disabled={landmarkSaving || !isAdmin}
@@ -758,7 +748,7 @@ export function MemoryCitySheet({
                   </button>
                   {hasCustomLandmark && (
                     <button
-                      className="grid h-8 w-8 place-items-center rounded-[6px] border border-[#F5DCE0] text-[#E8B8C2] transition hover:bg-[#F5DCE0]/45 disabled:opacity-45"
+                      className="grid h-8 w-8 place-items-center rounded-[6px] border border-sakura text-bloom transition hover:bg-sakura/45 disabled:opacity-45"
                       type="button"
                       onClick={handleDeleteLandmark}
                       disabled={landmarkSaving || !isAdmin}
@@ -768,11 +758,11 @@ export function MemoryCitySheet({
                     </button>
                   )}
                 </div>
-                {landmarkError && <p className="mt-2 text-xs text-[#E8B8C2]">{landmarkError}</p>}
+                {landmarkError && <p className="mt-2 text-xs text-bloom">{landmarkError}</p>}
               </div>
             )}
 
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[8px] border border-[#D8DDD8] bg-[#D6E8F0]">
+            <div className="relative aspect-[4/3] overflow-hidden rounded-[8px] border border-dim bg-mist">
               <MobileMemoryImage
                 src={memory?.image ?? resolvedLandmarkImage}
                 alt={`${city.name} memory`}
@@ -780,7 +770,7 @@ export function MemoryCitySheet({
                 fit={memory ? "cover" : "contain"}
               />
               {memoryPhotos.length > 1 && (
-                <span className="absolute bottom-2 right-2 rounded-[6px] bg-[#FAFBF7]/86 px-2 py-1 text-xs font-medium text-[#5A6670]/78 shadow-[0_6px_14px_rgba(90,102,112,0.12)]">
+                <span className="absolute bottom-2 right-2 rounded-[6px] bg-cream/86 px-2 py-1 text-xs font-medium text-ink/78 shadow-[0_6px_14px_rgba(90,102,112,0.12)]">
                   {memoryPhotos.length} photos
                 </span>
               )}
@@ -794,10 +784,10 @@ export function MemoryCitySheet({
                   return (
                     <button
                       key={`${memory?.id ?? city.id}-mobile-photo-${index}`}
-                      className={`group relative aspect-square overflow-hidden rounded-[5px] border bg-[#D6E8F0] transition ${
+                      className={`group relative aspect-square overflow-hidden rounded-[5px] border bg-mist transition ${
                         isCover
-                          ? "border-[#E8B8C2] shadow-[0_0_0_2px_rgba(245,220,224,0.75)]"
-                          : "border-[#D8DDD8] hover:border-[#E8B8C2]"
+                          ? "border-bloom shadow-[0_0_0_2px_rgba(245,220,224,0.75)]"
+                          : "border-dim hover:border-bloom"
                       }`}
                       type="button"
                       onClick={() => handleSetCover(photo)}
@@ -807,8 +797,8 @@ export function MemoryCitySheet({
                       <MobileMemoryImage src={photo} alt={`${city.name} memory photo ${index + 1}`} fit="cover" />
                       {canSetCover && (
                         <span
-                          className={`absolute inset-x-1 bottom-1 rounded-[4px] bg-[#FAFBF7]/90 px-1.5 py-1 text-[10px] font-medium shadow-[0_4px_10px_rgba(90,102,112,0.10)] transition ${
-                            isCover ? "text-[#E8B8C2] opacity-100" : "text-[#5A6670]/68 opacity-0 group-hover:opacity-100"
+                          className={`absolute inset-x-1 bottom-1 rounded-[4px] bg-cream/90 px-1.5 py-1 text-[10px] font-medium shadow-[0_4px_10px_rgba(90,102,112,0.10)] transition ${
+                            isCover ? "text-bloom opacity-100" : "text-ink/68 opacity-0 group-hover:opacity-100"
                           }`}
                         >
                           {isCover ? "封面" : settingCover === photo ? "保存中" : "设封面"}
@@ -819,13 +809,13 @@ export function MemoryCitySheet({
                 })}
               </div>
             )}
-            {coverError && <p className="text-xs text-[#E8B8C2]">{coverError}</p>}
+            {coverError && <p className="text-xs text-bloom">{coverError}</p>}
 
             {memory && localMemoryIds.has(memory.id) && (
               <div className="flex gap-2">
                 {canEditMemory ? (
                   <button
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#D8DDD8] px-3 py-2.5 text-xs font-semibold text-[#5A6670]/70 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-dim px-3 py-2.5 text-xs font-semibold text-ink/70 transition hover:border-sky hover:text-sky"
                     type="button"
                     onClick={() => startEdit(memory)}
                   >
@@ -834,7 +824,7 @@ export function MemoryCitySheet({
                   </button>
                 ) : canAnnotateMemory ? (
                   <button
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#F5DCE0] px-3 py-2.5 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/55"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-sakura px-3 py-2.5 text-xs font-semibold text-bloom transition hover:bg-sakura/55"
                     type="button"
                     onClick={() => startAnnotate(memory)}
                   >
@@ -844,7 +834,7 @@ export function MemoryCitySheet({
                 ) : null}
                 {canEditMemory && (
                   <button
-                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-[#F5DCE0] px-3 py-2.5 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/55 disabled:opacity-45"
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-[7px] border border-sakura px-3 py-2.5 text-xs font-semibold text-bloom transition hover:bg-sakura/55 disabled:opacity-45"
                     type="button"
                     onClick={() => handleDelete(memory)}
                     disabled={deletingMemoryId === memory.id}
@@ -855,23 +845,23 @@ export function MemoryCitySheet({
                 )}
               </div>
             )}
-            {deleteError && <p className="text-xs text-[#E8B8C2]">{deleteError}</p>}
+            {deleteError && <p className="text-xs text-bloom">{deleteError}</p>}
             {memory && annotatingMemoryId === memory.id && renderNoteEditor(memory)}
-            {noteError && !annotatingMemoryId && <p className="text-xs text-[#E8B8C2]">{noteError}</p>}
+            {noteError && !annotatingMemoryId && <p className="text-xs text-bloom">{noteError}</p>}
 
             {memory ? (
               <MemoryContentView memory={memory} cityName={city.name} showPhotos={false} showTitle />
             ) : (
-              <div className="rounded-[8px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7]/70 px-4 py-6 text-center">
-                <p className="text-sm font-semibold text-[#5A6670]">这座城市还没有回忆</p>
-                <p className="mt-2 text-xs leading-5 text-[#5A6670]/52">
+              <div className="rounded-[8px] border border-dashed border-dim bg-cream/70 px-4 py-6 text-center">
+                <p className="text-sm font-semibold text-ink">这座城市还没有回忆</p>
+                <p className="mt-2 text-xs leading-5 text-ink/52">
                   {isAdmin ? "写下第一段回忆后，这座城市会被点亮。" : "登录后可以添加第一段回忆。"}
                 </p>
               </div>
             )}
 
             <button
-              className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#D8DDD8] px-3 py-3 text-sm font-semibold text-[#5A6670]/68 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC] disabled:cursor-not-allowed disabled:opacity-45"
+              className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-dashed border-dim px-3 py-3 text-sm font-semibold text-ink/68 transition hover:border-sky hover:text-sky disabled:cursor-not-allowed disabled:opacity-45"
               type="button"
               onClick={startCreate}
               disabled={!isAdmin}
@@ -883,135 +873,23 @@ export function MemoryCitySheet({
         )}
 
         {showGallery && !formOpen && (
-          <div>
-            {galleryPhotos.length > 0 ? (
-              <div className="grid grid-cols-3 gap-2">
-                {galleryPhotos.map((photo, index) => (
-                  <span
-                    key={`${city.id}-mobile-gallery-photo-${index}`}
-                    className="relative aspect-square overflow-hidden rounded-[6px] border border-[#D8DDD8] bg-[#D6E8F0]"
-                  >
-                    <MobileMemoryImage src={photo} alt={`${city.name} gallery photo ${index + 1}`} fit="cover" />
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="rounded-[7px] border border-dashed border-[#D8DDD8] px-4 py-6 text-center text-sm text-[#5A6670]/56">
-                还没有照片，添加第一段回忆后会出现在这里。
-              </p>
-            )}
-          </div>
+          <MemoryGallery city={city} photos={galleryPhotos} />
         )}
 
         {showHistory && !formOpen && (
-          <div className="space-y-3">
-            {memories.length > 0 ? (
-              memories.map((record, recordIndex) => {
-                const recordPhotos = photosOfMemory(record);
-                const editable = localMemoryIds.has(record.id);
-                const recordAccess = computeMemoryEditAccess(record);
-                const canEditRecord = editable && isAdmin && recordAccess.canEdit;
-                const canAnnotateRecord = editable && isAdmin && recordAccess.canAddNote && !recordAccess.canEdit;
-
-                return (
-                  <article
-                    key={record.id}
-                    className="rounded-[8px] border border-[#D8DDD8]/70 bg-[#FAFBF7]/72 p-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs font-semibold text-[#5A6670]/70">{record.date}</p>
-                      <div className="flex items-center gap-1.5">
-                        {recordIndex === 0 && (
-                          <span className="rounded-full bg-[#F5DCE0]/82 px-2 py-0.5 text-[10px] font-medium text-[#E8B8C2]">
-                            最新
-                          </span>
-                        )}
-                        {editable ? (
-                          <>
-                            {(canEditRecord || canAnnotateRecord) && (
-                              <button
-                                className="grid h-7 w-7 place-items-center rounded-[5px] text-[#5A6670]/50 transition hover:bg-[#D6E8F0]/34 hover:text-[#A8C8DC]"
-                                type="button"
-                                onClick={() => {
-                                  if (canEditRecord) startEdit(record);
-                                  else startAnnotate(record);
-                                }}
-                                aria-label={
-                                  canEditRecord
-                                    ? `编辑 ${record.city} ${record.date} 回忆`
-                                    : `给 ${record.city} ${record.date} 回忆添加补充`
-                                }
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            {canEditRecord && (
-                              <button
-                                className="grid h-7 w-7 place-items-center rounded-[5px] text-[#5A6670]/46 transition hover:bg-[#F5DCE0]/46 hover:text-[#E8B8C2] disabled:opacity-40"
-                                type="button"
-                                onClick={() => handleDelete(record)}
-                                disabled={deletingMemoryId === record.id}
-                                aria-label={`删除 ${record.city} ${record.date} 回忆`}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-[10px] text-[#5A6670]/36">示例</span>
-                        )}
-                      </div>
-                    </div>
-                    {record.title && <p className="mt-2 text-sm font-semibold text-[#5A6670]">{record.title}</p>}
-                    <p className="mt-2 text-xs leading-5 text-[#5A6670]/72">{record.text}</p>
-                    {(record.mood || record.tags?.length) && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {record.mood && (
-                          <span className="rounded-full bg-[#D6E8F0]/42 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/58">
-                            {record.mood}
-                          </span>
-                        )}
-                        {record.tags?.slice(0, 4).map((tag) => (
-                          <span
-                            key={`${record.id}-mobile-history-tag-${tag}`}
-                            className="rounded-full bg-[#FAFBF7]/80 px-2 py-0.5 text-[10px] font-semibold text-[#5A6670]/46"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {recordPhotos.length > 0 && (
-                      <div className="mt-3 grid grid-cols-5 gap-1.5">
-                        {recordPhotos.slice(0, 10).map((photo, photoIndex) => (
-                          <span
-                            key={`${record.id}-mobile-history-photo-${photoIndex}`}
-                            className="relative aspect-square overflow-hidden rounded-[4px] border border-[#D8DDD8] bg-[#D6E8F0]"
-                          >
-                            <MobileMemoryImage src={photo} alt={`${city.name} history photo ${photoIndex + 1}`} fit="cover" />
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    {record.partnerNote && (
-                      <div className="mt-3 rounded-[7px] border border-[#F5DCE0]/70 bg-[#F5DCE0]/24 px-3 py-2">
-                        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[#E8B8C2]/80">
-                          {memorySupplementLabel(record)}
-                        </p>
-                        <p className="text-xs leading-5 text-[#5A6670]/70">{record.partnerNote}</p>
-                      </div>
-                    )}
-                    {annotatingMemoryId === record.id && <div className="mt-3">{renderNoteEditor(record)}</div>}
-                  </article>
-                );
-              })
-            ) : (
-              <p className="rounded-[7px] border border-dashed border-[#D8DDD8] px-4 py-6 text-center text-sm text-[#5A6670]/56">
-                还没有历史记录。
-              </p>
-            )}
-            {deleteError && <p className="text-xs text-[#E8B8C2]">{deleteError}</p>}
-          </div>
+          <MemoryHistory
+            city={city}
+            memories={memories}
+            localMemoryIds={localMemoryIds}
+            isAdmin={isAdmin}
+            annotatingMemoryId={annotatingMemoryId}
+            deletingMemoryId={deletingMemoryId}
+            deleteError={deleteError}
+            onEdit={startEdit}
+            onAnnotate={startAnnotate}
+            onDelete={handleDelete}
+            renderNoteEditor={renderNoteEditor}
+          />
         )}
 
         {formOpen && (
@@ -1019,9 +897,9 @@ export function MemoryCitySheet({
             {canEditFields && (
               <>
                 <label className="block">
-                  <span className="text-xs font-medium text-[#5A6670]/70">标题</span>
+                  <span className="text-xs font-medium text-ink/70">标题</span>
                   <input
-                    className="mt-1.5 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    className="mt-1.5 w-full rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                     type="text"
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
@@ -1031,9 +909,9 @@ export function MemoryCitySheet({
                 </label>
 
                 <label className="block">
-                  <span className="text-xs font-medium text-[#5A6670]/70">具体地点</span>
+                  <span className="text-xs font-medium text-ink/70">具体地点</span>
                   <input
-                    className="mt-1.5 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    className="mt-1.5 w-full rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                     type="text"
                     value={placeName}
                     onChange={(event) => setPlaceName(event.target.value)}
@@ -1043,27 +921,27 @@ export function MemoryCitySheet({
                 </label>
 
                 <label className="block">
-                  <span className="text-xs font-medium text-[#5A6670]/70">日期</span>
+                  <span className="text-xs font-medium text-ink/70">日期</span>
                   <DatePicker
-                    className="mt-1.5 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    className="mt-1.5 w-full rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                     value={date}
                     onChange={setDate}
                     aria-invalid={dateInvalid}
                   />
                   {dateInvalid && (
-                    <span className="mt-1.5 block text-xs text-[#E8B8C2]">
+                    <span className="mt-1.5 block text-xs text-bloom">
                       请使用 2024.05.20 或 2024.5.20 格式
                     </span>
                   )}
                 </label>
 
                 <label className="block">
-                  <span className="flex items-center justify-between gap-3 text-xs font-medium text-[#5A6670]/70">
+                  <span className="flex items-center justify-between gap-3 text-xs font-medium text-ink/70">
                     一句话回忆
-                    <span className="font-normal text-[#5A6670]/45">{text.length}/{memoryTextMaxLength}</span>
+                    <span className="font-normal text-ink/45">{text.length}/{memoryTextMaxLength}</span>
                   </span>
                   <textarea
-                    className="mt-1.5 w-full resize-none rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                    className="mt-1.5 w-full resize-none rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm leading-6 text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                     rows={3}
                     value={text}
                     onChange={(event) => {
@@ -1078,9 +956,9 @@ export function MemoryCitySheet({
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-xs font-medium text-[#5A6670]/70">心情</span>
+                    <span className="text-xs font-medium text-ink/70">心情</span>
                     <input
-                      className="mt-1.5 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                      className="mt-1.5 w-full rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                       type="text"
                       value={mood}
                       onChange={(event) => setMood(event.target.value)}
@@ -1089,9 +967,9 @@ export function MemoryCitySheet({
                     />
                   </label>
                   <label className="block">
-                    <span className="text-xs font-medium text-[#5A6670]/70">标签</span>
+                    <span className="text-xs font-medium text-ink/70">标签</span>
                     <input
-                      className="mt-1.5 w-full rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                      className="mt-1.5 w-full rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                       type="text"
                       value={tags}
                       onChange={(event) => setTags(event.target.value)}
@@ -1102,7 +980,7 @@ export function MemoryCitySheet({
                 </div>
 
                 <div>
-                  <span className="text-xs font-medium text-[#5A6670]/70">可见性</span>
+                  <span className="text-xs font-medium text-ink/70">可见性</span>
                   <div className="mt-1.5 grid grid-cols-3 gap-2">
                     {[
                       ["both", "给我们看"],
@@ -1113,8 +991,8 @@ export function MemoryCitySheet({
                         key={value}
                         className={`rounded-[7px] border px-2 py-2 text-xs font-semibold transition ${
                           visibility === value
-                            ? "border-[#F5DCE0] bg-[#F5DCE0]/62 text-[#B85D70]"
-                            : "border-[#D8DDD8] bg-[#FAFBF7] text-[#5A6670]/58 hover:border-[#A8C8DC]"
+                            ? "border-sakura bg-sakura/62 text-rose-ink"
+                            : "border-dim bg-cream text-ink/58 hover:border-sky"
                         }`}
                         type="button"
                         onClick={() => setVisibility(value as "both" | "me" | "her")}
@@ -1127,20 +1005,20 @@ export function MemoryCitySheet({
 
                 <div className="space-y-2">
                   <button
-                    className="inline-flex min-h-9 items-center gap-2 rounded-[6px] border border-[#F5DCE0] bg-[#F5DCE0]/42 px-3 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#F5DCE0]/70 disabled:cursor-not-allowed disabled:opacity-45"
+                    className="inline-flex min-h-9 items-center gap-2 rounded-[6px] border border-sakura bg-sakura/42 px-3 text-xs font-semibold text-bloom transition hover:bg-sakura/70 disabled:cursor-not-allowed disabled:opacity-45"
                     type="button"
                     onClick={handlePolishMemory}
                     disabled={!trimmedText || polishing}
                   >
-                    {polishing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    {polishing ? <Spinner size="sm" /> : <Sparkles className="h-3.5 w-3.5" />}
                     {polishing ? "润色中" : "AI 润色"}
                   </button>
                   {polishSuggestion && (
-                    <div className="rounded-[7px] border border-[#F5DCE0]/76 bg-white/54 p-3">
-                      <p className="text-xs leading-5 text-[#5A6670]/72">{polishSuggestion}</p>
+                    <div className="rounded-[7px] border border-sakura/76 bg-white/54 p-3">
+                      <p className="text-xs leading-5 text-ink/72">{polishSuggestion}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         <button
-                          className="rounded-[6px] bg-[#F5DCE0] px-3 py-1.5 text-xs font-semibold text-[#E8B8C2] transition hover:bg-[#E8B8C2] hover:text-[#FAFBF7]"
+                          className="rounded-[6px] bg-sakura px-3 py-1.5 text-xs font-semibold text-bloom transition hover:bg-bloom hover:text-cream"
                           type="button"
                           onClick={() => {
                             setText(polishSuggestion.slice(0, memoryTextMaxLength));
@@ -1151,7 +1029,7 @@ export function MemoryCitySheet({
                           采用
                         </button>
                         <button
-                          className="rounded-[6px] border border-[#D8DDD8] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/66 transition hover:border-[#A8C8DC] hover:text-[#A8C8DC]"
+                          className="rounded-[6px] border border-dim px-3 py-1.5 text-xs font-semibold text-ink/66 transition hover:border-sky hover:text-sky"
                           type="button"
                           onClick={handlePolishMemory}
                           disabled={polishing}
@@ -1159,7 +1037,7 @@ export function MemoryCitySheet({
                           重新润色
                         </button>
                         <button
-                          className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-[#5A6670]/52 transition hover:bg-[#D8DDD8]/28"
+                          className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-ink/52 transition hover:bg-dim/28"
                           type="button"
                           onClick={() => {
                             setPolishSuggestion("");
@@ -1171,11 +1049,11 @@ export function MemoryCitySheet({
                       </div>
                     </div>
                   )}
-                  {polishError && <p className="text-xs text-[#E8B8C2]">{polishError}</p>}
+                  {polishError && <p className="text-xs text-bloom">{polishError}</p>}
                 </div>
 
                 <div>
-                  <span className="text-xs font-medium text-[#5A6670]/70">照片</span>
+                  <span className="text-xs font-medium text-ink/70">照片</span>
                   <input
                     ref={fileInputRef}
                     className="hidden"
@@ -1185,7 +1063,7 @@ export function MemoryCitySheet({
                     onChange={handlePickFile}
                   />
                   <button
-                    className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-[7px] border border-dashed border-[#D8DDD8] bg-[#FAFBF7] px-3 py-3 text-sm text-[#5A6670]/70 transition hover:border-[#E8B8C2] hover:text-[#E8B8C2]"
+                    className="mt-1.5 flex w-full items-center justify-center gap-2 rounded-[7px] border border-dashed border-dim bg-cream px-3 py-3 text-sm text-ink/70 transition hover:border-bloom hover:text-bloom"
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                   >
@@ -1195,7 +1073,7 @@ export function MemoryCitySheet({
                           {photoDrafts.slice(0, 8).map((photo, index) => (
                             <span
                               key={`${photo.previewUrl}-${index}`}
-                              className="relative aspect-square overflow-hidden rounded-[4px] bg-[#D6E8F0]"
+                              className="relative aspect-square overflow-hidden rounded-[4px] bg-mist"
                             >
                               <LocalPrivacyImg
                                 className="pixelated h-full w-full object-cover"
@@ -1205,7 +1083,7 @@ export function MemoryCitySheet({
                             </span>
                           ))}
                         </span>
-                        <span className="mt-2 block text-xs text-[#5A6670]/58">
+                        <span className="mt-2 block text-xs text-ink/58">
                           已选择 {photoDrafts.length} 张
                         </span>
                       </span>
@@ -1216,16 +1094,16 @@ export function MemoryCitySheet({
                       </>
                     )}
                   </button>
-                  {photoError && <span className="mt-1.5 block text-xs text-[#E8B8C2]">{photoError}</span>}
+                  {photoError && <span className="mt-1.5 block text-xs text-bloom">{photoError}</span>}
                 </div>
               </>
             )}
 
               {canAnnotate && (
                 <label className="block">
-                <span className="text-xs font-medium text-[#5A6670]/70">补充回忆</span>
+                <span className="text-xs font-medium text-ink/70">补充回忆</span>
                 <textarea
-                  className="mt-1.5 w-full resize-none rounded-[7px] border border-[#D8DDD8] bg-[#FAFBF7] px-3 py-2.5 text-sm leading-6 text-[#5A6670] placeholder:text-[#5A6670]/40 outline-none transition focus:border-[#E8B8C2]"
+                  className="mt-1.5 w-full resize-none rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm leading-6 text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                   rows={4}
                   value={partnerNote}
                   onChange={(event) => setPartnerNote(event.target.value)}
@@ -1237,30 +1115,7 @@ export function MemoryCitySheet({
           </div>
         )}
       </div>
+      {confirmDialog}
     </BottomSheet>
-  );
-}
-
-function MobileMemoryImage({
-  src,
-  alt,
-  dim = false,
-  fit = "contain",
-}: Readonly<{ src: string; alt: string; dim?: boolean; fit?: "contain" | "cover" }>) {
-  const objectClass = fit === "cover" ? "object-cover" : "object-contain";
-  const className = `pixelated h-full w-full ${objectClass} ${dim ? "opacity-50 grayscale" : ""}`;
-
-  if (isBrowserImageUrl(src)) {
-    return <LocalPrivacyImg className={className} src={src} alt={alt} />;
-  }
-
-  return (
-    <LocalPrivacyImage
-      className={`pixelated ${objectClass} ${dim ? "opacity-50 grayscale" : ""}`}
-      src={src}
-      alt={alt}
-      fill
-      sizes="(max-width: 1023px) 100vw, 292px"
-    />
   );
 }

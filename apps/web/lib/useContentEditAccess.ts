@@ -1,30 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { adminModeUpdatedEvent, readAdminMode } from "@/data/adminMode";
-import { readSession } from "@/lib/authStore";
+import { useMemo } from "react";
+import { readAdminMode } from "@/data/adminMode";
+import { readSession, type StoredSession } from "@/lib/authStore";
+import { useAuth } from "@/lib/authContext";
 import type { Memory } from "@/data/memories";
 
 export const readContentEditAccess = () => Boolean(readSession()) || readAdminMode();
 
 export function useContentEditAccess() {
-  const [canEdit, setCanEdit] = useState(false);
-
-  useEffect(() => {
-    const update = () => setCanEdit(readContentEditAccess());
-    const timer = window.setTimeout(update, 0);
-
-    window.addEventListener(adminModeUpdatedEvent, update);
-    window.addEventListener("storage", update);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener(adminModeUpdatedEvent, update);
-      window.removeEventListener("storage", update);
-    };
-  }, []);
-
-  return canEdit;
+  return useAuth().canEditContent;
 }
 
 export interface MemoryEditAccess {
@@ -35,41 +20,20 @@ export interface MemoryEditAccess {
 }
 
 export function useMemoryEditAccess(memory?: Pick<Memory, "createdById"> | null): MemoryEditAccess {
-  const [access, setAccess] = useState<MemoryEditAccess>({
-    canEdit: false,
-    canEditAll: false,
-    canAddNote: false,
-    isCreator: false,
-  });
+  const { session, canEditContent } = useAuth();
 
-  useEffect(() => {
-    const update = () => setAccess(computeMemoryEditAccess(memory));
-
-    const timer = window.setTimeout(update, 0);
-
-    window.addEventListener(adminModeUpdatedEvent, update);
-    window.addEventListener("storage", update);
-
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener(adminModeUpdatedEvent, update);
-      window.removeEventListener("storage", update);
-    };
-  }, [memory]);
-
-  return access;
+  return useMemo(
+    () => computeMemoryEditAccessForSession(session, memory, canEditContent),
+    [canEditContent, memory, session],
+  );
 }
 
-/**
- * 纯函数版编辑权限判定，复用与 useMemoryEditAccess 完全一致的逻辑。
- * 用于无法使用 hook 的场景（如在列表 map 内按每条 record 判断作者）。
- * 与 hook 的差异：无响应式更新，仅在调用时读取一次 session。
- */
-export function computeMemoryEditAccess(memory?: Pick<Memory, "createdById"> | null): MemoryEditAccess {
-  const session = readSession();
-  const isLoggedIn = Boolean(session) || readAdminMode();
-
-  if (!isLoggedIn || !memory) {
+export function computeMemoryEditAccessForSession(
+  session: StoredSession | null,
+  memory?: Pick<Memory, "createdById"> | null,
+  canEditContent = Boolean(session) || readAdminMode(),
+): MemoryEditAccess {
+  if (!canEditContent || !memory) {
     return { canEdit: false, canEditAll: false, canAddNote: false, isCreator: false };
   }
 
@@ -82,4 +46,14 @@ export function computeMemoryEditAccess(memory?: Pick<Memory, "createdById"> | n
     canAddNote: Boolean(currentUserId && memory.createdById && !isCreator),
     isCreator,
   };
+}
+
+/**
+ * 纯函数版编辑权限判定，复用与 useMemoryEditAccess 完全一致的逻辑。
+ * 用于无法使用 hook 的场景（如在列表 map 内按每条 record 判断作者）。
+ * 与 hook 的差异：无响应式更新，仅在调用时读取一次 session。
+ */
+export function computeMemoryEditAccess(memory?: Pick<Memory, "createdById"> | null): MemoryEditAccess {
+  const session = readSession();
+  return computeMemoryEditAccessForSession(session, memory);
 }
