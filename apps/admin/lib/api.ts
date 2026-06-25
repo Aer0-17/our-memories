@@ -1,6 +1,8 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const ADMIN_BASE_PATH = "/admin";
+const adminUrl = (path: string) => `${ADMIN_BASE_PATH}${path.startsWith("/") ? path : `/${path}`}`;
 
-interface AdminSession {
+export interface AdminSession {
   token: string;
   admin: {
     id: string;
@@ -11,13 +13,30 @@ interface AdminSession {
 
 const SESSION_KEY = "admin_session";
 
+function isAdminSession(value: unknown): value is AdminSession {
+  if (!value || typeof value !== "object") return false;
+  const session = value as Partial<AdminSession>;
+  const admin = session.admin;
+  return (
+    typeof session.token === "string" &&
+    !!admin &&
+    typeof admin.id === "string" &&
+    typeof admin.username === "string" &&
+    typeof admin.displayName === "string"
+  );
+}
+
 export function getSession(): AdminSession | null {
   if (typeof window === "undefined") return null;
   const stored = localStorage.getItem(SESSION_KEY);
   if (!stored) return null;
   try {
-    return JSON.parse(stored);
+    const session = JSON.parse(stored);
+    if (isAdminSession(session)) return session;
+    clearSession();
+    return null;
   } catch {
+    clearSession();
     return null;
   }
 }
@@ -49,7 +68,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 
   if (response.status === 401) {
     clearSession();
-    window.location.href = "/login";
+    window.location.href = adminUrl("/login");
     throw new Error("Unauthorized");
   }
 
@@ -72,7 +91,7 @@ export async function login(username: string, password: string): Promise<void> {
 
 export async function logout(): Promise<void> {
   clearSession();
-  window.location.href = "/login";
+  window.location.href = adminUrl("/login");
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
@@ -81,6 +100,24 @@ export async function apiGet<T>(path: string): Promise<T> {
     throw new Error(`API error: ${response.status}`);
   }
   return response.json();
+}
+
+export async function apiDownload(
+  path: string
+): Promise<{ blob: Blob; filename: string }> {
+  const response = await apiFetch(path, {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+
+  const disposition = response.headers.get("Content-Disposition") || "";
+  const filenameMatch = disposition.match(/filename="?([^"]+)"?/i);
+  return {
+    blob: await response.blob(),
+    filename: filenameMatch?.[1] || "our-memories-backup.json",
+  };
 }
 
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {

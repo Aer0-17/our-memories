@@ -3,6 +3,9 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const serverUrl = process.env.CAPACITOR_SERVER_URL?.replace(/\/$/, "");
+const allowHttp =
+  process.env.CAPACITOR_ALLOW_HTTP === "1" ||
+  process.env.CAPACITOR_ALLOW_HTTP === "true";
 
 if (!serverUrl) {
   console.error("CAPACITOR_SERVER_URL is required, for example:");
@@ -10,9 +13,14 @@ if (!serverUrl) {
   process.exit(1);
 }
 
-if (!/^https:\/\//.test(serverUrl)) {
+if (!/^https:\/\//.test(serverUrl) && !allowHttp) {
   console.error("CAPACITOR_SERVER_URL must be an https URL for a production APK.");
+  console.error("For a private HTTP/IP build, set CAPACITOR_ALLOW_HTTP=1 explicitly.");
   process.exit(1);
+}
+
+if (!/^https:\/\//.test(serverUrl)) {
+  console.warn("Warning: building an HTTP online APK. Use this only for private/internal distribution.");
 }
 
 const run = (command, args, options = {}) => {

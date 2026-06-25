@@ -134,19 +134,19 @@ export default function DashboardPage() {
           </h2>
           <div className="space-y-3">
             <a
-              href="/spaces"
+              href="/admin/spaces"
               className="block px-4 py-3 bg-[var(--muted)] rounded-lg hover:bg-[var(--secondary)] transition text-sm"
             >
               查看所有空间
             </a>
             <a
-              href="/users"
+              href="/admin/users"
               className="block px-4 py-3 bg-[var(--muted)] rounded-lg hover:bg-[var(--secondary)] transition text-sm"
             >
               管理用户
             </a>
             <a
-              href="/orders"
+              href="/admin/orders"
               className="block px-4 py-3 bg-[var(--muted)] rounded-lg hover:bg-[var(--secondary)] transition text-sm"
             >
               处理订单

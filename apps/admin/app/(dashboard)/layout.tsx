@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { logout, getSession } from "@/lib/api";
+import { logout, getSession, type AdminSession } from "@/lib/api";
 import { LayoutDashboard, Users, Package, DollarSign, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/spaces", label: "空间管理", icon: Package },
   { href: "/users", label: "用户管理", icon: Users },
   { href: "/orders", label: "订单管理", icon: DollarSign },
+  { href: "/backup", label: "备份迁移", icon: Package },
 ];
 
 export default function DashboardLayout({
@@ -21,21 +22,22 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [session, setSession] = useState<ReturnType<typeof getSession>>(null);
-  const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [session, setSession] = useState<AdminSession | null>();
+  const currentPath = pathname?.startsWith("/admin/")
+    ? pathname.slice("/admin".length)
+    : pathname;
 
   useEffect(() => {
-    const nextSession = getSession();
-    setSession(nextSession);
-    setIsCheckingSession(false);
-    if (!nextSession) router.push("/login");
+    const storedSession = getSession();
+    setSession(storedSession);
+    if (!storedSession) router.push("/login");
   }, [router]);
 
   const handleLogout = () => {
     logout();
   };
 
-  if (isCheckingSession || !session) return null;
+  if (!session) return null;
 
   return (
     <div className="min-h-screen flex bg-[var(--muted)]">
@@ -51,7 +53,7 @@ export default function DashboardLayout({
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href;
+            const isActive = currentPath === item.href;
             return (
               <Link
                 key={item.href}

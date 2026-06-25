@@ -11,6 +11,7 @@ import (
 type Config struct {
 	Port              string
 	DatabasePath      string
+	PublicDir         string
 	JWTSecret         string
 	AllowedOrigins    []string
 	DefaultSpaceCode  string
@@ -36,12 +37,13 @@ func Load() {
 	cfg = &Config{
 		Port:              getEnv("PORT", "8080"),
 		DatabasePath:      getEnv("DATABASE_PATH", "./data/ourMemories.db"),
+		PublicDir:         getEnv("PUBLIC_DIR", "./public"),
 		JWTSecret:         getEnv("JWT_SECRET", "change-me-at-least-24-characters"),
 		AllowedOrigins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3002"), ","),
 		DefaultSpaceCode:  getEnv("DEFAULT_SPACE_CODE", "our-space-2026"),
 		DefaultPassword:   getEnv("DEFAULT_PASSWORD", "1234"),
-		AdminUsername:     getEnv("ADMIN_USERNAME", ""),
-		AdminPassword:     getEnv("ADMIN_PASSWORD", ""),
+		AdminUsername:     getEnv("ADMIN_USERNAME", "admin"),
+		AdminPassword:     getEnv("ADMIN_PASSWORD", "admin123456"),
 		AdminDisplayName:  getEnv("ADMIN_DISPLAY_NAME", "Admin User"),
 		AutoSeed:          getEnv("AUTO_SEED", "true") == "true",
 		S3Endpoint:        getEnv("S3_ENDPOINT", ""),

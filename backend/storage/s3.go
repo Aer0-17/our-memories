@@ -76,6 +76,21 @@ func publicURLForKey(cfg *config.Config, key string) string {
 	return fmt.Sprintf("%s/%s/%s", strings.TrimRight(cfg.S3Endpoint, "/"), strings.Trim(cfg.S3Bucket, "/"), key)
 }
 
+// PublicURLForKey returns the public URL for an existing object key in the
+// currently configured storage backend. It returns an empty string when storage
+// has no public base to build from.
+func PublicURLForKey(key string) string {
+	key = strings.TrimLeft(strings.TrimSpace(key), "/")
+	if key == "" {
+		return ""
+	}
+	cfg := config.Get()
+	if cfg.S3PublicBaseURL == "" && cfg.S3Endpoint == "" {
+		return ""
+	}
+	return publicURLForKey(cfg, key)
+}
+
 // PresignPut 为前端直传签发一个 15 分钟有效的 PUT URL，并返回对象 key 与最终公共访问 URL。
 func PresignPut(spaceID, folder, contentType string) (key, uploadURL, publicURL string, err error) {
 	if s3Client == nil {

@@ -47,20 +47,22 @@ go run main.go
 ```
 
 ### 4. 配置管理员
-在 `.env` 中设置后，服务启动时会自动创建或更新管理端账号：
+服务启动时会自动创建或更新默认管理端账号：
 
 ```bash
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=YourSecurePassword
+ADMIN_PASSWORD=admin123456
 ADMIN_DISPLAY_NAME=Admin User
 ```
+
+生产环境请在 `.env` 中改成自己的强密码。
 
 也可以手动创建：
 
 ```bash
 go run cmd/create_admin.go \
   -username=admin \
-  -password=YourSecurePassword \
+  -password=admin123456 \
   -name="Admin User"
 ```
 
@@ -84,6 +86,7 @@ npm run dev
 
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - 完整部署指南
 - [SAME_PORT_DEPLOYMENT.md](./SAME_PORT_DEPLOYMENT.md) - 同端口部署指南（前后端同域）
+- [DEPLOY_115_190_114_125.md](./DEPLOY_115_190_114_125.md) - 115.190.114.125 裸 IP 部署
 - [SUMMARY.md](./SUMMARY.md) - 项目修复与升级总结
 - [计划文档](./.claude/plans/elegant-giggling-flame.md) - 实现计划
 
@@ -210,12 +213,13 @@ MIT License
 # 一键部署
 ./deploy.sh
 
-# 启动服务器
-cd backend && go run main.go
+# 启动同端口服务
+PORT=8080 PUBLIC_DIR=./backend/public DATABASE_PATH=./backend/data/ourMemories.db ./dist/our-memories-api
 
 # 访问
+# 用户端: http://localhost:8080/
 # API: http://localhost:8080/api/v1
-# 管理后台: http://localhost:8080/admin
+# 管理后台: http://localhost:8080/admin/
 ```
 
 详见 [SAME_PORT_DEPLOYMENT.md](./SAME_PORT_DEPLOYMENT.md)

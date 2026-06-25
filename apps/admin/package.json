@@ -7,7 +7,7 @@
     "dev": "next dev -p 3003",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint app lib components",
+    "lint": "eslint app lib",
     "typecheck": "tsc --noEmit",
     "deploy": "npm run build && rm -rf ../../backend/public/admin && mkdir -p ../../backend/public/admin && cp -r out/* ../../backend/public/admin/"
   },

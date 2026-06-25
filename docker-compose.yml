@@ -7,6 +7,7 @@ services:
     environment:
       PORT: 8080
       DATABASE_PATH: /app/data/ourMemories.db
+      PUBLIC_DIR: /app/public
       JWT_SECRET: ${JWT_SECRET:-our-memories-jwt-secret-change-this-in-production}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002,capacitor://localhost,http://localhost,https://localhost}
       DEFAULT_SPACE_CODE: ${DEFAULT_SPACE_CODE:-our-space-2026}

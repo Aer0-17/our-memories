@@ -38,6 +38,9 @@ npm run build:apk:remote https://your-domain.com
 # 连接到你的生产服务器
 ./scripts/build-apk-remote.sh https://ourmemories.example.com
 
+# 只有裸 IP / HTTP 时，用于私有分发
+CAPACITOR_ALLOW_HTTP=1 CAPACITOR_SERVER_URL=http://115.190.114.125 npm run mobile:android:build:online
+
 # 连接到本地开发服务器（测试）
 ./scripts/build-apk-remote.sh http://192.168.1.100:3000
 ```
@@ -102,6 +105,7 @@ server: {
 2. **HTTPS推荐**
    - 生产环境使用HTTPS
    - 开发环境可用HTTP
+   - 裸 IP / HTTP 在线 APK 需要显式设置 `CAPACITOR_ALLOW_HTTP=1`
 
 3. **版本兼容性**
    - 如果API接口变更，仍需发布新APK

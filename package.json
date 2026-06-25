@@ -11,11 +11,12 @@
   "scripts": {
     "dev": "npm run dev -w @map-of-us/web",
     "dev:web": "npm run dev -w @map-of-us/web",
-    "dev:server": "npm run dev -w @map-of-us/server",
-    "build": "npm run build:shared && npm run build --workspaces --if-present",
+    "dev:server": "cd backend && go run main.go",
+    "build": "npm run build:shared && npm run build -w @map-of-us/web && npm run build -w @map-of-us/admin && npm run build:server",
     "build:shared": "npm run build -w @map-of-us/shared",
     "build:web": "npm run build:shared && npm run build -w @map-of-us/web",
-    "build:server": "npm run build:shared && npm run build -w @map-of-us/server",
+    "build:admin": "npm run build -w @map-of-us/admin",
+    "build:server": "cd backend && go build -o ../dist/our-memories-api ./main.go",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "desktop": "npm run desktop -w @map-of-us/desktop",
@@ -28,9 +29,9 @@
     "mobile:android:build:online": "npm run android:build:online -w @map-of-us/mobile",
     "miniprogram:dev": "npm run dev:weapp -w @map-of-us/miniprogram",
     "miniprogram:build": "npm run build:weapp -w @map-of-us/miniprogram",
-    "db:generate": "npm run db:generate -w @map-of-us/server",
-    "db:migrate": "npm run db:migrate -w @map-of-us/server",
-    "db:seed": "npm run db:seed -w @map-of-us/server"
+    "db:generate": "echo \"Go/SQLite backend does not require generated DB client\"",
+    "db:migrate": "cd backend && go run ./cmd/migrate",
+    "db:seed": "cd backend && AUTO_SEED=true go run ./cmd/migrate"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

@@ -45,6 +45,8 @@ func main() {
 			admin.GET("/spaces/:id", handlers.GetSpaceDetail)
 			admin.PUT("/spaces/:id/status", handlers.UpdateSpaceStatus)
 			admin.DELETE("/spaces/:id", handlers.DeleteSpace)
+			admin.GET("/spaces/:id/backup/export", handlers.AdminExportSpaceBackup)
+			admin.POST("/backup/import", handlers.AdminImportBackup)
 
 			admin.GET("/users", handlers.GetUsers)
 			admin.PUT("/users/:id/role", handlers.UpdateUserRole)
@@ -131,8 +133,9 @@ func main() {
 }
 
 func registerStaticApps(r *gin.Engine) {
-	webDistPath := filepath.Join(".", "public", "web")
-	adminDistPath := filepath.Join(".", "public", "admin")
+	publicDir := resolvePublicDir(config.Get().PublicDir)
+	webDistPath := filepath.Join(publicDir, "web")
+	adminDistPath := filepath.Join(publicDir, "admin")
 
 	if stat, err := os.Stat(webDistPath); err == nil && stat.IsDir() {
 		log.Printf("Serving web app from %s at /", webDistPath)
@@ -164,6 +167,22 @@ func registerStaticApps(r *gin.Engine) {
 	})
 }
 
+func resolvePublicDir(configuredPath string) string {
+	if configuredPath == "" {
+		configuredPath = "./public"
+	}
+	if stat, err := os.Stat(configuredPath); err == nil && stat.IsDir() {
+		return configuredPath
+	}
+	if configuredPath == "./public" {
+		fallbackPath := filepath.Join("backend", "public")
+		if stat, err := os.Stat(fallbackPath); err == nil && stat.IsDir() {
+			return fallbackPath
+		}
+	}
+	return configuredPath
+}
+
 func serveStaticApp(c *gin.Context, distPath, prefix string) bool {
 	if stat, err := os.Stat(distPath); err != nil || !stat.IsDir() {
 		return false
@@ -192,11 +211,11 @@ func serveStaticApp(c *gin.Context, distPath, prefix string) bool {
 		if stat.IsDir() {
 			indexPath := filepath.Join(filePath, "index.html")
 			if _, err := os.Stat(indexPath); err == nil {
-				c.File(indexPath)
+				serveStaticFile(c, indexPath)
 				return true
 			}
 		} else {
-			c.File(filePath)
+			serveStaticFile(c, filePath)
 			return true
 		}
 	}
@@ -208,12 +227,23 @@ func serveStaticApp(c *gin.Context, distPath, prefix string) bool {
 
 	indexPath := filepath.Join(distPath, "index.html")
 	if _, err := os.Stat(indexPath); err == nil {
-		c.File(indexPath)
+		serveStaticFile(c, indexPath)
 		return true
 	}
 
 	c.Status(http.StatusNotFound)
 	return true
+}
+
+func serveStaticFile(c *gin.Context, filePath string) {
+	ext := strings.ToLower(filepath.Ext(filePath))
+	switch {
+	case ext == ".html" || ext == ".txt" || ext == ".rsc":
+		c.Header("Cache-Control", "no-store")
+	case strings.Contains(filepath.ToSlash(filePath), "/_next/static/"):
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+	}
+	c.File(filePath)
 }
 
 func isPathInside(root, target string) bool {

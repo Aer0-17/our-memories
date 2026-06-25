@@ -1,5 +1,9 @@
 # Our Memories - 管理后台部署指南
 
+> 如果要部署到 `http://115.190.114.125/`，优先看
+> [DEPLOY_115_190_114_125.md](./DEPLOY_115_190_114_125.md)。
+> 当前推荐同端口部署：用户端 `/`、管理端 `/admin/`、API `/api/v1` 都由 Go 服务提供。
+
 ## 系统概述
 
 Our Memories 已升级为支持多用户空间和商业化的版本，包含：
@@ -43,11 +47,19 @@ go run main.go
 
 ### 3. 创建管理员账户
 
-使用命令行工具创建第一个管理员：
+默认启动会自动创建管理员 `admin / admin123456`。生产环境请在 `backend/.env` 中覆盖：
+
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your-secure-admin-password
+ADMIN_DISPLAY_NAME=Admin User
+```
+
+也可以使用命令行工具手动创建第一个管理员：
 
 ```bash
 cd backend
-go run cmd/create_admin.go -username=admin -password=YourSecurePassword -name="Admin User"
+go run cmd/create_admin.go -username=admin -password=your-secure-admin-password -name="Admin User"
 ```
 
 输出：

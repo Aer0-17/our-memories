@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /src
@@ -26,6 +24,7 @@ COPY --from=builder /out/our-memories-api ./our-memories-api
 
 ENV PORT=8080 \
   DATABASE_PATH=/app/data/ourMemories.db \
+  PUBLIC_DIR=/app/public \
   AUTO_SEED=true
 
 USER app

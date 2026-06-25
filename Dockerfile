@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 FROM node:22-alpine AS web-builder
 
 WORKDIR /src
@@ -53,6 +51,7 @@ COPY --from=admin-builder /src/apps/admin/out ./public/admin
 
 ENV PORT=8080 \
   DATABASE_PATH=/app/data/ourMemories.db \
+  PUBLIC_DIR=/app/public \
   AUTO_SEED=true
 
 USER app
