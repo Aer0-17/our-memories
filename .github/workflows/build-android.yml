@@ -15,7 +15,7 @@ on:
 
 env:
   CAPACITOR_SERVER_URL: ${{ inputs.server_url || secrets.CAPACITOR_SERVER_URL }}
-  CAPACITOR_ALLOW_HTTP: ${{ inputs.allow_http || secrets.CAPACITOR_ALLOW_HTTP || '0' }}
+  CAPACITOR_ALLOW_HTTP: ${{ inputs.allow_http || vars.CAPACITOR_ALLOW_HTTP || '0' }}
 
 jobs:
   build-apk:

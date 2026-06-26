@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const serverUrl = process.env.CAPACITOR_SERVER_URL?.replace(/\/$/, "");
@@ -29,6 +29,9 @@ const run = (command, args, options = {}) => {
     shell: process.platform === "win32",
     ...options,
   });
+  if (result.error) {
+    console.error(result.error.message);
+  }
   if (result.status !== 0) process.exit(result.status ?? 1);
 };
 
@@ -55,6 +58,9 @@ if (!existsSync(fallbackIndex)) {
 }
 
 run("npx", ["capacitor", "sync", "android"]);
+if (process.platform !== "win32") {
+  chmodSync(resolve("android/gradlew"), 0o755);
+}
 run(process.platform === "win32" ? "gradlew.bat" : "./gradlew", ["assembleDebug"], {
   cwd: "android",
 });
