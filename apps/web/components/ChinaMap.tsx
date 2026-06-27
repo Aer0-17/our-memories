@@ -22,7 +22,7 @@ import { provinces } from "@/data/provinces";
 import Image from "next/image";
 import { cities } from "@/data/cities";
 import { memoryTime, type Memory } from "@/data/memories";
-import { useMemoryStore } from "@/lib/memoryStore";
+import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore";
 import { Modal } from "@/components/ui/modal";
 
 interface ChinaMapProps {
@@ -102,8 +102,9 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
   const [zoom, setZoom] = useState(1);
   const [reduceMotion, setReduceMotion] = useState(false);
   const router = useRouter();
-  const { data: memoryData } = useMemoryStore();
-  const localMemories = useMemo<LocalMemoryStore>(() => memoryData?.memories ?? {}, [memoryData?.memories]);
+  const { data: memoryData } = useMemorySummary();
+  const memorySummary = useMemo(() => memoryData?.summary ?? {}, [memoryData?.summary]);
+  const localMemories = useMemo<LocalMemoryStore>(() => summaryToMemoryStore(memorySummary), [memorySummary]);
 
   useEffect(() => {
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -115,19 +116,18 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
 
   const provinceStats = useMemo(() => {
     const stats = new Map<string, { count: number; cities: Set<string>; latest?: Memory }>();
-    Object.values(localMemories)
-      .flat()
-      .forEach((memory) => {
-        const city = cityById.get(memory.cityId);
+    Object.values(memorySummary)
+      .forEach((item) => {
+        const city = cityById.get(item.cityId);
         if (!city) return;
         const entry = stats.get(city.provinceId) ?? { count: 0, cities: new Set<string>() };
-        entry.count += 1;
+        entry.count += item.count;
         entry.cities.add(city.id);
-        if (!entry.latest || memoryTime(memory) > memoryTime(entry.latest)) entry.latest = memory;
+        if (item.latest && (!entry.latest || memoryTime(item.latest) > memoryTime(entry.latest))) entry.latest = item.latest;
         stats.set(city.provinceId, entry);
       });
     return stats;
-  }, [localMemories]);
+  }, [memorySummary]);
 
   const litProvinceIds = useMemo(
     () => getLitProvinceIds(getLitCityIds(localMemories)),

@@ -16,8 +16,21 @@ export interface Memory {
   placeName?: string;
   createdById?: string;
   createdAt?: string;
+  updatedAt?: string;
   draft?: boolean;
 }
+
+export interface MemorySummaryItem {
+  cityId: string;
+  city: string;
+  cityEn: string;
+  count: number;
+  coverImage?: string;
+  latest?: Memory;
+  updatedAt?: string;
+}
+
+export type MemorySummaryStore = Record<string, MemorySummaryItem>;
 
 export const memoryTime = (memory: Pick<Memory, "date" | "createdAt">) => {
   if (/^\d{4}\.\d{2}\.\d{2}$/.test(memory.date)) {

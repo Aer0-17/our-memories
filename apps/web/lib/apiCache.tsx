@@ -19,12 +19,14 @@ const maxPersistedEntryBytes = 750 * 1024;
 
 const persistentKeys = new Set([
   "/api/v1/memories",
+  "/api/v1/memories/summary",
   "/api/v1/city-assets",
   "/api/v1/anniversary-cards",
   "/api/v1/time-capsules",
   "/api/v1/auxiliary-items",
   "/api/v1/trip-guides",
 ]);
+const persistentKeyPrefixes = ["/api/v1/memories/cities/"];
 
 type PersistedCacheEntry = [
   string,
@@ -37,7 +39,7 @@ type PersistedCacheEntry = [
 function isPersistentKey(key: unknown): key is string {
   if (typeof key !== "string") return false;
   const [pathname] = key.split("?");
-  return persistentKeys.has(pathname);
+  return persistentKeys.has(pathname) || persistentKeyPrefixes.some((prefix) => pathname.startsWith(prefix));
 }
 
 function cacheContainsDataUrl(value: unknown): boolean {

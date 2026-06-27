@@ -4,13 +4,10 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Camera, MapPin, RefreshCw } from "lucide-react";
 import { cities } from "@/data/cities";
-import type { Memory } from "@/data/memories";
-import {
-  type LocalMemoryStore,
-} from "@/data/progress";
+import type { MemorySummaryStore } from "@/data/memories";
 import { LocalPrivacyImage, LocalPrivacyImg } from "@/components/LocalPrivacyImage";
 import { isBrowserImageUrl } from "@/lib/image";
-import { useMemoryStore } from "@/lib/memoryStore";
+import { useMemorySummary } from "@/lib/memorySummaryStore";
 
 interface RandomPhoto {
   id: string;
@@ -21,14 +18,19 @@ interface RandomPhoto {
   text: string;
 }
 
-function collectMemories(localMemories: LocalMemoryStore) {
-  const byId = new Map<string, Memory>();
-
-  Object.values(localMemories).flat().forEach((memory) => {
-    if (!memory.draft) byId.set(memory.id, memory);
+function collectSummaryPhotos(summary: MemorySummaryStore) {
+  return Object.values(summary).flatMap((item) => {
+    const src = item.coverImage || item.latest?.image;
+    if (!src || !item.latest) return [];
+    return [{
+      id: item.latest.id,
+      src,
+      city: item.city,
+      cityId: item.cityId,
+      date: item.latest.date,
+      text: item.latest.text,
+    }];
   });
-
-  return [...byId.values()];
 }
 
 function PhotoImage({ photo }: Readonly<{ photo: RandomPhoto }>) {
@@ -54,21 +56,11 @@ function PhotoImage({ photo }: Readonly<{ photo: RandomPhoto }>) {
 export default function RandomPhotoCard() {
   const [initialPhotoSeed] = useState(() => Math.random());
   const [selectedPhotoId, setSelectedPhotoId] = useState("");
-  const { data } = useMemoryStore();
+  const { data } = useMemorySummary();
 
   const photos = useMemo(
-    () =>
-      collectMemories(data?.memories ?? {}).flatMap((memory) =>
-        (memory.photos?.length ? memory.photos : [memory.image]).map((src, photoIndex) => ({
-          id: `${memory.id}-${photoIndex}`,
-          src,
-          city: memory.city,
-          cityId: memory.cityId,
-          date: memory.date,
-          text: memory.text,
-        })),
-      ),
-    [data?.memories],
+    () => collectSummaryPhotos(data?.summary ?? {}),
+    [data?.summary],
   );
 
   const photo = useMemo(() => {

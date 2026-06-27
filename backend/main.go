@@ -64,6 +64,8 @@ func main() {
 			auth.PUT("/auth/password", handlers.UpdatePassword)
 
 			auth.GET("/memories", handlers.GetMemories)
+			auth.GET("/memories/summary", handlers.GetMemorySummary)
+			auth.GET("/memories/cities/:cityId", handlers.GetCityMemories)
 			auth.POST("/memories", handlers.CreateMemory)
 			auth.PATCH("/memories/:id", handlers.UpdateMemory)
 			auth.DELETE("/memories/:id", handlers.DeleteMemory)

@@ -23,7 +23,7 @@ func GetMemories(c *gin.Context) {
 	userID := c.GetString("userID")
 
 	// 尝试从缓存获取
-	cacheKey := fmt.Sprintf("memories:%s:%s", spaceID, userID)
+	cacheKey := fmt.Sprintf("memories:%s:%s:full", spaceID, userID)
 	if cached, found := cache.Get(cacheKey); found {
 		utils.Success(c, gin.H{"memories": cached})
 		return
@@ -40,20 +40,80 @@ func GetMemories(c *gin.Context) {
 	utils.Success(c, gin.H{"memories": memories})
 }
 
+func GetCityMemories(c *gin.Context) {
+	spaceID := c.GetString("spaceID")
+	userID := c.GetString("userID")
+	cityID := strings.TrimSpace(c.Param("cityId"))
+	if cityID == "" {
+		utils.Error(c, 400, "cityId is required")
+		return
+	}
+
+	cacheKey := fmt.Sprintf("memories:%s:%s:city:%s", spaceID, userID, cityID)
+	if cached, found := cache.Get(cacheKey); found {
+		utils.Success(c, gin.H{"memories": cached})
+		return
+	}
+
+	memories, err := loadMemoryStoreForCity(spaceID, userID, cityID)
+	if err != nil {
+		utils.Error(c, 500, "Failed to fetch city memories")
+		return
+	}
+
+	cache.Set(cacheKey, memories, 30*time.Second)
+	utils.Success(c, gin.H{"memories": memories})
+}
+
+func GetMemorySummary(c *gin.Context) {
+	spaceID := c.GetString("spaceID")
+	userID := c.GetString("userID")
+
+	cacheKey := fmt.Sprintf("memories:%s:%s:summary", spaceID, userID)
+	if cached, found := cache.Get(cacheKey); found {
+		utils.Success(c, gin.H{"summary": cached})
+		return
+	}
+
+	summary, err := loadMemorySummary(spaceID, userID)
+	if err != nil {
+		utils.Error(c, 500, "Failed to fetch memory summary")
+		return
+	}
+
+	cache.Set(cacheKey, summary, 30*time.Second)
+	utils.Success(c, gin.H{"summary": summary})
+}
+
 func clearMemoriesCache(spaceID string) {
 	cache.DeletePrefix(fmt.Sprintf("memories:%s:", spaceID))
 }
 
 func loadMemoryStore(spaceID string, userID string) (map[string][]gin.H, error) {
+	return loadMemoryStoreWithCity(spaceID, userID, "")
+}
+
+func loadMemoryStoreForCity(spaceID string, userID string, cityID string) (map[string][]gin.H, error) {
+	return loadMemoryStoreWithCity(spaceID, userID, cityID)
+}
+
+func loadMemoryStoreWithCity(spaceID string, userID string, cityID string) (map[string][]gin.H, error) {
+	cityFilter := ""
+	args := []interface{}{spaceID, userID}
+	if cityID != "" {
+		cityFilter = " AND city_id = ?"
+		args = append(args, cityID)
+	}
+
 	rows, err := db.DB.Query(`
 		SELECT id, space_id, city_id, city, city_en, COALESCE(title, ''), date, text,
 		       COALESCE(mood, ''), COALESCE(tags, '[]'), visibility, COALESCE(partner_note, ''),
 		       COALESCE(partner_note_author_id, ''), COALESCE(place_name, ''),
 		       COALESCE(cover_photo_id, ''), COALESCE(created_by_id, ''), created_at, updated_at
 		FROM memories
-		WHERE space_id = ? AND (visibility = 'both' OR created_by_id = ?)
+		WHERE space_id = ? AND (visibility = 'both' OR created_by_id = ?)`+cityFilter+`
 		ORDER BY date DESC, created_at DESC
-	`, spaceID, userID)
+	`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +199,77 @@ func loadMemoryStore(spaceID string, userID string) (map[string][]gin.H, error) 
 	}
 
 	return memories, nil
+}
+
+func loadMemorySummary(spaceID string, userID string) (map[string]gin.H, error) {
+	rows, err := db.DB.Query(`
+		SELECT id, city_id, city, city_en, COALESCE(title, ''), date, text,
+		       COALESCE(place_name, ''), COALESCE(created_by_id, ''), created_at, updated_at,
+		       COALESCE(
+		         (SELECT url FROM memory_photos WHERE id = memories.cover_photo_id AND url != ''),
+		         (SELECT url FROM memory_photos WHERE memory_id = memories.id AND url != '' ORDER BY sort_order LIMIT 1),
+		         ''
+		       ) AS image
+		FROM memories
+		WHERE space_id = ? AND (visibility = 'both' OR created_by_id = ?)
+		ORDER BY date DESC, created_at DESC
+	`, spaceID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	summary := map[string]gin.H{}
+	for rows.Next() {
+		var id, cityID, city, cityEn, title, date, text, placeName, createdByID, createdAt, updatedAt, image string
+		if err := rows.Scan(&id, &cityID, &city, &cityEn, &title, &date, &text, &placeName, &createdByID, &createdAt, &updatedAt, &image); err != nil {
+			return nil, err
+		}
+
+		existing, ok := summary[cityID]
+		count := 1
+		if ok {
+			if existingCount, isInt := existing["count"].(int); isInt {
+				count = existingCount + 1
+			}
+		}
+
+		latest := gin.H{
+			"id":          id,
+			"cityId":      cityID,
+			"city":        city,
+			"cityEn":      cityEn,
+			"title":       title,
+			"date":        date,
+			"text":        text,
+			"placeName":   placeName,
+			"image":       image,
+			"createdById": createdByID,
+			"createdAt":   createdAt,
+			"updatedAt":   updatedAt,
+		}
+
+		if ok {
+			existing["count"] = count
+			summary[cityID] = existing
+			continue
+		}
+
+		summary[cityID] = gin.H{
+			"cityId":     cityID,
+			"city":       city,
+			"cityEn":     cityEn,
+			"count":      count,
+			"coverImage": image,
+			"latest":     latest,
+			"updatedAt":  updatedAt,
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return summary, nil
 }
 
 func CreateMemory(c *gin.Context) {

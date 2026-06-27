@@ -22,9 +22,10 @@ import {
   type AppSettings,
 } from "@/data/appSettings";
 import TripGuidesCard from "@/components/TripGuidesCard";
-import { useMemoryStore } from "@/lib/memoryStore";
+import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore";
 import { pullRefreshEvent } from "@/lib/refresh";
 import { useDeferredReady } from "@/lib/useDeferredReady";
+import { useIsMobile } from "@/lib/useIsMobile";
 
 const weatherFallbackTemp = 24;
 
@@ -285,6 +286,7 @@ function WeatherCard() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const settings = useAppSettings();
+  const isMobile = useIsMobile();
   const ready = useDeferredReady(1500);
 
   const locationCities = useMemo(
@@ -299,7 +301,7 @@ function WeatherCard() {
   );
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || isMobile) return;
     let cancelled = false;
 
     async function loadWeather() {
@@ -341,7 +343,9 @@ function WeatherCard() {
       window.clearInterval(interval);
       window.removeEventListener(pullRefreshEvent, loadWeather);
     };
-  }, [locationCities, ready]);
+  }, [isMobile, locationCities, ready]);
+
+  if (isMobile) return null;
 
   return (
     <div className="mb-4 rounded-[8px] border border-dim/70 bg-cream/66 p-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)] backdrop-blur">
@@ -573,10 +577,10 @@ function CoupleLogo() {
 }
 
 function useProgress() {
-  const { data } = useMemoryStore();
+  const { data } = useMemorySummary();
 
   return useMemo(() => {
-    const localMemories = data?.memories ?? {};
+    const localMemories = summaryToMemoryStore(data?.summary ?? {});
     const litCityIds = getLitCityIds(localMemories);
     const litProvinceIds = getLitProvinceIds(litCityIds);
 
@@ -584,7 +588,7 @@ function useProgress() {
       cityCount: litCityIds.size,
       provinceCount: litProvinceIds.size,
     };
-  }, [data?.memories]);
+  }, [data?.summary]);
 }
 
 export function ProgressBadge() {
@@ -645,15 +649,15 @@ export function ProvinceProgressBadge({
   provinceId: string;
   total: number;
 }>) {
-  const { data } = useMemoryStore();
+  const { data } = useMemorySummary();
 
   const count = useMemo(() => {
-    const localMemories = data?.memories ?? {};
+    const localMemories = summaryToMemoryStore(data?.summary ?? {});
     const litCityIds = getLitCityIds(localMemories);
 
     return cities.filter((city) => city.provinceId === provinceId && litCityIds.has(city.id))
       .length;
-  }, [data?.memories, provinceId]);
+  }, [data?.summary, provinceId]);
 
   return (
     <div className="hidden items-center gap-2 rounded-[8px] border border-dim/90 bg-cream/70 px-4 py-2.5 text-sm text-ink/76 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:flex">

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useSWRConfig } from "swr";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { chinaFeatures, makePath, makeProjectionForProvince, provinceIdOf } from "@/lib/geo";
 import { cityRegionPath, cityRegionsOfProvince } from "@/lib/cityGeo";
@@ -11,12 +12,13 @@ import { getLitCityIds, memoryStoreUpdatedEvent, type LocalMemoryStore } from "@
 import { buildMemoryRoutePoints, curvedRoutePath } from "@/lib/memoryRoutes";
 import type { Province } from "@/data/provinces";
 import { MemoryCitySheet, type MemoryPatchPayload } from "@/components/memories/MemoryCitySheet";
-import { apiFetch } from "@/lib/apiClient";
+import { apiFetch, apiJson } from "@/lib/apiClient";
 import { adminModeUpdatedEvent } from "@/data/adminMode";
 import { memoryPhotosPayload } from "@/lib/photoPayload";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 import { useIsMobile } from "@/lib/useIsMobile";
-import { publishMemoryStore, useMemoryStore } from "@/lib/memoryStore";
+import { memoriesApiKey, publishMemoryStore, type MemoriesResponse } from "@/lib/memoryStore";
+import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore";
 import { useApi } from "@/lib/swr";
 import {
   type CardAnchor,
@@ -55,12 +57,13 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const longPressTimeoutRef = useRef<BrowserTimeout | null>(null);
   const previousLitCityIdsRef = useRef<Set<string> | null>(null);
   const localMemoriesRef = useRef<LocalMemoryStore>({});
-  const { data: memoryData, mutate: mutateMemories } = useMemoryStore();
+  const { mutate } = useSWRConfig();
+  const { data: summaryData, mutate: mutateSummary } = useMemorySummary();
   const cameraRef = useRef<MapCamera>({ scale: 1, x: 0, y: 0 });
   const dragStateRef = useRef<DragState | null>(null);
   const dragMovedRef = useRef(false);
-  const emptyMemories = useMemo<LocalMemoryStore>(() => ({}), []);
   const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  const [cityMemoryStore, setCityMemoryStore] = useState<LocalMemoryStore>({});
   const [nudgedCityId, setNudgedCityId] = useState<string | null>(null);
   const [sparkedCityId, setSparkedCityId] = useState<string | null>(null);
   const [previewCityId, setPreviewCityId] = useState<string | null>(null);
@@ -72,7 +75,14 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   );
   const cityAssets = cityAssetData?.assets ?? EMPTY_CITY_ASSETS;
   const [camera, setCameraState] = useState<MapCamera>({ scale: 1, x: 0, y: 0 });
-  const localMemories = memoryData?.memories ?? emptyMemories;
+  const summaryMemories = useMemo(
+    () => summaryToMemoryStore(summaryData?.summary ?? {}),
+    [summaryData?.summary],
+  );
+  const localMemories = useMemo(
+    () => ({ ...summaryMemories, ...cityMemoryStore }),
+    [cityMemoryStore, summaryMemories],
+  );
   const provinceCities = useMemo(() => getCitiesByProvince(province.id), [province.id]);
   const litCityIds = useMemo(() => getLitCityIds(localMemories), [localMemories]);
   const selectedCity = provinceCities.find((city) => city.id === selectedCityId) ?? null;
@@ -101,11 +111,21 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     });
   };
 
-  const commitMemoryStore = useCallback((memories: LocalMemoryStore) => {
-    localMemoriesRef.current = memories;
-    void mutateMemories({ memories }, { revalidate: false });
+  const loadCityMemories = useCallback(async (cityId: string, force = false) => {
+    if (!force && cityId in localMemoriesRef.current && (cityId in cityMemoryStore)) return;
+    const data = await apiJson<MemoriesResponse>(`/api/v1/memories/cities/${encodeURIComponent(cityId)}`);
+    const cityMemories = data.memories[cityId] ?? [];
+    setCityMemoryStore((current) => ({ ...current, [cityId]: cityMemories }));
+  }, [cityMemoryStore]);
+
+  const commitMemoryStore = useCallback((memories: LocalMemoryStore, cityId: string) => {
+    const cityMemories = memories[cityId] ?? [];
+    setCityMemoryStore((current) => ({ ...current, [cityId]: cityMemories }));
+    localMemoriesRef.current = { ...localMemoriesRef.current, [cityId]: cityMemories };
+    void mutate(memoriesApiKey, { memories } satisfies MemoriesResponse, { revalidate: false });
+    void mutateSummary();
     publishMemoryStore(memories);
-  }, [mutateMemories]);
+  }, [mutate, mutateSummary]);
 
   useEffect(() => {
     return () => {
@@ -157,12 +177,15 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     let cancelled = false;
     const applyMemories = (memories: LocalMemoryStore) => {
       if (cancelled) return;
-      localMemoriesRef.current = memories;
-      void mutateMemories({ memories }, { revalidate: false });
+      const selectedMemories = selectedCityId ? memories[selectedCityId] : undefined;
+      if (selectedCityId && selectedMemories) {
+        setCityMemoryStore((current) => ({ ...current, [selectedCityId]: selectedMemories }));
+      }
     };
     const reloadRemoteState = () => {
       void mutateCityAssets();
-      void mutateMemories();
+      void mutateSummary();
+      if (selectedCityId) void loadCityMemories(selectedCityId, true);
     };
     const handleMemoryUpdate = (event: Event) => {
       const detail = (event as CustomEvent<LocalMemoryStore>).detail;
@@ -181,7 +204,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
       window.removeEventListener(adminModeUpdatedEvent, reloadRemoteState);
       window.removeEventListener("storage", reloadRemoteState);
     };
-  }, [mutateCityAssets, mutateMemories]);
+  }, [loadCityMemories, mutateCityAssets, mutateSummary, selectedCityId]);
   useEffect(() => {
     const frame = frameRef.current;
     if (!frame) return;
@@ -313,7 +336,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     if (!response.ok) throw new Error("Failed to save memory");
 
     const data = (await response.json()) as { memories: LocalMemoryStore };
-    commitMemoryStore(data.memories);
+    commitMemoryStore(data.memories, cityId);
   };
 
   const handleSetMemoryCover = async (cityId: string, memoryId: string, coverImage: string) => {
@@ -328,7 +351,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     if (!response.ok) throw new Error("Failed to update memory cover");
 
     const data = (await response.json()) as { memory: Memory; memories: LocalMemoryStore };
-    commitMemoryStore(data.memories);
+    commitMemoryStore(data.memories, cityId);
   };
 
   const handleUpdateMemory = async (cityId: string, memoryId: string, memory: MemoryPatchPayload) => {
@@ -343,7 +366,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     if (!response.ok) throw new Error("Failed to update memory");
 
     const data = (await response.json()) as { memory: Memory; memories: LocalMemoryStore };
-    commitMemoryStore(data.memories);
+    commitMemoryStore(data.memories, cityId);
   };
 
   const handleDeleteMemory = async (cityId: string, memoryId: string) => {
@@ -356,7 +379,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     if (!response.ok) throw new Error("Failed to delete memory");
 
     const data = (await response.json()) as { memories: LocalMemoryStore };
-    commitMemoryStore(data.memories);
+    commitMemoryStore(data.memories, cityId);
   };
 
   const handleSaveCityAsset = async (cityId: string, image: string) => {
@@ -405,6 +428,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     const city = provinceCities.find((candidate) => candidate.id === cityId);
     setSelectedCityId(cityId);
     setMobileSheetMode(!lit && isAdmin ? "create" : "view");
+    void loadCityMemories(cityId);
     if (city) focusCity(city);
     if (!lit) {
       setNudgedCityId(cityId);
@@ -425,13 +449,14 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
 
     const timer = window.setTimeout(() => {
       setSelectedCityId(city.id);
+      void loadCityMemories(city.id);
       focusCity(city);
     }, 0);
 
     return () => window.clearTimeout(timer);
     // Run after city coordinates are projected so deep links can focus the map.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mapGeometry.cities, provinceCities]);
+  }, [loadCityMemories, mapGeometry.cities, provinceCities]);
 
   const zoomAt = (clientX: number, clientY: number, delta: number) => {
     const frame = frameRef.current;
