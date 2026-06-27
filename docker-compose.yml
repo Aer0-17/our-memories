@@ -1,6 +1,5 @@
 services:
   api:
-    container_name: our-memories-api
     image: ${OUR_MEMORIES_IMAGE:-ghcr.io/qq570850096/our-memories:latest}
     pull_policy: always
     environment:
