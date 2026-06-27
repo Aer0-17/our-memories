@@ -107,9 +107,8 @@ func PresignPut(spaceID, folder, contentType string) (key, uploadURL, publicURL 
 	cfg := config.Get()
 	key = buildKey(spaceID, folder, ext)
 	req, _ := s3Client.PutObjectRequest(&s3.PutObjectInput{
-		Bucket:      aws.String(cfg.S3Bucket),
-		Key:         aws.String(key),
-		ContentType: aws.String(contentType),
+		Bucket: aws.String(cfg.S3Bucket),
+		Key:    aws.String(key),
 	})
 	uploadURL, err = req.Presign(15 * time.Minute)
 	if err != nil {
