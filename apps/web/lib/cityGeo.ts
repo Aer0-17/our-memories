@@ -1,5 +1,4 @@
 import { geoArea, type GeoProjection } from "d3-geo";
-import rawCityGeo from "@/data/china-city-geo.json";
 import { cities, type City } from "@/data/cities";
 import { provinces } from "@/data/provinces";
 import { featureOfProvince, makePath, type GeoFeature } from "@/lib/geo";
@@ -12,6 +11,10 @@ type CityFeature = GeoFeature & {
     provinceAdcode?: number;
     parent?: { adcode?: number };
   };
+};
+type CityFeatureCollection = {
+  type: "FeatureCollection";
+  features?: CityFeature[];
 };
 
 export type CityRegion = {
@@ -62,22 +65,6 @@ function fixWinding(feature: CityFeature): CityFeature {
   return geoArea(feature as never) > 2 * Math.PI ? reverseFeature(feature) : feature;
 }
 
-const cityFeatures = (rawCityGeo.features as CityFeature[])
-  .filter((feature) => feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")
-  .map(fixWinding);
-
-const cityFeaturesByAdcode = new Map(cityFeatures.map((feature) => [feature.properties.adcode, feature]));
-const featuresByProvinceAdcode = new Map<number, CityFeature[]>();
-
-cityFeatures.forEach((feature) => {
-  const provinceAdcode = feature.properties.provinceAdcode ?? feature.properties.parent?.adcode;
-  if (!provinceAdcode) return;
-  featuresByProvinceAdcode.set(provinceAdcode, [
-    ...(featuresByProvinceAdcode.get(provinceAdcode) ?? []),
-    feature,
-  ]);
-});
-
 const normalizeName = (name: string) =>
   name
     .replace(/[·•\s]/g, "")
@@ -85,21 +72,27 @@ const normalizeName = (name: string) =>
     .replace(/(特别行政区|回族自治区|维吾尔自治区|壮族自治区|自治区|省|市|地区|盟|自治州|县|区)$/g, "");
 
 const cityFeatureKey = (provinceAdcode: number, name: string) => `${provinceAdcode}:${normalizeName(name)}`;
-const cityFeatureByName = new Map<string, CityFeature>();
 
-cityFeatures.forEach((feature) => {
-  const provinceAdcode = feature.properties.provinceAdcode ?? feature.properties.parent?.adcode;
-  if (!provinceAdcode) return;
-  cityFeatureByName.set(cityFeatureKey(provinceAdcode, feature.properties.name), feature);
-});
+function cityRegionUrl(provinceId: string) {
+  return `/geo/city-regions/${provinceId}.json`;
+}
 
-function featureCollectionForProvince(provinceId: string) {
+async function loadCityFeatures(provinceId: string, signal?: AbortSignal) {
+  const response = await fetch(cityRegionUrl(provinceId), { signal }).catch(() => null);
+  if (!response?.ok) return [];
+
+  const data = (await response.json().catch(() => null)) as CityFeatureCollection | null;
+  return (data?.features ?? [])
+    .filter((feature) => feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")
+    .map(fixWinding);
+}
+
+function featureCollectionForProvince(provinceId: string, provinceFeatures: CityFeature[]) {
   const province = provinceById.get(provinceId);
   if (!province) return null;
 
   const provinceFeature = featureOfProvince(provinceId);
-  const districtFeatures = featuresByProvinceAdcode.get(province.adcode) ?? [];
-  const features = districtFeatures.length > 0 ? districtFeatures : provinceFeature ? [provinceFeature] : [];
+  const features = provinceFeatures.length > 0 ? provinceFeatures : provinceFeature ? [provinceFeature] : [];
   if (features.length === 0) return null;
 
   return {
@@ -108,9 +101,14 @@ function featureCollectionForProvince(provinceId: string) {
   };
 }
 
-export function cityRegionOf(city: City): CityRegion | null {
+function cityRegionOf(
+  city: City,
+  provinceFeatures: CityFeature[],
+  cityFeaturesByAdcode: Map<number, CityFeature>,
+  cityFeatureByName: Map<string, CityFeature>,
+): CityRegion | null {
   if (wholeProvinceCityIds.has(city.id)) {
-    const feature = featureCollectionForProvince(city.provinceId) ?? featureOfProvince(city.provinceId);
+    const feature = featureCollectionForProvince(city.provinceId, provinceFeatures) ?? featureOfProvince(city.provinceId);
     return feature ? { city, feature, wholeProvince: true } : null;
   }
 
@@ -127,8 +125,21 @@ export function cityRegionOf(city: City): CityRegion | null {
   return feature ? { city, feature, wholeProvince: false } : null;
 }
 
-export function cityRegionsOfProvince(provinceId: string): CityRegion[] {
-  return cities.filter((city) => city.provinceId === provinceId).map(cityRegionOf).filter(Boolean) as CityRegion[];
+export async function loadCityRegionsOfProvince(provinceId: string, signal?: AbortSignal): Promise<CityRegion[]> {
+  const provinceFeatures = await loadCityFeatures(provinceId, signal);
+  const cityFeaturesByAdcode = new Map(provinceFeatures.map((feature) => [feature.properties.adcode, feature]));
+  const cityFeatureByName = new Map<string, CityFeature>();
+
+  provinceFeatures.forEach((feature) => {
+    const provinceAdcode = feature.properties.provinceAdcode ?? feature.properties.parent?.adcode;
+    if (!provinceAdcode) return;
+    cityFeatureByName.set(cityFeatureKey(provinceAdcode, feature.properties.name), feature);
+  });
+
+  return cities
+    .filter((city) => city.provinceId === provinceId)
+    .map((city) => cityRegionOf(city, provinceFeatures, cityFeaturesByAdcode, cityFeatureByName))
+    .filter(Boolean) as CityRegion[];
 }
 
 export function cityRegionPath(region: CityRegion, projection: GeoProjection) {
@@ -136,7 +147,7 @@ export function cityRegionPath(region: CityRegion, projection: GeoProjection) {
 }
 
 export function unmatchedCityRegions() {
-  return cities.filter((city) => !cityRegionOf(city));
+  return [];
 }
 
 export const explicitWholeRegionCityIds = new Set([...wholeProvinceCityIds, ...taiwanFallbackCityIds]);

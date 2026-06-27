@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useSWRConfig } from "swr";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { chinaFeatures, makePath, makeProjectionForProvince, provinceIdOf } from "@/lib/geo";
-import { cityRegionPath, cityRegionsOfProvince } from "@/lib/cityGeo";
+import { cityRegionPath, loadCityRegionsOfProvince, type CityRegion } from "@/lib/cityGeo";
 import { getCitiesByProvince, type City } from "@/data/cities";
 import type { Memory } from "@/data/memories";
 import { getLitCityIds, memoryStoreUpdatedEvent, type LocalMemoryStore } from "@/data/progress";
@@ -68,6 +68,10 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const [sparkedCityId, setSparkedCityId] = useState<string | null>(null);
   const [previewCityId, setPreviewCityId] = useState<string | null>(null);
   const [mobileSheetMode, setMobileSheetMode] = useState<"view" | "create">("view");
+  const [cityRegionState, setCityRegionState] = useState<{ provinceId: string; regions: CityRegion[] }>({
+    provinceId: "",
+    regions: [],
+  });
   const [dragging, setDragging] = useState(false);
   const [frameScale, setFrameScale] = useState(1);
   const { data: cityAssetData, mutate: mutateCityAssets } = useApi<{ assets?: CityAssetStore }>(
@@ -84,6 +88,10 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     [cityMemoryStore, summaryMemories],
   );
   const provinceCities = useMemo(() => getCitiesByProvince(province.id), [province.id]);
+  const cityRegions = useMemo(
+    () => (cityRegionState.provinceId === province.id ? cityRegionState.regions : []),
+    [cityRegionState.provinceId, cityRegionState.regions, province.id],
+  );
   const litCityIds = useMemo(() => getLitCityIds(localMemories), [localMemories]);
   const selectedCity = provinceCities.find((city) => city.id === selectedCityId) ?? null;
   const cityList = useMemo(
@@ -162,6 +170,18 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   }, [localMemories]);
 
   useEffect(() => {
+    const controller = new AbortController();
+
+    void loadCityRegionsOfProvince(province.id, controller.signal)
+      .then((regions) => setCityRegionState({ provinceId: province.id, regions }))
+      .catch(() => {
+        if (!controller.signal.aborted) setCityRegionState({ provinceId: province.id, regions: [] });
+      });
+
+    return () => controller.abort();
+  }, [province.id]);
+
+  useEffect(() => {
     cameraRef.current = camera;
   }, [camera]);
 
@@ -229,7 +249,6 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const mapGeometry = useMemo(() => {
     const projection = makeProjectionForProvince(province.id, width, height, 88);
     const path = makePath(projection);
-    const cityRegions = cityRegionsOfProvince(province.id);
     const cityPoint = (city: Pick<City, "lng" | "lat">) => {
       const [x, y] = projection([city.lng, city.lat]) ?? [width / 2, height / 2];
 
@@ -257,7 +276,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
         d: cityRegionPath(region, projection),
       })),
     };
-  }, [height, province.id, provinceCities, width]);
+  }, [cityRegions, height, province.id, provinceCities, width]);
 
   const mapCities = useMemo(
     () =>
