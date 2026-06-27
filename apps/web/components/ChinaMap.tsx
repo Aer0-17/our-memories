@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Minus, Plus, RotateCcw } from "lucide-react";
 import {
@@ -179,10 +180,6 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
   const zoomProgress = ((zoom - minZoom) / (maxZoom - minZoom)) * 100;
   const setClampedZoom = (nextZoom: number) => {
     setZoom(Math.min(Math.max(nextZoom, minZoom), maxZoom));
-  };
-
-  const goProvince = (id: string) => {
-    router.push(`/province/${id}`);
   };
 
   const goProvinceCity = (provinceId: string, cityId: string) => {
@@ -495,14 +492,13 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
                 )}
               </div>
             </div>
-            <button
-              type="button"
+            <Link
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[8px] bg-sakura px-4 text-sm font-semibold text-bloom transition hover:bg-bloom hover:text-cream"
-              onClick={() => goProvince(selectedProvinceId)}
+              href={`/province/${selectedProvinceId}`}
             >
               进入 {selectedPath.province.name}
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </Link>
           </div>
         )}
       </Modal>

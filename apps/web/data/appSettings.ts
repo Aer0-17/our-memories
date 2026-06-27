@@ -125,12 +125,27 @@ const unwrapSettings = (value: unknown): AppSettings => {
   return normalizeAppSettings(value);
 };
 
+let syncSettingsPromise: Promise<AppSettings> | null = null;
+let lastSyncAt = 0;
+const settingsSyncDedupeMs = 30_000;
+
 export const syncAppSettings = async () => {
   if (!readSession()) return readAppSettings();
+  const now = Date.now();
+  if (syncSettingsPromise) return syncSettingsPromise;
+  if (now - lastSyncAt < settingsSyncDedupeMs) return readAppSettings();
 
-  const data = await apiJson<unknown>("/api/v1/settings");
-  const normalized = unwrapSettings(data);
-  window.localStorage.setItem(appSettingsStorageKey, JSON.stringify(normalized));
-  window.dispatchEvent(new CustomEvent<AppSettings>(appSettingsUpdatedEvent, { detail: normalized }));
-  return normalized;
+  syncSettingsPromise = apiJson<unknown>("/api/v1/settings")
+    .then((data) => {
+      const normalized = unwrapSettings(data);
+      window.localStorage.setItem(appSettingsStorageKey, JSON.stringify(normalized));
+      window.dispatchEvent(new CustomEvent<AppSettings>(appSettingsUpdatedEvent, { detail: normalized }));
+      lastSyncAt = Date.now();
+      return normalized;
+    })
+    .finally(() => {
+      syncSettingsPromise = null;
+    });
+
+  return syncSettingsPromise;
 };

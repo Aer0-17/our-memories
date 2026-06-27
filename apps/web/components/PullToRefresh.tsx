@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useSWRConfig } from "swr";
 import { RefreshCw } from "lucide-react";
 import { pullRefreshEvent } from "@/lib/refresh";
@@ -8,8 +9,39 @@ import { pullRefreshEvent } from "@/lib/refresh";
 const threshold = 72;
 const maxPull = 104;
 
+function refreshableApiKeyForPath(pathname: string, key: unknown) {
+  if (typeof key !== "string") return false;
+  const [apiPath] = key.split("?");
+  const path = pathname.replace(/\/$/, "") || "/";
+
+  if (path === "/map") {
+    return [
+      "/api/v1/memories/summary",
+      "/api/v1/time-capsules",
+      "/api/v1/trip-guides",
+    ].includes(apiPath);
+  }
+
+  if (path.startsWith("/province/")) {
+    return (
+      apiPath === "/api/v1/memories/summary" ||
+      apiPath === "/api/v1/city-assets" ||
+      apiPath.startsWith("/api/v1/memories/cities/")
+    );
+  }
+
+  if (path === "/memories") return apiPath === "/api/v1/memories";
+  if (path === "/anniversaries") return apiPath === "/api/v1/anniversary-cards";
+  if (path === "/time-capsule") return apiPath === "/api/v1/time-capsules";
+  if (path === "/whispers") return apiPath === "/api/v1/whispers";
+  if (path === "/favorites") return apiPath === "/api/v1/auxiliary-items" && key.includes("kind=favorite");
+
+  return false;
+}
+
 export function PullToRefresh() {
   const { mutate } = useSWRConfig();
+  const pathname = usePathname();
   const startYRef = useRef<number | null>(null);
   const pullRef = useRef(0);
   const refreshingRef = useRef(false);
@@ -30,7 +62,7 @@ export function PullToRefresh() {
       setRefreshing(true);
       window.dispatchEvent(new CustomEvent(pullRefreshEvent));
       try {
-        await mutate((key) => typeof key === "string");
+        await mutate((key) => refreshableApiKeyForPath(pathname, key));
       } finally {
         window.setTimeout(() => {
           refreshingRef.current = false;
@@ -81,7 +113,7 @@ export function PullToRefresh() {
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
     };
-  }, [mutate]);
+  }, [mutate, pathname]);
 
   const visible = pull > 0 || refreshing;
   const armed = pull >= threshold;
