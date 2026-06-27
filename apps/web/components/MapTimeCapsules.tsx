@@ -27,7 +27,7 @@ export function MapTimeCapsules() {
   if (capsules.length === 0) return null;
 
   return (
-    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+10.5rem)] left-3 right-3 z-30 flex gap-2 overflow-x-auto pb-2 lg:hidden">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+17rem)] left-3 right-3 z-30 flex gap-2 overflow-x-auto pb-2 lg:hidden">
       {capsules.map((cap, index) => {
         const days = daysUntil(cap.openDate);
         return (

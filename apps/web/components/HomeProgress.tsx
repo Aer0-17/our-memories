@@ -10,6 +10,7 @@ import {
   getLitProvinceIds,
 } from "@/data/progress";
 import { TOTAL_PROVINCES } from "@/data/provinces";
+import { memoryTime } from "@/data/memories";
 import {
   appSettingsUpdatedEvent,
   defaultAnniversaryDate,
@@ -589,6 +590,102 @@ function useProgress() {
       provinceCount: litProvinceIds.size,
     };
   }, [data?.summary]);
+}
+
+function useMapRitualStats() {
+  const { days } = useTogetherDays();
+  const { data } = useMemorySummary();
+
+  return useMemo(() => {
+    const summaryItems = Object.values(data?.summary ?? {});
+    const localMemories = summaryToMemoryStore(data?.summary ?? {});
+    const litCityIds = getLitCityIds(localMemories);
+    const litProvinceIds = getLitProvinceIds(litCityIds);
+    const latestMemory = summaryItems
+      .flatMap((item) => (item.latest ? [item.latest] : []))
+      .sort((a, b) => memoryTime(b) - memoryTime(a))[0];
+
+    return {
+      days,
+      cityCount: litCityIds.size,
+      provinceCount: litProvinceIds.size,
+      memoryCount: summaryItems.reduce((total, item) => total + item.count, 0),
+      latestCity: latestMemory?.city ?? "等待点亮",
+      latestDate: latestMemory?.date ?? "第一站",
+    };
+  }, [data?.summary, days]);
+}
+
+export function MobileRitualStats() {
+  const stats = useMapRitualStats();
+  const badges = [
+    { label: "在一起", value: stats.days, unit: "天", accent: "text-bloom", fill: "bg-sakura" },
+    { label: "省份", value: stats.provinceCount, unit: "枚", accent: "text-sky", fill: "bg-sky" },
+    { label: "城市", value: stats.cityCount, unit: "座", accent: "text-ink", fill: "bg-mint" },
+    { label: "回忆", value: stats.memoryCount, unit: "条", accent: "text-bloom", fill: "bg-bloom" },
+  ];
+
+  return (
+    <section className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+9rem)] z-30 lg:hidden">
+      <div className="space-y-2">
+        <div className="grid grid-cols-4 gap-2">
+          {badges.map((badge, index) => (
+            <div
+              key={badge.label}
+              className="relative min-w-0 border-2 border-ink/18 bg-cream/88 px-1.5 pb-2 pt-1.5 text-center shadow-[3px_3px_0_rgba(90,102,112,0.16)] backdrop-blur"
+            >
+              <span className="absolute -right-1 -top-1 h-2 w-2 border border-ink/15 bg-white/72" />
+              <PixelMedal className="mx-auto" fillClassName={badge.fill} variant={index} />
+              <p className="mt-1 truncate text-[10px] font-semibold leading-none text-ink/48">{badge.label}</p>
+              <p className={`mt-1 truncate text-lg font-semibold leading-none ${badge.accent}`}>
+                {badge.value}
+                <span className="ml-0.5 text-[10px] font-semibold text-ink/42">{badge.unit}</span>
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex min-h-8 items-center justify-between gap-2 border-2 border-dim/70 bg-cream/86 px-3 text-[11px] font-semibold text-ink/58 shadow-[3px_3px_0_rgba(90,102,112,0.12)] backdrop-blur">
+          <span className="shrink-0 text-bloom">最近一站</span>
+          <span className="min-w-0 truncate text-right text-ink/70">
+            {stats.latestCity} · {stats.latestDate}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PixelMedal({
+  className,
+  fillClassName,
+  variant,
+}: Readonly<{
+  className?: string;
+  fillClassName: string;
+  variant: number;
+}>) {
+  const patterns = [
+    [1, 2, 4, 5, 6, 7, 8, 10, 13],
+    [1, 2, 4, 6, 8, 9, 10, 13, 14],
+    [1, 2, 5, 6, 8, 10, 12, 13, 14],
+    [1, 2, 4, 5, 6, 9, 10, 13],
+  ];
+  const active = new Set(patterns[variant % patterns.length]);
+
+  return (
+    <span
+      className={`grid h-7 w-7 grid-cols-4 grid-rows-4 gap-[1px] border border-ink/15 bg-white/50 p-[2px] ${className ?? ""}`}
+      aria-hidden="true"
+    >
+      {Array.from({ length: 16 }).map((_, index) => (
+        <span
+          key={index}
+          className={active.has(index) ? fillClassName : "bg-transparent"}
+        />
+      ))}
+    </span>
+  );
 }
 
 export function ProgressBadge() {

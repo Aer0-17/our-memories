@@ -4,7 +4,13 @@ import {
 } from "lucide-react";
 import ChinaMap, { SouthChinaSeaInset } from "@/components/ChinaMap";
 import BackToLoginButton from "@/components/BackToLoginButton";
-import { LegendProgress, ProgressBadge, StatsPanel, TogetherDaysBadge } from "@/components/HomeProgress";
+import {
+  LegendProgress,
+  MobileRitualStats,
+  ProgressBadge,
+  StatsPanel,
+  TogetherDaysBadge,
+} from "@/components/HomeProgress";
 import RandomPhotoCard from "@/components/RandomPhotoCard";
 import { MapTimeCapsules } from "@/components/MapTimeCapsules";
 import { MapPageShell } from "@/components/MemoryNav";
@@ -161,6 +167,7 @@ export default function MapPage() {
             />
           </div>
 
+          <MobileRitualStats />
           <RandomPhotoCard />
           <MapTimeCapsules />
 
