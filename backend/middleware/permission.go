@@ -3,6 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/db"
+	"our-memories-backend/repositories"
 	"our-memories-backend/utils"
 )
 
@@ -12,8 +13,7 @@ func RequireOwner() gin.HandlerFunc {
 		userID := c.GetString("userID")
 		spaceID := c.GetString("spaceID")
 
-		var role string
-		err := db.DB.QueryRow(`SELECT role FROM users WHERE id = ? AND space_id = ?`, userID, spaceID).Scan(&role)
+		role, err := repositories.NewAccountRepository(db.Gorm).UserRole(userID, spaceID)
 		if err != nil || role != "owner" {
 			utils.Error(c, 403, "Owner permission required")
 			c.Abort()
@@ -28,8 +28,7 @@ func RequireActiveTier() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		spaceID := c.GetString("spaceID")
 
-		var tier, status string
-		err := db.DB.QueryRow(`SELECT tier, status FROM spaces WHERE id = ?`, spaceID).Scan(&tier, &status)
+		tier, status, err := repositories.NewAccountRepository(db.Gorm).SpaceTierStatus(spaceID)
 		if err != nil {
 			utils.Error(c, 500, "Failed to check tier")
 			c.Abort()

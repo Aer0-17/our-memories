@@ -1,13 +1,15 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/cache"
 	"our-memories-backend/db"
-	"our-memories-backend/models"
+	"our-memories-backend/repositories"
+	"our-memories-backend/services"
 	"our-memories-backend/utils"
 )
 
@@ -19,47 +21,10 @@ func GetAnniversaryCards(c *gin.Context) {
 		return
 	}
 
-	rows, err := db.DB.Query(`
-		SELECT id, space_id, title, date, note, COALESCE(cover_photo_id, ''), repeat_yearly, pinned, sort_order,
-		       COALESCE(created_by_id, ''), created_at, updated_at
-		FROM anniversary_cards
-		WHERE space_id = ?
-		ORDER BY pinned DESC, sort_order, date
-	`, spaceID)
+	cards, err := anniversaryService().List(spaceID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to fetch anniversary cards")
 		return
-	}
-	defer rows.Close()
-
-	cards := []models.AnniversaryCard{}
-	cardIDs := []string{}
-	for rows.Next() {
-		var card models.AnniversaryCard
-		var repeatInt, pinnedInt int
-		err := rows.Scan(&card.ID, &card.SpaceID, &card.Title, &card.Date, &card.Note, &card.CoverPhotoID,
-			&repeatInt, &pinnedInt, &card.SortOrder, &card.CreatedByID, &card.CreatedAt, &card.UpdatedAt)
-		if err != nil {
-			continue
-		}
-		card.RepeatYearly = repeatInt == 1
-		card.Pinned = pinnedInt == 1
-
-		cardIDs = append(cardIDs, card.ID)
-		cards = append(cards, card)
-	}
-	if err := rows.Err(); err != nil {
-		utils.Error(c, 500, "Failed to fetch anniversary cards")
-		return
-	}
-
-	photosByCardID, err := loadAnniversaryPhotosByCardIDs(cardIDs)
-	if err != nil {
-		utils.Error(c, 500, "Failed to fetch anniversary cards")
-		return
-	}
-	for i := range cards {
-		cards[i].Photos = photosByCardID[cards[i].ID]
 	}
 
 	cache.Set(cacheKey, cards, 5*time.Minute)
@@ -67,66 +32,25 @@ func GetAnniversaryCards(c *gin.Context) {
 }
 
 func clearAnniversaryCardsCache(spaceID string) {
-	cache.Delete(fmt.Sprintf("anniversary-cards:%s", spaceID))
+	cache.ClearAnniversarySpace(spaceID)
 }
 
 func CreateAnniversaryCard(c *gin.Context) {
 	spaceID := c.GetString("spaceID")
 	userID := c.GetString("userID")
 
-	var req struct {
-		Title        string       `json:"title" binding:"required"`
-		Date         string       `json:"date" binding:"required"`
-		Note         string       `json:"note"`
-		RepeatYearly bool         `json:"repeatYearly"`
-		Pinned       bool         `json:"pinned"`
-		Photos       []photoInput `json:"photos"`
-	}
-
+	var req services.CreateAnniversaryCardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.Error(c, 400, "Invalid request")
 		return
 	}
-	if err := uploadPhotoInputs(spaceID, "anniversaries", req.Photos); err != nil {
-		utils.Error(c, 500, "Failed to upload anniversary photos")
-		return
-	}
 
-	cardID := utils.NewID()
-	repeatInt := 0
-	if req.RepeatYearly {
-		repeatInt = 1
-	}
-	pinnedInt := 0
-	if req.Pinned {
-		pinnedInt = 1
-	}
-
-	tx, err := db.DB.Begin()
+	cardID, err := anniversaryService().Create(spaceID, userID, req)
 	if err != nil {
-		utils.Error(c, 500, "Failed to create anniversary card")
-		return
-	}
-	defer tx.Rollback()
-
-	_, err = tx.Exec(`INSERT INTO anniversary_cards (id, space_id, title, date, note, repeat_yearly, pinned, created_by_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		cardID, spaceID, req.Title, req.Date, req.Note, repeatInt, pinnedInt, userID)
-	if err != nil {
-		utils.Error(c, 500, "Failed to create anniversary card")
+		writeAnniversaryServiceError(c, err, "Failed to create anniversary card")
 		return
 	}
 
-	if err := insertAnniversaryPhotos(tx, cardID, req.Photos); err != nil {
-		utils.Error(c, 500, "Failed to save anniversary photos")
-		return
-	}
-	if err := tx.Commit(); err != nil {
-		utils.Error(c, 500, "Failed to create anniversary card")
-		return
-	}
-
-	clearAnniversaryCardsCache(spaceID)
 	utils.Success(c, gin.H{"id": cardID})
 }
 
@@ -135,95 +59,16 @@ func UpdateAnniversaryCard(c *gin.Context) {
 	spaceID := c.GetString("spaceID")
 	userID := c.GetString("userID")
 
-	var req struct {
-		Title        string        `json:"title"`
-		Date         string        `json:"date"`
-		Note         string        `json:"note"`
-		RepeatYearly bool          `json:"repeatYearly"`
-		Pinned       bool          `json:"pinned"`
-		Photos       *[]photoInput `json:"photos"`
-	}
-
+	var req services.UpdateAnniversaryCardRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.Error(c, 400, "Invalid request")
 		return
 	}
 
-	// 检查权限：只有创建者可以编辑
-	var createdByID string
-	err := db.DB.QueryRow(`SELECT created_by_id FROM anniversary_cards WHERE id = ? AND space_id = ?`, id, spaceID).Scan(&createdByID)
-	if err != nil {
-		utils.Error(c, 404, "Anniversary card not found")
+	if err := anniversaryService().Update(spaceID, userID, id, req); err != nil {
+		writeAnniversaryServiceError(c, err, "Failed to update anniversary card")
 		return
 	}
-	if createdByID != userID {
-		utils.Error(c, 403, "Only the creator can edit this card")
-		return
-	}
-	if req.Photos != nil {
-		if err := uploadPhotoInputs(spaceID, "anniversaries", *req.Photos); err != nil {
-			utils.Error(c, 500, "Failed to upload anniversary photos")
-			return
-		}
-	}
-
-	repeatInt := 0
-	if req.RepeatYearly {
-		repeatInt = 1
-	}
-	pinnedInt := 0
-	if req.Pinned {
-		pinnedInt = 1
-	}
-
-	var oldPhotos []storedPhoto
-	if req.Photos != nil {
-		oldPhotos = collectPhotos(`SELECT key, url FROM anniversary_photos WHERE anniversary_card_id = ?`, id)
-	}
-
-	tx, err := db.DB.Begin()
-	if err != nil {
-		utils.Error(c, 500, "Failed to update anniversary card")
-		return
-	}
-	defer tx.Rollback()
-
-	_, err = tx.Exec(`UPDATE anniversary_cards SET title = ?, date = ?, note = ?, repeat_yearly = ?, pinned = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND space_id = ?`,
-		req.Title, req.Date, req.Note, repeatInt, pinnedInt, id, spaceID)
-	if err != nil {
-		utils.Error(c, 500, "Failed to update anniversary card")
-		return
-	}
-
-	if req.Photos != nil {
-		if _, err := tx.Exec(`DELETE FROM anniversary_photos WHERE anniversary_card_id = ?`, id); err != nil {
-			utils.Error(c, 500, "Failed to update anniversary photos")
-			return
-		}
-		if _, err := tx.Exec(`UPDATE anniversary_cards SET cover_photo_id = NULL WHERE id = ?`, id); err != nil {
-			utils.Error(c, 500, "Failed to update anniversary photos")
-			return
-		}
-		if err := insertAnniversaryPhotos(tx, id, *req.Photos); err != nil {
-			utils.Error(c, 500, "Failed to save anniversary photos")
-			return
-		}
-	}
-
-	if err := tx.Commit(); err != nil {
-		utils.Error(c, 500, "Failed to update anniversary card")
-		return
-	}
-	if req.Photos != nil {
-		if err := deleteRemovedPhotos(spaceID, oldPhotos, *req.Photos); err != nil {
-			clearAnniversaryCardsCache(spaceID)
-			utils.Error(c, 500, "Failed to delete removed anniversary photos")
-			return
-		}
-	}
-
-	clearAnniversaryCardsCache(spaceID)
 	utils.Success(c, gin.H{"ok": true})
 }
 
@@ -232,30 +77,29 @@ func DeleteAnniversaryCard(c *gin.Context) {
 	spaceID := c.GetString("spaceID")
 	userID := c.GetString("userID")
 
-	// 检查权限：只有创建者可以删除
-	var createdByID string
-	err := db.DB.QueryRow(`SELECT created_by_id FROM anniversary_cards WHERE id = ? AND space_id = ?`, id, spaceID).Scan(&createdByID)
-	if err != nil {
-		utils.Error(c, 404, "Anniversary card not found")
-		return
-	}
-	if createdByID != userID {
-		utils.Error(c, 403, "Only the creator can delete this card")
+	if err := anniversaryService().Delete(spaceID, userID, id); err != nil {
+		writeAnniversaryServiceError(c, err, "Failed to delete anniversary card")
 		return
 	}
 
-	photos := collectPhotos(`SELECT key, url FROM anniversary_photos WHERE anniversary_card_id = ?`, id)
-	if err := deletePhotos(spaceID, photos); err != nil {
-		utils.Error(c, 500, "Failed to delete anniversary photos")
-		return
-	}
-
-	_, err = db.DB.Exec(`DELETE FROM anniversary_cards WHERE id = ? AND space_id = ?`, id, spaceID)
-	if err != nil {
-		utils.Error(c, 500, "Failed to delete anniversary card")
-		return
-	}
-
-	clearAnniversaryCardsCache(spaceID)
 	utils.Success(c, gin.H{"ok": true})
+}
+
+func anniversaryService() *services.AnniversaryService {
+	return services.NewAnniversaryService(
+		repositories.NewAnniversaryRepository(db.Gorm),
+		uploadServicePhotoInputs,
+		deleteServicePhotos,
+	)
+}
+
+func writeAnniversaryServiceError(c *gin.Context, err error, fallback string) {
+	switch {
+	case errors.Is(err, repositories.ErrAnniversaryCardNotFound):
+		utils.Error(c, 404, "Anniversary card not found")
+	case errors.Is(err, services.ErrForbidden):
+		utils.Error(c, 403, "Only the creator can modify this card")
+	default:
+		utils.Error(c, 500, fallback)
+	}
 }

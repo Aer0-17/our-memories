@@ -1,45 +1,42 @@
 package handlers
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
-	"our-memories-backend/db"
-	"our-memories-backend/models"
+	"our-memories-backend/services"
 	"our-memories-backend/utils"
 )
 
 // AdminLogin 管理员登录
 func AdminLogin(c *gin.Context) {
-	var req struct {
-		Username string `json:"username" binding:"required"`
-		Password string `json:"password" binding:"required"`
-	}
-
+	var req services.AdminLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.Error(c, 400, "Invalid request")
 		return
 	}
 
-	var admin models.Admin
-	err := db.DB.QueryRow(`SELECT id, username, password_hash, display_name FROM admins WHERE username = ?`, req.Username).
-		Scan(&admin.ID, &admin.Username, &admin.PasswordHash, &admin.DisplayName)
+	result, err := accountService().AdminLogin(req)
 	if err != nil {
-		utils.Error(c, 401, "Invalid username or password")
+		writeAdminLoginError(c, err)
 		return
 	}
-
-	if !utils.VerifyPassword(admin.PasswordHash, req.Password) {
-		utils.Error(c, 401, "Invalid username or password")
-		return
-	}
-
-	token, _ := utils.GenerateAdminToken(admin.ID)
 
 	utils.Success(c, gin.H{
-		"token": token,
+		"token": result.Token,
 		"admin": gin.H{
-			"id":          admin.ID,
-			"username":    admin.Username,
-			"displayName": admin.DisplayName,
+			"id":          result.Admin.ID,
+			"username":    result.Admin.Username,
+			"displayName": result.Admin.DisplayName,
 		},
 	})
+}
+
+func writeAdminLoginError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, services.ErrInvalidCredentials):
+		utils.Error(c, 401, "Invalid username or password")
+	default:
+		utils.Error(c, 500, "Failed to login")
+	}
 }

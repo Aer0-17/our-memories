@@ -139,7 +139,7 @@ func main() {
 
 func serveLocalImage(c *gin.Context) {
 	key := strings.TrimPrefix(c.Param("key"), "/")
-	filePath, ok := storage.LocalPathForKey(key)
+	filePath, ok := storage.Default().LocalPathForKey(key)
 	if !ok {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Not found"})
 		return

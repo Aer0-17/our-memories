@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { apiFetch } from "@/lib/apiClient";
 import { normalizeDottedDate } from "@/lib/dateFormat";
-import { memoryPhotosPayload } from "@/lib/photoPayload";
+import { memoryPhotosPayload, uploadedPhotosPayload } from "@/lib/photoPayload";
 import { deleteUploaded, uploadImages } from "@/lib/upload";
 
 type AddMemoryForm = {
@@ -265,7 +265,7 @@ export function AddMemoryPanel({
       if (photos.length > 0) {
         const uploaded = await uploadImages(photos.map((photo) => photo.file), "memories");
         uploadedKeys = uploaded.map((item) => item.key);
-        photosPayload = uploaded.map((item) => ({ url: item.url, key: item.key, mimeType: item.mimeType }));
+        photosPayload = uploadedPhotosPayload(uploaded);
       } else {
         photosPayload = memoryPhotosPayload([fallbackPhoto]);
       }

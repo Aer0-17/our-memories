@@ -15,22 +15,14 @@ import { BottomSheet } from "@/components/ui/BottomSheet";
 import { DatePicker } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { useConfirm } from "@/components/ui/use-confirm";
-import { apiFetch } from "@/lib/apiClient";
-import { uploadImage, uploadImages, deleteUploaded } from "@/lib/upload";
-import { normalizeDottedDate } from "@/lib/dateFormat";
-import { memoryPhotosPayload } from "@/lib/photoPayload";
+import { uploadImage, deleteUploaded } from "@/lib/upload";
+import type { MemoryPatchPayload, MemoryPhotoPayload } from "@/lib/memoryApi";
 import { computeMemoryEditAccess, useMemoryEditAccess } from "@/lib/useContentEditAccess";
+import { memoryTextMaxLength, useMemoryEditor } from "@/components/memories/useMemoryEditor";
 
-export type MemoryPatchPayload = Omit<Partial<Memory>, "photos"> & {
-  photos?: Array<{ url: string; key: string; mimeType: string }>;
-};
-
-type PhotoDraft = {
-  previewUrl: string;
-  name: string;
-  file: File;
-};
 type MemoryPanelTab = "memory" | "gallery" | "history";
+
+export type { MemoryPatchPayload } from "@/lib/memoryApi";
 
 type MemoryCitySheetProps = {
   open: boolean;
@@ -43,26 +35,12 @@ type MemoryCitySheetProps = {
   defaultMode?: "view" | "create";
   landmarkImage?: string;
   hasCustomLandmark?: boolean;
-  onSave: (cityId: string, memory: Memory) => Promise<void>;
+  onSave: (cityId: string, memory: Memory, photos?: MemoryPhotoPayload[]) => Promise<void>;
   onUpdate: (cityId: string, memoryId: string, memory: MemoryPatchPayload) => Promise<void>;
   onDelete: (cityId: string, memoryId: string) => Promise<void>;
   onSetCover?: (cityId: string, memoryId: string, coverImage: string) => Promise<void>;
   onSaveLandmark?: (cityId: string, image: string) => Promise<void>;
   onDeleteLandmark?: (cityId: string) => Promise<void>;
-};
-
-const memoryTextMaxLength = 80;
-const maxPhotosPerMemory = 24;
-
-const isObjectUrl = (url?: string | null): url is string =>
-  typeof url === "string" && url.startsWith("blob:");
-
-const revokeObjectUrl = (url?: string | null) => {
-  if (isObjectUrl(url)) URL.revokeObjectURL(url);
-};
-
-const revokePhotoDrafts = (photos: PhotoDraft[]) => {
-  photos.forEach((photo) => revokeObjectUrl(photo.previewUrl));
 };
 
 export function MemoryCitySheet({
@@ -106,60 +84,69 @@ export function MemoryCitySheet({
   const canSetCover = Boolean(memory && onSetCover && canEditMemory);
 
   const [formOpen, setFormOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [placeName, setPlaceName] = useState("");
-  const [date, setDate] = useState("");
-  const [text, setText] = useState("");
-  const [mood, setMood] = useState("");
-  const [tags, setTags] = useState("");
-  const [partnerNote, setPartnerNote] = useState("");
-  const [visibility, setVisibility] = useState<"both" | "me" | "her">("both");
-  const [photoDrafts, setPhotoDrafts] = useState<PhotoDraft[]>([]);
-  const [photoError, setPhotoError] = useState("");
-  const [polishSuggestion, setPolishSuggestion] = useState("");
-  const [polishError, setPolishError] = useState("");
-  const [polishing, setPolishing] = useState(false);
-  const [saveError, setSaveError] = useState("");
-  const [coverError, setCoverError] = useState("");
+  const {
+    title,
+    setTitle,
+    placeName,
+    setPlaceName,
+    date,
+    setDate,
+    text,
+    setText,
+    mood,
+    setMood,
+    tags,
+    setTags,
+    partnerNote,
+    setPartnerNote,
+    visibility,
+    setVisibility,
+    photoDrafts,
+    photoError,
+    polishSuggestion,
+    polishError,
+    polishing,
+    saveError,
+    coverError,
+    setCoverError,
+    editingMemory,
+    deleteError,
+    setDeleteError,
+    isSaving,
+    fileInputRef,
+    canEditFields,
+    canAnnotate,
+    trimmedText,
+    dateInvalid,
+    canSave,
+    isEditing,
+    resetForm,
+    startEdit: startEditorEdit,
+    handlePickFile,
+    handlePolishMemory,
+    acceptPolishSuggestion,
+    clearPolishSuggestion,
+    save: saveMemoryForm,
+  } = useMemoryEditor({
+    city,
+    fallbackImage: resolvedLandmarkImage,
+    isAdmin,
+    onSave,
+    onUpdate,
+  });
   const [settingCover, setSettingCover] = useState("");
-  const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [deletingMemoryId, setDeletingMemoryId] = useState("");
-  const [deleteError, setDeleteError] = useState("");
   const [landmarkError, setLandmarkError] = useState("");
   const [landmarkSaving, setLandmarkSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<MemoryPanelTab>("memory");
-  const [isSaving, setIsSaving] = useState(false);
   const [annotatingMemoryId, setAnnotatingMemoryId] = useState<string | null>(null);
   const [previewPhotoIndex, setPreviewPhotoIndex] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState("");
   const [noteError, setNoteError] = useState("");
   const [noteSaving, setNoteSaving] = useState(false);
-  const photoDraftsRef = useRef<PhotoDraft[]>([]);
   const mountedRef = useRef(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const landmarkInputRef = useRef<HTMLInputElement>(null);
   const noteEditorRef = useRef<HTMLDivElement>(null);
-
-  const editingAccess = computeMemoryEditAccess(editingMemory);
-  const isCreating = editingMemory == null;
-  const canEditFields = isAdmin && (isCreating || editingAccess.canEdit);
-  const canAnnotate = isAdmin && !isCreating && editingAccess.canAddNote && !editingAccess.canEdit;
-  const trimmedDate = date.trim();
-  const trimmedText = text.trim();
-  const normalizedDate = normalizeDottedDate(trimmedDate);
-  const dateInvalid = trimmedDate.length > 0 && !normalizedDate;
-  const canSave = isAdmin
-    ? canEditFields
-      ? Boolean(normalizedDate) &&
-        trimmedText.length > 0 &&
-        !photoError &&
-        !isSaving
-      : canAnnotate &&
-        editingMemory != null &&
-        partnerNote.trim().length > 0 &&
-        !isSaving
-    : false;
-  const isEditing = Boolean(editingMemory);
   const showMemory = activeTab === "memory";
   const showGallery = activeTab === "gallery";
   const showHistory = activeTab === "history";
@@ -182,56 +169,11 @@ export function MemoryCitySheet({
     setNoteSaving(false);
   }, []);
 
-  const resetForm = useCallback(
-    (revokePhoto: boolean) => {
-      setTitle("");
-      setPlaceName("");
-      setDate("");
-      setText("");
-      setMood("");
-      setTags("");
-      setPartnerNote("");
-      setVisibility("both");
-      setPhotoError("");
-      setPolishSuggestion("");
-      setPolishError("");
-      setPolishing(false);
-      setSaveError("");
-      setCoverError("");
-      setDeleteError("");
-      setEditingMemory(null);
-      if (revokePhoto) revokePhotoDrafts(photoDraftsRef.current);
-      photoDraftsRef.current = [];
-      setPhotoDrafts([]);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    },
-    [
-      setCoverError,
-      setDate,
-      setDeleteError,
-      setEditingMemory,
-      setMood,
-      setPartnerNote,
-      setPhotoDrafts,
-      setPhotoError,
-      setPlaceName,
-      setPolishError,
-      setPolishSuggestion,
-      setPolishing,
-      setSaveError,
-      setTags,
-      setText,
-      setTitle,
-      setVisibility,
-    ],
-  );
-
   useEffect(() => {
     mountedRef.current = true;
 
     return () => {
       mountedRef.current = false;
-      revokePhotoDrafts(photoDraftsRef.current);
     };
   }, []);
 
@@ -277,27 +219,8 @@ export function MemoryCitySheet({
     const recordAccess = computeMemoryEditAccess(record);
     if (!isAdmin || !localMemoryIds.has(record.id) || !recordAccess.canEdit) return;
 
-    revokePhotoDrafts(photoDraftsRef.current);
     resetAnnotation();
-    photoDraftsRef.current = [];
-    setPhotoDrafts([]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setTitle(record.title ?? "");
-    setPlaceName(record.placeName ?? "");
-    setDate(record.date);
-    setText(record.text);
-    setMood(record.mood ?? "");
-    setTags(record.tags?.join("，") ?? "");
-    setPartnerNote(record.partnerNote ?? "");
-    setVisibility(record.visibility ?? "both");
-    setPhotoError("");
-    setPolishSuggestion("");
-    setPolishError("");
-    setPolishing(false);
-    setSaveError("");
-    setCoverError("");
-    setDeleteError("");
-    setEditingMemory(record);
+    startEditorEdit(record);
     setFormOpen(true);
     setActiveTab("memory");
   };
@@ -366,64 +289,6 @@ export function MemoryCitySheet({
     }
   };
 
-  const handlePickFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isAdmin || !canEditFields) {
-      event.target.value = "";
-      setPhotoError("请先登录后再选择照片");
-      return;
-    }
-
-    const files = Array.from(event.target.files ?? [])
-      .filter((file) => file.type.startsWith("image/"))
-      .slice(0, maxPhotosPerMemory);
-    if (files.length === 0) return;
-
-    revokePhotoDrafts(photoDraftsRef.current);
-    const nextPhotoDrafts = files.map((file) => ({
-      previewUrl: URL.createObjectURL(file),
-      name: file.name,
-      file,
-    }));
-
-    photoDraftsRef.current = nextPhotoDrafts;
-    setPhotoDrafts(nextPhotoDrafts);
-    setPhotoError("");
-    setSaveError("");
-  };
-
-  const handlePolishMemory = async () => {
-    if (!isAdmin || !canEditFields) {
-      setPolishError("请先登录后再使用 AI 润色");
-      return;
-    }
-    if (!trimmedText || polishing) return;
-
-    setPolishing(true);
-    setPolishError("");
-
-    try {
-      const response = await apiFetch("/ai/memory-polish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourceText: trimmedText,
-          cityId: city.id,
-          city: city.name,
-          date: normalizedDate ?? trimmedDate,
-        }),
-      });
-      if (!response.ok) throw new Error("Polish failed");
-      const data = (await response.json()) as { polishedText?: unknown };
-      const nextText = typeof data.polishedText === "string" ? data.polishedText.trim().slice(0, memoryTextMaxLength) : "";
-      if (!nextText) throw new Error("Empty polish result");
-      setPolishSuggestion(nextText);
-    } catch {
-      setPolishError("润色失败，请稍后再试");
-    } finally {
-      if (mountedRef.current) setPolishing(false);
-    }
-  };
-
   const handlePickLandmark = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!isAdmin || !onSaveLandmark) {
@@ -472,96 +337,7 @@ export function MemoryCitySheet({
   };
 
   const handleSave = async () => {
-    if (!isAdmin) {
-      setSaveError("请先登录后再保存");
-      return;
-    }
-    if (!canSave) return;
-    if (canEditFields && !normalizedDate) return;
-    setIsSaving(true);
-    setSaveError("");
-
-    let uploadedKeys: string[] = [];
-    try {
-      if (editingMemory && canAnnotate && !canEditFields) {
-        await onUpdate(city.id, editingMemory.id, { partnerNote: partnerNote.trim() });
-        resetForm(true);
-        setFormOpen(false);
-        return;
-      }
-
-      if (!normalizedDate) return;
-
-      const uploaded = await uploadImages(photoDrafts.map((photo) => photo.file), "memories");
-      uploadedKeys = uploaded.map((item) => item.key);
-      const photos = uploaded.map((item) => item.url);
-      const nextTags = Array.from(
-        new Set(
-          tags
-            .split(/[，,\s]+/)
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-        ),
-      ).slice(0, 12);
-      const nextPhotos = photos.length > 0 ? photos : editingMemory?.photos ?? [editingMemory?.image ?? resolvedLandmarkImage];
-      const nextMemory: Memory = {
-        id: editingMemory?.id ?? `${city.id}-local`,
-        cityId: city.id,
-        city: city.name,
-        cityEn: city.nameEn,
-        title: title.trim() || undefined,
-        placeName: placeName.trim() || undefined,
-        date: normalizedDate,
-        image: editingMemory && photos.length === 0 ? editingMemory.image : nextPhotos[0],
-        photos: nextPhotos,
-        text: trimmedText,
-        mood: mood.trim() || undefined,
-        tags: nextTags,
-        visibility,
-        createdById: editingMemory?.createdById,
-        createdAt: editingMemory?.createdAt,
-      };
-
-      if (editingMemory) {
-        const patch: MemoryPatchPayload = {
-          title: nextMemory.title,
-          placeName: nextMemory.placeName,
-          date: nextMemory.date,
-          image: nextMemory.image,
-          text: nextMemory.text,
-          mood: nextMemory.mood,
-          tags: nextMemory.tags,
-          visibility: nextMemory.visibility,
-        };
-        if (uploaded.length > 0) {
-          patch.photos = memoryPhotosPayload(nextMemory.photos ?? [nextMemory.image]);
-        }
-        await onUpdate(city.id, editingMemory.id, patch);
-      } else {
-        await onSave(city.id, {
-          id: `${city.id}-local`,
-          cityId: city.id,
-          city: city.name,
-          cityEn: city.nameEn,
-          date: normalizedDate,
-          image: photos[0] ?? resolvedLandmarkImage,
-          photos: photos.length > 0 ? photos : [resolvedLandmarkImage],
-          text: trimmedText,
-          title: title.trim() || undefined,
-          placeName: placeName.trim() || undefined,
-          mood: mood.trim() || undefined,
-          tags: nextTags,
-          visibility,
-        });
-      }
-      resetForm(true);
-      setFormOpen(false);
-    } catch {
-      await deleteUploaded(uploadedKeys);
-      setSaveError("保存失败，请稍后再试");
-    } finally {
-      if (mountedRef.current) setIsSaving(false);
-    }
+    if (await saveMemoryForm()) setFormOpen(false);
   };
 
   const handleSetCover = async (photo: string) => {
@@ -963,11 +739,7 @@ export function MemoryCitySheet({
                     className="mt-1.5 w-full resize-none rounded-[7px] border border-dim bg-cream px-3 py-2.5 text-sm leading-6 text-ink placeholder:text-ink/40 outline-none transition focus:border-bloom"
                     rows={3}
                     value={text}
-                    onChange={(event) => {
-                      setText(event.target.value);
-                      setPolishSuggestion("");
-                      setPolishError("");
-                    }}
+                    onChange={(event) => setText(event.target.value)}
                     placeholder="写下这一刻..."
                     maxLength={memoryTextMaxLength}
                   />
@@ -1039,11 +811,7 @@ export function MemoryCitySheet({
                         <button
                           className="rounded-[6px] bg-sakura px-3 py-1.5 text-xs font-semibold text-bloom transition hover:bg-bloom hover:text-cream"
                           type="button"
-                          onClick={() => {
-                            setText(polishSuggestion.slice(0, memoryTextMaxLength));
-                            setPolishSuggestion("");
-                            setPolishError("");
-                          }}
+                          onClick={acceptPolishSuggestion}
                         >
                           采用
                         </button>
@@ -1058,10 +826,7 @@ export function MemoryCitySheet({
                         <button
                           className="rounded-[6px] px-3 py-1.5 text-xs font-semibold text-ink/52 transition hover:bg-dim/28"
                           type="button"
-                          onClick={() => {
-                            setPolishSuggestion("");
-                            setPolishError("");
-                          }}
+                          onClick={clearPolishSuggestion}
                         >
                           取消
                         </button>

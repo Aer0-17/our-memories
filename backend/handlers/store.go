@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/cache"
-	"our-memories-backend/db"
 	"our-memories-backend/storage"
 	"our-memories-backend/utils"
 )
@@ -47,26 +45,11 @@ type tripStore struct {
 }
 
 func readSettingJSON(spaceID string, key string, target interface{}) error {
-	var valueJSON string
-	err := db.DB.QueryRow(`SELECT value FROM settings WHERE space_id = ? AND key = ?`, spaceID, key).Scan(&valueJSON)
-	if err == sql.ErrNoRows {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal([]byte(valueJSON), target)
+	return settingService().ReadJSON(spaceID, key, target)
 }
 
 func writeSettingJSON(spaceID string, key string, value interface{}) error {
-	valueJSON, err := json.Marshal(value)
-	if err != nil {
-		return err
-	}
-	_, err = db.DB.Exec(`INSERT INTO settings (id, space_id, key, value) VALUES (?, ?, ?, ?)
-		ON CONFLICT(space_id, key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
-		utils.NewID(), spaceID, key, valueJSON)
-	return err
+	return settingService().Upsert(spaceID, key, value)
 }
 
 func readCityAssets(spaceID string) (map[string]string, error) {
@@ -93,7 +76,7 @@ func GetCityAssets(c *gin.Context) {
 }
 
 func clearCityAssetsCache(spaceID string) {
-	cache.Delete(fmt.Sprintf("city-assets:%s", spaceID))
+	cache.ClearCityAssetsSpace(spaceID)
 }
 
 func UpdateCityAsset(c *gin.Context) {
@@ -124,7 +107,7 @@ func UpdateCityAsset(c *gin.Context) {
 	}
 	clearCityAssetsCache(spaceID)
 	if previous != "" && previous != image {
-		storage.DeleteObjectByURL(previous)
+		storage.Default().DeleteObjectByURL(previous)
 	}
 	utils.Success(c, gin.H{"assets": assets})
 }
@@ -151,7 +134,7 @@ func DeleteCityAsset(c *gin.Context) {
 	}
 	clearCityAssetsCache(spaceID)
 	if previous != "" {
-		storage.DeleteObjectByURL(previous)
+		storage.Default().DeleteObjectByURL(previous)
 	}
 	utils.Success(c, gin.H{"assets": assets})
 }
@@ -211,7 +194,7 @@ func UpdateLoginPhoto(c *gin.Context) {
 		return
 	}
 	if previousPhoto != "" && previousPhoto != store.Photos[req.SlotID] {
-		storage.DeleteObjectByURL(previousPhoto)
+		storage.Default().DeleteObjectByURL(previousPhoto)
 	}
 	utils.Success(c, store)
 }
@@ -267,7 +250,7 @@ func DeleteLoginPhoto(c *gin.Context) {
 		return
 	}
 	if previousPhoto != "" {
-		storage.DeleteObjectByURL(previousPhoto)
+		storage.Default().DeleteObjectByURL(previousPhoto)
 	}
 	utils.Success(c, store)
 }

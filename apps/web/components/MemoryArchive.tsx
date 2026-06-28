@@ -14,19 +14,24 @@ import {
   sortMemoriesByTime,
   type Memory,
 } from "@/data/memories";
-import type { LocalMemoryStore } from "@/data/progress";
-import { apiFetch } from "@/lib/apiClient";
-import { memoryPhotosPayload } from "@/lib/photoPayload";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { useTransientStatus } from "@/lib/useTransientStatus";
 import { useMemoryCachePublisher, useMemoryStore } from "@/lib/memoryStore";
+import {
+  createMemory,
+  deleteMemory,
+  setMemoryCover,
+  updateMemory,
+  type MemoryPatchPayload,
+  type MemoryPhotoPayload,
+} from "@/lib/memoryApi";
 import { AddMemoryPanel } from "@/components/memories/AddMemoryPanel";
 import {
   MemoryArchiveCard as MemoryCard,
   type MemoryArchiveItem,
 } from "@/components/memories/MemoryArchiveCard";
-import { MemoryCitySheet, type MemoryPatchPayload } from "@/components/memories/MemoryCitySheet";
+import { MemoryCitySheet } from "@/components/memories/MemoryCitySheet";
 
 type ArchiveView = "city" | "timeline";
 type MemoryItem = MemoryArchiveItem;
@@ -57,11 +62,7 @@ export default function MemoryArchive() {
     if (deletingId) return;
     setDeletingId(memoryId);
     try {
-      const response = await apiFetch(`/memories/${memoryId}`, { method: "DELETE" });
-
-      if (!response.ok) throw new Error("Failed to delete memory");
-
-      const data = (await response.json()) as { memories: LocalMemoryStore };
+      const data = await deleteMemory(memoryId);
       publishMemoryMutation(data.memories, cityId);
       setSelectedItem((current) => (current?.memory.id === memoryId ? null : current));
       setArchiveStatus("回忆已删除。", { autoClear: true });
@@ -72,36 +73,17 @@ export default function MemoryArchive() {
     }
   };
 
-  const handleSaveMemory = async (cityId: string, memory: Memory) => {
+  const handleSaveMemory = async (cityId: string, memory: Memory, photos?: MemoryPhotoPayload[]) => {
     if (!canEdit) return;
 
-    const response = await apiFetch("/api/v1/memories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...memory,
-        photos: memoryPhotosPayload(memory.photos ?? [memory.image]),
-      }),
-    });
-
-    if (!response.ok) throw new Error("Failed to save memory");
-
-    const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
+    const data = await createMemory(memory, photos);
     publishMemoryMutation(data.memories, cityId);
   };
 
   const handleUpdateMemory = async (cityId: string, memoryId: string, memory: MemoryPatchPayload) => {
     if (!canEdit) return;
 
-    const response = await apiFetch(`/memories/${memoryId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(memory),
-    });
-
-    if (!response.ok) throw new Error("Failed to update memory");
-
-    const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
+    const data = await updateMemory(memoryId, memory);
     const nextMemories = data.memories;
     publishMemoryMutation(nextMemories, cityId);
     setSelectedItem((current) => {
@@ -118,15 +100,7 @@ export default function MemoryArchive() {
   const handleSetMemoryCover = async (cityId: string, memoryId: string, coverImage: string) => {
     if (!canEdit) return;
 
-    const response = await apiFetch(`/memories/${memoryId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ coverImage }),
-    });
-
-    if (!response.ok) throw new Error("Failed to update memory cover");
-
-    const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
+    const data = await setMemoryCover(memoryId, coverImage);
     const nextMemories = data.memories;
     publishMemoryMutation(nextMemories, cityId);
     setSelectedItem((current) => {

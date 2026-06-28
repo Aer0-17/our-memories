@@ -82,7 +82,11 @@ func initSmokeS3(t *testing.T) {
 
 func headObject(key string) error {
 	cfg := config.Get()
-	_, err := s3Client.HeadObject(&s3.HeadObjectInput{
+	store, ok := Default().(*S3Storage)
+	if !ok || store.client == nil {
+		return fmt.Errorf("object storage is not configured")
+	}
+	_, err := store.client.HeadObject(&s3.HeadObjectInput{
 		Bucket: aws.String(cfg.S3Bucket),
 		Key:    aws.String(key),
 	})

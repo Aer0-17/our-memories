@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
-	_ "modernc.org/sqlite"
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 	"our-memories-backend/config"
 )
 
 var DB *sql.DB
+var Gorm *gorm.DB
 
 func Init() {
 	cfg := config.Get()
@@ -30,6 +32,8 @@ func Init() {
 		log.Fatal("连接数据库失败:", err)
 	}
 
+	initGorm(DB)
+
 	Migrate()
 
 	if cfg.AutoSeed {
@@ -37,6 +41,14 @@ func Init() {
 	}
 
 	log.Println("数据库初始化完成")
+}
+
+func initGorm(sqlDB *sql.DB) {
+	var err error
+	Gorm, err = gorm.Open(sqlite.Dialector{Conn: sqlDB}, &gorm.Config{})
+	if err != nil {
+		log.Fatal("初始化 ORM 失败:", err)
+	}
 }
 
 func Migrate() {

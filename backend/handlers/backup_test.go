@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	_ "modernc.org/sqlite"
+	_ "github.com/glebarez/sqlite"
+	sqlitegorm "github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 	"our-memories-backend/db"
 )
 
@@ -27,6 +29,10 @@ func setupBackupTestDB(t *testing.T) {
 		testDB.Close()
 	})
 	db.DB = testDB
+	db.Gorm, err = gorm.Open(sqlitegorm.Dialector{Conn: testDB}, &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	db.Migrate()
 }
 

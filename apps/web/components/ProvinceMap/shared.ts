@@ -1,4 +1,6 @@
 import { cityFallbackSprite, type City } from "@/data/cities";
+import type { Memory } from "@/data/memories";
+import type { MemoryRoutePoint } from "@/lib/memoryRoutes";
 
 export type PhotoDraft = {
   previewUrl: string;
@@ -30,6 +32,40 @@ export type MemoryPanelTab = "memory" | "gallery" | "history";
 export type CityAssetStore = Record<string, string>;
 
 export const EMPTY_CITY_ASSETS: CityAssetStore = {};
+
+export type ProvinceMapPath = {
+  id: string;
+  d: string;
+  active: boolean;
+};
+
+export type ProvinceMapCityRegion = {
+  city: City;
+  wholeProvince: boolean;
+  d: string;
+};
+
+export type ProvinceMapGeometry = {
+  paths: ProvinceMapPath[];
+  cities: Array<{ city: City; x: number; y: number }>;
+  cityRegions: ProvinceMapCityRegion[];
+};
+
+export type ProvinceMapCity = City & {
+  x: number;
+  y: number;
+  sprite: string;
+  customSprite?: string;
+  lit: boolean;
+  memory?: Memory;
+  memoryCount: number;
+  earliestDate?: string;
+};
+
+export type ProvinceRoutePoint = MemoryRoutePoint & {
+  x: number;
+  y: number;
+};
 
 export const colors = {
   cream: "var(--color-cream)",

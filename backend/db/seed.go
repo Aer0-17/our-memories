@@ -4,12 +4,16 @@ import (
 	"log"
 
 	"our-memories-backend/config"
+	"our-memories-backend/repositories"
 	"our-memories-backend/utils"
 )
 
 func Seed() {
-	var count int
-	DB.QueryRow("SELECT COUNT(*) FROM spaces").Scan(&count)
+	repo := repositories.NewAccountRepository(Gorm)
+	count, err := repo.SpaceCount()
+	if err != nil {
+		log.Fatal("检查种子数据失败:", err)
+	}
 	if count > 0 {
 		log.Println("数据库已存在数据，跳过种子数据")
 		return
@@ -19,18 +23,20 @@ func Seed() {
 	spaceID := utils.NewID()
 	passwordHash := utils.HashPassword(cfg.DefaultPassword)
 
-	_, err := DB.Exec(`INSERT INTO spaces (id, space_code, password_hash, name) VALUES (?, ?, ?, ?)`,
-		spaceID, cfg.DefaultSpaceCode, passwordHash, "我们的回忆")
-	if err != nil {
-		log.Fatal("创建空间失败:", err)
-	}
-
 	userMeID := utils.NewID()
 	userTaID := utils.NewID()
-
-	_, err = DB.Exec(`INSERT INTO users (id, space_id, username, display_name) VALUES (?, ?, ?, ?), (?, ?, ?, ?)`,
-		userMeID, spaceID, "me", "刘永伦",
-		userTaID, spaceID, "ta", "郭文盈")
+	err = repo.CreateSpaceWithUsers(
+		repositories.SpaceRecord{
+			ID:           spaceID,
+			SpaceCode:    cfg.DefaultSpaceCode,
+			PasswordHash: passwordHash,
+			Name:         "我们的回忆",
+		},
+		[]repositories.UserRecord{
+			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: "刘永伦"},
+			{ID: userTaID, SpaceID: spaceID, Username: "ta", DisplayName: "郭文盈"},
+		},
+	)
 	if err != nil {
 		log.Fatal("创建用户失败:", err)
 	}

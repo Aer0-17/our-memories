@@ -14,6 +14,7 @@ func loadS3TestConfig(t *testing.T, publicBaseURL string) {
 	t.Setenv("S3_BUCKET", "our-memories")
 	t.Setenv("S3_PUBLIC_BASE_URL", publicBaseURL)
 	config.Load()
+	InitS3()
 }
 
 func TestKeyFromURLWithPublicBaseURL(t *testing.T) {

@@ -25,7 +25,8 @@ func UploadImage(c *gin.Context) {
 		req.Folder = "uploads"
 	}
 
-	url, key, err := storage.UploadImageWithKey(spaceID, req.Folder, req.DataURL)
+	objectStorage := storage.Default()
+	url, key, err := objectStorage.UploadImageWithKey(spaceID, req.Folder, req.DataURL)
 	if err != nil {
 		log.Printf("image upload failed: %v", err)
 		utils.Error(c, 500, "Upload failed")
@@ -51,9 +52,10 @@ func PresignUpload(c *gin.Context) {
 		req.Folder = "uploads"
 	}
 
-	key, uploadURL, publicURL, err := storage.PresignPut(spaceID, req.Folder, req.ContentType)
+	objectStorage := storage.Default()
+	key, uploadURL, publicURL, err := objectStorage.PresignPut(spaceID, req.Folder, req.ContentType)
 	if err != nil {
-		if !storage.Enabled() {
+		if !objectStorage.Enabled() {
 			utils.Error(c, 503, "Object storage not configured")
 			return
 		}
@@ -72,16 +74,17 @@ func DeleteUpload(c *gin.Context) {
 		utils.Error(c, 400, "Missing key")
 		return
 	}
-	if !storage.KeyBelongsToSpace(key, spaceID) {
+	objectStorage := storage.Default()
+	if !objectStorage.KeyBelongsToSpace(key, spaceID) {
 		utils.Error(c, 403, "Forbidden")
 		return
 	}
-	if err := storage.DeleteObject(key); err != nil {
+	if err := objectStorage.DeleteObject(key); err != nil {
 		log.Printf("delete upload failed (key=%s): %v", key, err)
 		utils.Error(c, 500, "Delete failed")
 		return
 	}
-	if err := storage.DeleteLocalObject(key); err != nil {
+	if err := objectStorage.DeleteLocalObject(key); err != nil {
 		log.Printf("delete local upload failed (key=%s): %v", key, err)
 		utils.Error(c, 500, "Delete failed")
 		return

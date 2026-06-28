@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -8,7 +9,8 @@ import (
 
 	"our-memories-backend/config"
 	"our-memories-backend/db"
-	"our-memories-backend/utils"
+	"our-memories-backend/repositories"
+	"our-memories-backend/services"
 )
 
 func main() {
@@ -25,25 +27,17 @@ func main() {
 	config.Load()
 	db.Init()
 
-	// 检查用户名是否已存在
-	var exists int
-	db.DB.QueryRow(`SELECT COUNT(*) FROM admins WHERE username = ?`, *username).Scan(&exists)
-	if exists > 0 {
+	accountService := services.NewAccountService(repositories.NewAccountRepository(db.Gorm))
+	admin, err := accountService.CreateAdmin(*username, *password, *displayName)
+	if errors.Is(err, services.ErrAdminAlreadyExists) {
 		log.Fatal("管理员用户名已存在")
 	}
-
-	// 创建管理员
-	adminID := utils.NewID()
-	passwordHash := utils.HashPassword(*password)
-
-	_, err := db.DB.Exec(`INSERT INTO admins (id, username, password_hash, display_name) VALUES (?, ?, ?, ?)`,
-		adminID, *username, passwordHash, *displayName)
 	if err != nil {
 		log.Fatal("创建管理员失败:", err)
 	}
 
 	fmt.Printf("✅ 管理员创建成功!\n")
-	fmt.Printf("ID: %s\n", adminID)
-	fmt.Printf("Username: %s\n", *username)
-	fmt.Printf("Display Name: %s\n", *displayName)
+	fmt.Printf("ID: %s\n", admin.ID)
+	fmt.Printf("Username: %s\n", admin.Username)
+	fmt.Printf("Display Name: %s\n", admin.DisplayName)
 }

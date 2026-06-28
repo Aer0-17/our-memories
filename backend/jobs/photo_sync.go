@@ -10,6 +10,7 @@ import (
 	"our-memories-backend/cache"
 	"our-memories-backend/config"
 	"our-memories-backend/db"
+	"our-memories-backend/repositories"
 	"our-memories-backend/storage"
 )
 
@@ -19,13 +20,6 @@ type photoTable struct {
 	idColumn  string
 	joinTable string
 	joinOn    string
-}
-
-type photoRow struct {
-	id      string
-	spaceID string
-	key     string
-	url     string
 }
 
 var photoTables = []photoTable{
@@ -86,11 +80,15 @@ func runAndLogPhotoSync() {
 
 // RunPhotoSyncOnce uploads inline/local fallback images and updates database URLs.
 func RunPhotoSyncOnce() (int, error) {
+	return runPhotoSyncOnce(storage.Default())
+}
+
+func runPhotoSyncOnce(objectStorage storage.ObjectStorage) (int, error) {
 	totalUpdated := 0
 	errs := []error{}
 
 	for _, table := range photoTables {
-		updated, err := syncPhotoTable(table)
+		updated, err := syncPhotoTable(table, objectStorage)
 		totalUpdated += updated
 		if err != nil {
 			errs = append(errs, err)
@@ -104,37 +102,17 @@ func RunPhotoSyncOnce() (int, error) {
 	return totalUpdated, errors.Join(errs...)
 }
 
-func syncPhotoTable(table photoTable) (int, error) {
-	rows, err := db.DB.Query(fmt.Sprintf(`
-		SELECT %s.%s, %s.space_id, COALESCE(%s.key, ''), %s.url
-		FROM %s
-		JOIN %s ON %s
-		WHERE %s.url LIKE 'data:image/%%'
-		   OR %s.url LIKE '/local-images/%%'
-		   OR %s.url LIKE 'http%%/local-images/%%'
-		ORDER BY %s.%s
-	`, table.name, table.idColumn, table.joinTable, table.name, table.name, table.name, table.joinTable, table.joinOn, table.name, table.name, table.name, table.name, table.idColumn))
+func syncPhotoTable(table photoTable, objectStorage storage.ObjectStorage) (int, error) {
+	repo := repositories.NewPhotoSyncRepository(db.Gorm)
+	pending, err := repo.PendingRows(photoSyncTable(table))
 	if err != nil {
-		return 0, err
-	}
-	defer rows.Close()
-
-	pending := []photoRow{}
-	for rows.Next() {
-		var row photoRow
-		if err := rows.Scan(&row.id, &row.spaceID, &row.key, &row.url); err != nil {
-			return 0, err
-		}
-		pending = append(pending, row)
-	}
-	if err := rows.Err(); err != nil {
 		return 0, err
 	}
 
 	updated := 0
 	errs := []error{}
 	for _, row := range pending {
-		rowUpdated, err := syncPhotoRow(table, row)
+		rowUpdated, err := syncPhotoRow(repo, table, row, objectStorage)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -146,75 +124,83 @@ func syncPhotoTable(table photoTable) (int, error) {
 	return updated, errors.Join(errs...)
 }
 
-func syncPhotoRow(table photoTable, row photoRow) (bool, error) {
-	nextURL, nextKey, err := nextPhotoLocation(table, row)
+func syncPhotoRow(
+	repo *repositories.PhotoSyncRepository,
+	table photoTable,
+	row repositories.PhotoSyncRow,
+	objectStorage storage.ObjectStorage,
+) (bool, error) {
+	nextURL, nextKey, err := nextPhotoLocation(table, row, objectStorage)
 	if err != nil {
 		return false, err
 	}
-	if nextURL == "" || nextURL == row.url {
+	if nextURL == "" || nextURL == row.URL {
 		return false, nil
 	}
 
-	result, err := db.DB.Exec(
-		fmt.Sprintf(`UPDATE %s SET url = ?, key = ? WHERE %s = ? AND url = ?`, table.name, table.idColumn),
-		nextURL,
-		nextKey,
-		row.id,
-		row.url,
-	)
+	affected, err := repo.UpdatePhotoLocation(photoSyncTable(table), row, nextURL, nextKey)
 	if err != nil {
-		cleanupNewObject(nextURL, nextKey)
-		return false, fmt.Errorf("%s %s update failed: %w", table.name, row.id, err)
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return false, err
+		cleanupNewObject(objectStorage, nextURL, nextKey)
+		return false, fmt.Errorf("%s %s update failed: %w", table.name, row.ID, err)
 	}
 	if affected != 1 {
-		cleanupNewObject(nextURL, nextKey)
-		return false, fmt.Errorf("%s %s update affected %d rows", table.name, row.id, affected)
+		cleanupNewObject(objectStorage, nextURL, nextKey)
+		return false, fmt.Errorf("%s %s update affected %d rows", table.name, row.ID, affected)
 	}
 
-	if localKey := storage.LocalKeyFromURL(row.url); localKey != "" && storage.KeyFromURL(nextURL) != "" {
-		if err := storage.DeleteLocalObject(localKey); err != nil {
-			return true, fmt.Errorf("%s %s local cleanup failed: %w", table.name, row.id, err)
+	if localKey := objectStorage.LocalKeyFromURL(row.URL); localKey != "" && objectStorage.KeyFromURL(nextURL) != "" {
+		if err := objectStorage.DeleteLocalObject(localKey); err != nil {
+			return true, fmt.Errorf("%s %s local cleanup failed: %w", table.name, row.ID, err)
 		}
 	}
 	return true, nil
 }
 
-func nextPhotoLocation(table photoTable, row photoRow) (string, string, error) {
-	if strings.HasPrefix(row.url, "data:image/") {
-		nextURL, nextKey, err := storage.UploadImageWithKey(row.spaceID, table.folder, row.url)
+func nextPhotoLocation(
+	table photoTable,
+	row repositories.PhotoSyncRow,
+	objectStorage storage.ObjectStorage,
+) (string, string, error) {
+	if strings.HasPrefix(row.URL, "data:image/") {
+		nextURL, nextKey, err := objectStorage.UploadImageWithKey(row.SpaceID, table.folder, row.URL)
 		if err != nil {
-			return "", "", fmt.Errorf("%s %s inline upload failed: %w", table.name, row.id, err)
+			return "", "", fmt.Errorf("%s %s inline upload failed: %w", table.name, row.ID, err)
 		}
 		return nextURL, nextKey, nil
 	}
 
-	localKey := storage.LocalKeyFromURL(row.url)
+	localKey := objectStorage.LocalKeyFromURL(row.URL)
 	if localKey == "" {
 		return "", "", nil
 	}
-	if !storage.Enabled() {
+	if !objectStorage.Enabled() {
 		return "", "", nil
 	}
-	nextURL, err := storage.UploadLocalObjectToS3(localKey)
+	nextURL, err := objectStorage.UploadLocalObjectToS3(localKey)
 	if err != nil {
-		return "", "", fmt.Errorf("%s %s local upload failed: %w", table.name, row.id, err)
+		return "", "", fmt.Errorf("%s %s local upload failed: %w", table.name, row.ID, err)
 	}
 	return nextURL, localKey, nil
 }
 
-func cleanupNewObject(url, key string) {
+func photoSyncTable(table photoTable) repositories.PhotoSyncTable {
+	return repositories.PhotoSyncTable{
+		Name:      table.name,
+		IDColumn:  table.idColumn,
+		JoinTable: table.joinTable,
+		JoinOn:    table.joinOn,
+	}
+}
+
+func cleanupNewObject(objectStorage storage.ObjectStorage, url, key string) {
 	if key == "" {
 		return
 	}
-	if storage.LocalKeyFromURL(url) != "" {
-		_ = storage.DeleteLocalObject(key)
+	if objectStorage.LocalKeyFromURL(url) != "" {
+		_ = objectStorage.DeleteLocalObject(key)
 		return
 	}
-	if storage.KeyFromURL(url) != "" {
-		_ = storage.DeleteObject(key)
+	if objectStorage.KeyFromURL(url) != "" {
+		_ = objectStorage.DeleteObject(key)
 	}
 }
