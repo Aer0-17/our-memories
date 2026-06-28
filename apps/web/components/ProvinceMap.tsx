@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useSWRConfig } from "swr";
 import { Minus, Plus, RotateCcw } from "lucide-react";
 import { chinaFeatures, makePath, makeProjectionForProvince, provinceIdOf } from "@/lib/geo";
 import { cityRegionPath, loadCityRegionsOfProvince, type CityRegion } from "@/lib/cityGeo";
@@ -17,7 +16,7 @@ import { adminModeUpdatedEvent } from "@/data/adminMode";
 import { memoryPhotosPayload } from "@/lib/photoPayload";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 import { useIsMobile } from "@/lib/useIsMobile";
-import { memoriesApiKey, publishMemoryStore, type MemoriesResponse } from "@/lib/memoryStore";
+import { cityMemoriesApiKey, useMemoryCachePublisher, type MemoriesResponse } from "@/lib/memoryStore";
 import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore";
 import { useApi } from "@/lib/swr";
 import {
@@ -57,8 +56,8 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
   const longPressTimeoutRef = useRef<BrowserTimeout | null>(null);
   const previousLitCityIdsRef = useRef<Set<string> | null>(null);
   const localMemoriesRef = useRef<LocalMemoryStore>({});
-  const { mutate } = useSWRConfig();
   const { data: summaryData, mutate: mutateSummary } = useMemorySummary();
+  const publishMemoryMutation = useMemoryCachePublisher();
   const cameraRef = useRef<MapCamera>({ scale: 1, x: 0, y: 0 });
   const dragStateRef = useRef<DragState | null>(null);
   const dragMovedRef = useRef(false);
@@ -121,7 +120,7 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
 
   const loadCityMemories = useCallback(async (cityId: string, force = false) => {
     if (!force && cityId in localMemoriesRef.current && (cityId in cityMemoryStore)) return;
-    const data = await apiJson<MemoriesResponse>(`/api/v1/memories/cities/${encodeURIComponent(cityId)}`);
+    const data = await apiJson<MemoriesResponse>(cityMemoriesApiKey(cityId));
     const cityMemories = data.memories[cityId] ?? [];
     setCityMemoryStore((current) => ({ ...current, [cityId]: cityMemories }));
   }, [cityMemoryStore]);
@@ -130,10 +129,8 @@ export default function ProvinceMap({ province, width = 1120, height = 760 }: Pr
     const cityMemories = memories[cityId] ?? [];
     setCityMemoryStore((current) => ({ ...current, [cityId]: cityMemories }));
     localMemoriesRef.current = { ...localMemoriesRef.current, [cityId]: cityMemories };
-    void mutate(memoriesApiKey, { memories } satisfies MemoriesResponse, { revalidate: false });
-    void mutateSummary();
-    publishMemoryStore(memories);
-  }, [mutate, mutateSummary]);
+    publishMemoryMutation(memories, cityId);
+  }, [publishMemoryMutation]);
 
   useEffect(() => {
     return () => {

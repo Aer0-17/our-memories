@@ -20,7 +20,7 @@ import { memoryPhotosPayload } from "@/lib/photoPayload";
 import { useContentEditAccess } from "@/lib/useContentEditAccess";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { useTransientStatus } from "@/lib/useTransientStatus";
-import { publishMemoryStore, useMemoryStore } from "@/lib/memoryStore";
+import { useMemoryCachePublisher, useMemoryStore } from "@/lib/memoryStore";
 import { AddMemoryPanel } from "@/components/memories/AddMemoryPanel";
 import {
   MemoryArchiveCard as MemoryCard,
@@ -39,7 +39,8 @@ const memoryMonthLabel = (memory: Memory) => {
 };
 
 export default function MemoryArchive() {
-  const { data, mutate } = useMemoryStore();
+  const { data } = useMemoryStore();
+  const publishMemoryMutation = useMemoryCachePublisher();
   const [view, setView] = useState<ArchiveView>("city");
   const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set());
   const canEdit = useContentEditAccess();
@@ -61,8 +62,7 @@ export default function MemoryArchive() {
       if (!response.ok) throw new Error("Failed to delete memory");
 
       const data = (await response.json()) as { memories: LocalMemoryStore };
-      mutate({ memories: data.memories }, { revalidate: false });
-      publishMemoryStore(data.memories);
+      publishMemoryMutation(data.memories, cityId);
       setSelectedItem((current) => (current?.memory.id === memoryId ? null : current));
       setArchiveStatus("回忆已删除。", { autoClear: true });
     } catch {
@@ -87,8 +87,7 @@ export default function MemoryArchive() {
     if (!response.ok) throw new Error("Failed to save memory");
 
     const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
-    mutate({ memories: data.memories }, { revalidate: false });
-    publishMemoryStore(data.memories);
+    publishMemoryMutation(data.memories, cityId);
   };
 
   const handleUpdateMemory = async (cityId: string, memoryId: string, memory: MemoryPatchPayload) => {
@@ -104,8 +103,7 @@ export default function MemoryArchive() {
 
     const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
     const nextMemories = data.memories;
-    mutate({ memories: nextMemories }, { revalidate: false });
-    publishMemoryStore(nextMemories);
+    publishMemoryMutation(nextMemories, cityId);
     setSelectedItem((current) => {
       if (!current || current.memory.id !== memoryId) return current;
       const updatedMemory =
@@ -130,8 +128,7 @@ export default function MemoryArchive() {
 
     const data = (await response.json()) as { memory?: Memory; memories: LocalMemoryStore };
     const nextMemories = data.memories;
-    mutate({ memories: nextMemories }, { revalidate: false });
-    publishMemoryStore(nextMemories);
+    publishMemoryMutation(nextMemories, cityId);
     setSelectedItem((current) => {
       if (!current || current.memory.id !== memoryId) return current;
       const updatedMemory =
@@ -237,8 +234,7 @@ export default function MemoryArchive() {
           <AddMemoryPanel
             canEdit={canEdit}
             onSaved={(memories) => {
-              mutate({ memories }, { revalidate: false });
-              publishMemoryStore(memories);
+              publishMemoryMutation(memories);
             }}
           />
 
