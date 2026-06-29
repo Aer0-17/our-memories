@@ -1,5 +1,6 @@
 "use client";
 
+import { Capacitor, registerPlugin } from "@capacitor/core";
 import { apiJson } from "@/lib/apiClient";
 
 type PermissionResult = {
@@ -15,44 +16,24 @@ type JPushPlugin = {
   getRegistrationId: () => Promise<RegistrationResult>;
 };
 
-type CapacitorRuntime = {
-  isNativePlatform?: () => boolean;
-  Plugins?: {
-    JPush?: JPushPlugin;
-  };
-};
-
+const JPush = registerPlugin<JPushPlugin>("JPush");
 const registrationStorageKey = "mapofus:jpush-registration-id";
 
-function capacitorRuntime() {
-  return (window as Window & { Capacitor?: CapacitorRuntime }).Capacitor;
-}
-
 function isNativeCapacitor() {
-  return typeof window !== "undefined" && capacitorRuntime()?.isNativePlatform?.() === true;
-}
-
-function jpushPlugin() {
-  return capacitorRuntime()?.Plugins?.JPush;
+  return typeof window !== "undefined" && Capacitor.isNativePlatform();
 }
 
 async function waitForRegistrationId() {
-  const JPush = jpushPlugin();
-  if (!JPush) return "";
-
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
     const { registrationId } = await JPush.getRegistrationId();
     if (registrationId) return registrationId;
-    await new Promise((resolve) => window.setTimeout(resolve, 1500));
+    await new Promise((resolve) => window.setTimeout(resolve, 2000));
   }
   return "";
 }
 
 export async function registerCurrentDeviceForPush() {
   if (!isNativeCapacitor()) return;
-
-  const JPush = jpushPlugin();
-  if (!JPush) return;
 
   const permission = await JPush.requestPermissions().catch(() => null);
   if (permission?.receive !== "granted") return;
