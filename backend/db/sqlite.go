@@ -280,6 +280,24 @@ func Migrate() {
 		FOREIGN KEY (admin_id) REFERENCES admins(id)
 	`)
 	createIndex("idx_audit_logs_admin", "audit_logs", "admin_id, created_at")
+
+	createTableIfNotExists("push_devices", `
+		id TEXT PRIMARY KEY,
+		space_id TEXT NOT NULL,
+		user_id TEXT NOT NULL,
+		platform TEXT NOT NULL,
+		registration_id TEXT NOT NULL,
+		device_model TEXT DEFAULT '',
+		app_version TEXT DEFAULT '',
+		enabled INTEGER DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (space_id) REFERENCES spaces(id),
+		FOREIGN KEY (user_id) REFERENCES users(id),
+		UNIQUE(registration_id)
+	`)
+	createIndex("idx_push_devices_space", "push_devices", "space_id, enabled")
+	createIndex("idx_push_devices_user", "push_devices", "user_id, enabled")
 }
 
 func ensureColumn(tableName string, columnName string, definition string) {

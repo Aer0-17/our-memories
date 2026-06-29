@@ -3,6 +3,7 @@ import { ApiBaseScript } from "@/app/api-base-script";
 import { ApiCacheProvider } from "@/lib/apiCache";
 import { AuthProvider } from "@/lib/authContext";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { PushRegistration } from "@/components/PushRegistration";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
@@ -27,6 +28,7 @@ export default function RootLayout({
           <AuthProvider>
             <ToastProvider>
               <PullToRefresh />
+              <PushRegistration />
               {children}
             </ToastProvider>
           </AuthProvider>

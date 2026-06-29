@@ -65,6 +65,8 @@ func main() {
 		{
 			auth.GET("/me", handlers.GetMe)
 			auth.PUT("/auth/password", handlers.UpdatePassword)
+			auth.POST("/push/devices", handlers.RegisterPushDevice)
+			auth.POST("/push/test", handlers.SendTestPush)
 
 			auth.GET("/memories", handlers.GetMemories)
 			auth.GET("/memories/summary", handlers.GetMemorySummary)

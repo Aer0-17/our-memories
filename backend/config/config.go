@@ -29,6 +29,8 @@ type Config struct {
 	S3ObjectACL       string
 	LocalImageDir     string
 	PhotoSyncInterval string
+	JPushAppKey       string
+	JPushMasterSecret string
 }
 
 var cfg *Config
@@ -57,6 +59,8 @@ func Load() {
 		S3ObjectACL:       getEnv("S3_OBJECT_ACL", ""),
 		LocalImageDir:     getEnv("LOCAL_IMAGE_DIR", "./data/images"),
 		PhotoSyncInterval: getEnv("PHOTO_SYNC_INTERVAL", "10m"),
+		JPushAppKey:       getEnv("JPUSH_APP_KEY", ""),
+		JPushMasterSecret: getEnv("JPUSH_MASTER_SECRET", ""),
 	}
 
 	if len(cfg.JWTSecret) < 24 {

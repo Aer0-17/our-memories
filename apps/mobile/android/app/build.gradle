@@ -9,6 +9,22 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [
+            JPUSH_PKGNAME : applicationId,
+            JPUSH_APPKEY  : "0ff236477b0e10b5d960163e",
+            JPUSH_CHANNEL : "developer-default",
+            MEIZU_APPKEY  : "",
+            MEIZU_APPID   : "",
+            XIAOMI_APPID  : "",
+            XIAOMI_APPKEY : "",
+            OPPO_APPKEY   : "",
+            OPPO_APPID    : "",
+            OPPO_APPSECRET: "",
+            VIVO_APPKEY   : "",
+            VIVO_APPID    : "",
+            HONOR_APPID   : "",
+            NIO_APPID     : "",
+        ]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -36,6 +52,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation project(':jiguang')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

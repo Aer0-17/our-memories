@@ -61,6 +61,6 @@ run("npx", ["capacitor", "sync", "android"]);
 if (process.platform !== "win32") {
   chmodSync(resolve("android/gradlew"), 0o755);
 }
-run(process.platform === "win32" ? "gradlew.bat" : "./gradlew", ["assembleDebug"], {
+run(process.platform === "win32" ? "gradlew.bat" : "./gradlew", [":app:assembleDebug"], {
   cwd: "android",
 });
