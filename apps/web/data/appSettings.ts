@@ -13,6 +13,8 @@ export type AppSettings = {
   anniversaryLabel?: string;
   weatherCityIds?: string[];
   coupleLogo?: string;
+  memberProfiles?: Record<string, PartnerProfile>;
+  coupleProfiles?: CoupleProfiles;
 };
 
 export type LoginPhotoText = {
@@ -20,11 +22,39 @@ export type LoginPhotoText = {
   label?: string;
 };
 
+export type PartnerGender = "female" | "male" | "neutral";
+
+export type PartnerProfile = {
+  name?: string;
+  gender?: PartnerGender;
+  cityId?: string;
+};
+
+export type CoupleProfiles = {
+  personA?: PartnerProfile;
+  personB?: PartnerProfile;
+};
+
 export const defaultAnniversaryDate = "2026.03.20";
 export const defaultAnniversaryLabel = "我们在一起";
 export const defaultWeatherCityIds = ["beijing", "shanghai", "guangzhou"];
 export const maxWeatherCities = 3;
 export const defaultCoupleLogo = "/logo/couple-logo-placeholder.svg";
+export const defaultSelfCityId = "city-320300";
+export const defaultCoupleProfiles = {
+  personA: {
+    name: "你",
+    gender: "female",
+    cityId: defaultSelfCityId,
+  },
+  personB: {
+    name: "TA",
+    gender: "male",
+    cityId: "city-451100",
+  },
+} as const satisfies Required<CoupleProfiles>;
+
+const validPartnerGenders = new Set<PartnerGender>(["female", "male", "neutral"]);
 
 const isValidLogo = (value: unknown): value is string =>
   typeof value === "string" && (value.startsWith("data:image/") || value.startsWith("/") || value.startsWith("https://"));
@@ -38,6 +68,44 @@ const cleanString = (value: unknown, maxLength: number): string | undefined => {
 
 export const normalizeAnniversaryDate = (value: unknown): string | undefined => {
   return normalizeDottedDate(value);
+};
+
+const normalizePartnerProfile = (value: unknown, fallback: PartnerProfile): PartnerProfile => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return fallback;
+
+  const profile = value as PartnerProfile;
+  const gender = validPartnerGenders.has(profile.gender as PartnerGender) ? profile.gender : fallback.gender;
+
+  return {
+    name: cleanString(profile.name, 16) ?? fallback.name,
+    gender,
+    cityId: cleanString(profile.cityId, 40) ?? fallback.cityId,
+  };
+};
+
+export const normalizeCoupleProfiles = (value: unknown): Required<CoupleProfiles> => {
+  const profiles = typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as CoupleProfiles)
+    : {};
+
+  return {
+    personA: normalizePartnerProfile(profiles.personA, defaultCoupleProfiles.personA),
+    personB: normalizePartnerProfile(profiles.personB, defaultCoupleProfiles.personB),
+  };
+};
+
+export const normalizeMemberProfiles = (value: unknown): Record<string, PartnerProfile> => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .map(([key, profile]) => {
+        const memberKey = cleanString(key, 120);
+        if (!memberKey) return null;
+        return [memberKey, normalizePartnerProfile(profile, { gender: "neutral", cityId: defaultSelfCityId })] as const;
+      })
+      .filter(Boolean) as Array<readonly [string, PartnerProfile]>,
+  );
 };
 
 export const normalizeAppSettings = (value: unknown): AppSettings => {
@@ -79,6 +147,8 @@ export const normalizeAppSettings = (value: unknown): AppSettings => {
     anniversaryLabel: cleanString(settings.anniversaryLabel, 40),
     weatherCityIds: weatherCityIds && weatherCityIds.length > 0 ? weatherCityIds : undefined,
     coupleLogo: isValidLogo(settings.coupleLogo) ? settings.coupleLogo : undefined,
+    memberProfiles: normalizeMemberProfiles(settings.memberProfiles),
+    coupleProfiles: normalizeCoupleProfiles(settings.coupleProfiles),
   };
 };
 
@@ -98,6 +168,7 @@ const serverSettingKeys = [
   "anniversaryLabel",
   "weatherCityIds",
   "coupleLogo",
+  "memberProfiles",
 ] as const satisfies ReadonlyArray<keyof AppSettings>;
 
 const serverSettingEntries = (settings: AppSettings) =>

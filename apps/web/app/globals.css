@@ -123,6 +123,32 @@ button {
   image-rendering: pixelated;
 }
 
+@keyframes map-avatar-sprite {
+  0%, 49.99% {
+    background-position: 0 0;
+  }
+  50%, 100% {
+    background-position: 100% 0;
+  }
+}
+
+.map-avatar-sprite {
+  display: block;
+  width: 1.88rem;
+  height: 2.36rem;
+  background-position: 0 0;
+  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  filter: drop-shadow(0 8px 10px rgba(90, 102, 112, 0.16));
+  animation: map-avatar-sprite 0.82s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-avatar-sprite {
+    animation: none;
+  }
+}
+
 .map-visual-scale {
   transform-origin: center center;
 }

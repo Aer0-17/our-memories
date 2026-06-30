@@ -340,7 +340,7 @@ export default function MemoryArchive() {
 
   return (
     <MemoryPageShell active="memories">
-          <header className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-5">
+          <header className="flex flex-col gap-4 sm:gap-5">
             <div>
               <div className="flex items-center gap-3">
                 <Star className="h-6 w-6 fill-sakura text-bloom sm:h-8 sm:w-8" />
@@ -351,22 +351,7 @@ export default function MemoryArchive() {
               </p>
             </div>
 
-            <div className="flex items-center justify-between gap-3 sm:justify-start">
-              <div className="rounded-[8px] border border-dim/80 bg-cream/72 px-3 py-2 text-sm font-semibold text-ink/62 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:px-4">
-                {memoryItems.length} 条 · {cityCount} 城
-              </div>
-              <button
-                className={`grid h-11 w-11 place-items-center rounded-[8px] border shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur transition ${
-                  showSearchPanel
-                    ? "border-sakura bg-sakura/58 text-bloom"
-                    : "border-dim/80 bg-cream/72 text-ink/58 hover:border-sky hover:text-sky"
-                }`}
-                type="button"
-                onClick={() => setSearchOpen((current) => !current)}
-                aria-label={showSearchPanel ? "收起搜索" : "搜索回忆"}
-              >
-                {showSearchPanel ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-              </button>
+            <div className="flex w-full items-center gap-3">
               <div className="flex rounded-[8px] border border-dim/80 bg-cream/72 p-1 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur">
                 {(["city", "timeline"] as const).map((mode) => (
                   <button
@@ -379,10 +364,25 @@ export default function MemoryArchive() {
                     type="button"
                     onClick={() => setView(mode)}
                   >
-                    {mode === "city" ? "城市" : "时间线"}
+                    {mode === "city" ? "地图" : "时间线"}
                   </button>
                 ))}
               </div>
+              <div className="rounded-[8px] border border-dim/80 bg-cream/72 px-3 py-2 text-sm font-semibold text-ink/62 shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur sm:px-4">
+                {memoryItems.length} 条 · {cityCount} 城
+              </div>
+              <button
+                className={`ml-auto grid h-11 w-11 place-items-center rounded-[8px] border shadow-[0_8px_24px_rgba(90,102,112,0.08)] backdrop-blur transition ${
+                  showSearchPanel
+                    ? "border-sakura bg-sakura/58 text-bloom"
+                    : "border-dim/80 bg-cream/72 text-ink/58 hover:border-sky hover:text-sky"
+                }`}
+                type="button"
+                onClick={() => setSearchOpen((current) => !current)}
+                aria-label={showSearchPanel ? "收起搜索" : "搜索回忆"}
+              >
+                {showSearchPanel ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+              </button>
             </div>
           </header>
 

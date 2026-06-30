@@ -27,8 +27,13 @@ import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore
 import { pullRefreshEvent } from "@/lib/refresh";
 import { useDeferredReady } from "@/lib/useDeferredReady";
 import { useIsMobile } from "@/lib/useIsMobile";
-
-const weatherFallbackTemp = 24;
+import {
+  buildWeatherUrl,
+  getWeatherKind,
+  weatherFallbackTemp,
+  type WeatherInfo,
+  type WeatherKind,
+} from "@/lib/weather";
 
 // Reads the user's local settings and stays in sync when they change them
 // from the settings page (same tab via custom event, other tabs via storage).
@@ -60,31 +65,6 @@ function useAppSettings(): AppSettings {
 
   return settings;
 }
-
-type WeatherKind =
-  | "sunny"
-  | "partly"
-  | "cloudy"
-  | "rain"
-  | "light-rain"
-  | "moderate-rain"
-  | "heavy-rain"
-  | "thunder"
-  | "snow"
-  | "moderate-snow"
-  | "heavy-snow"
-  | "sleet"
-  | "fog"
-  | "wind"
-  | "night-clear"
-  | "night-partly";
-
-type WeatherInfo = {
-  cityId: string;
-  temp: number;
-  kind: WeatherKind;
-  label: string;
-};
 
 type OpenMeteoCurrent = {
   current?: {
@@ -134,45 +114,6 @@ function useTogetherDays() {
   const days = daysTogether(startDate) ?? 0;
 
   return { days, label, startDate };
-}
-
-function getWeatherKind(code: number, windSpeed: number, isDay: boolean): { kind: WeatherKind; label: string } {
-  if (windSpeed >= 38) return { kind: "wind", label: "大风" };
-  if (code === 0) return isDay ? { kind: "sunny", label: "晴" } : { kind: "night-clear", label: "夜晴" };
-  if (code === 1 || code === 2) {
-    return isDay ? { kind: "partly", label: "多云" } : { kind: "night-partly", label: "夜多云" };
-  }
-  if (code === 3) return { kind: "cloudy", label: "阴" };
-  if (code === 45 || code === 48) return { kind: "fog", label: "大雾" };
-  if (code === 51 || code === 53 || code === 55 || code === 56 || code === 57) {
-    return { kind: "light-rain", label: "小雨" };
-  }
-  if (code === 61) return { kind: "light-rain", label: "小雨" };
-  if (code === 63) return { kind: "moderate-rain", label: "中雨" };
-  if (code === 65) return { kind: "heavy-rain", label: "大雨" };
-  if (code === 66 || code === 67) return { kind: "sleet", label: "雨夹雪" };
-  if (code === 71 || code === 77) return { kind: "snow", label: "小雪" };
-  if (code === 73) return { kind: "moderate-snow", label: "中雪" };
-  if (code === 75) return { kind: "heavy-snow", label: "大雪" };
-  if (code === 80) return { kind: "light-rain", label: "小雨" };
-  if (code === 81) return { kind: "moderate-rain", label: "中雨" };
-  if (code === 82) return { kind: "heavy-rain", label: "大雨" };
-  if (code === 85) return { kind: "snow", label: "小雪" };
-  if (code === 86) return { kind: "heavy-snow", label: "大雪" };
-  if (code === 95 || code === 96 || code === 99) return { kind: "thunder", label: "雷雨" };
-
-  return { kind: "rain", label: "阵雨" };
-}
-
-function buildWeatherUrl(lat: number, lng: number) {
-  const params = new URLSearchParams({
-    latitude: String(lat),
-    longitude: String(lng),
-    current: "temperature_2m,weather_code,wind_speed_10m,is_day",
-    timezone: "Asia/Shanghai",
-  });
-
-  return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
 }
 
 function WeatherPixelIcon({
@@ -656,6 +597,13 @@ export function MobileRitualStats() {
   );
 }
 
+const flowerVariants = [
+  "/sprites/decorations/generated/flower-v0.png",
+  "/sprites/decorations/generated/flower-v1.png",
+  "/sprites/decorations/generated/flower-v2.png",
+  "/sprites/decorations/generated/flower-v3.png",
+];
+
 function PixelFlower({
   className,
   variant,
@@ -663,87 +611,13 @@ function PixelFlower({
   className?: string;
   variant: number;
 }>) {
-  const palette = [
-    {
-      petal: "var(--color-sakura)",
-      petalDeep: "var(--color-bloom)",
-      core: "var(--color-marigold)",
-      leaf: "var(--color-mint)",
-      leafDeep: "var(--color-leaf)",
-    },
-    {
-      petal: "var(--color-sky-pale)",
-      petalDeep: "var(--color-sky)",
-      core: "var(--color-sunshine)",
-      leaf: "var(--color-mint)",
-      leafDeep: "var(--color-leaf)",
-    },
-    {
-      petal: "var(--color-lavender)",
-      petalDeep: "var(--color-dusk)",
-      core: "var(--color-sakura)",
-      leaf: "var(--color-mint)",
-      leafDeep: "var(--color-leaf)",
-    },
-    {
-      petal: "var(--color-sunlit)",
-      petalDeep: "var(--color-ember)",
-      core: "var(--color-bloom)",
-      leaf: "var(--color-mint)",
-      leafDeep: "var(--color-leaf)",
-    },
-  ][variant % 4];
-
   return (
-    <svg
+    <img
+      src={flowerVariants[variant % 4]}
+      alt=""
       className={`pixelated h-8 w-8 ${className ?? ""}`}
-      viewBox="0 0 32 32"
       aria-hidden="true"
-      shapeRendering="crispEdges"
-    >
-      <rect x="6" y="25" width="20" height="3" fill="var(--color-dim)" opacity="0.5" />
-      <rect x="15" y="17" width="3" height="9" fill={palette.leafDeep} />
-      <rect x="11" y="22" width="5" height="3" fill={palette.leaf} />
-      <rect x="18" y="20" width="5" height="3" fill={palette.leaf} />
-      {variant % 4 === 0 && (
-        <>
-          <rect x="12" y="5" width="8" height="5" fill={palette.petal} />
-          <rect x="8" y="10" width="6" height="7" fill={palette.petalDeep} />
-          <rect x="18" y="10" width="6" height="7" fill={palette.petalDeep} />
-          <rect x="12" y="17" width="8" height="5" fill={palette.petal} />
-        </>
-      )}
-      {variant % 4 === 1 && (
-        <>
-          <rect x="13" y="4" width="6" height="6" fill={palette.petalDeep} />
-          <rect x="7" y="9" width="6" height="6" fill={palette.petal} />
-          <rect x="19" y="9" width="6" height="6" fill={palette.petal} />
-          <rect x="10" y="16" width="5" height="5" fill={palette.petalDeep} />
-          <rect x="17" y="16" width="5" height="5" fill={palette.petalDeep} />
-        </>
-      )}
-      {variant % 4 === 2 && (
-        <>
-          <rect x="10" y="5" width="5" height="7" fill={palette.petal} />
-          <rect x="17" y="5" width="5" height="7" fill={palette.petal} />
-          <rect x="7" y="12" width="6" height="6" fill={palette.petalDeep} />
-          <rect x="19" y="12" width="6" height="6" fill={palette.petalDeep} />
-          <rect x="13" y="17" width="6" height="5" fill={palette.petal} />
-        </>
-      )}
-      {variant % 4 === 3 && (
-        <>
-          <rect x="11" y="4" width="10" height="4" fill={palette.petalDeep} />
-          <rect x="8" y="8" width="16" height="5" fill={palette.petal} />
-          <rect x="7" y="13" width="18" height="5" fill={palette.petalDeep} />
-          <rect x="11" y="18" width="10" height="4" fill={palette.petal} />
-        </>
-      )}
-      <rect x="13" y="11" width="6" height="6" fill={palette.core} />
-      <rect x="15" y="13" width="2" height="2" fill="var(--color-ink)" opacity="0.35" />
-      <rect x="6" y="6" width="2" height="2" fill="white" opacity="0.72" />
-      <rect x="24" y="7" width="2" height="2" fill="white" opacity="0.55" />
-    </svg>
+    />
   );
 }
 

@@ -25,6 +25,16 @@ import { cities } from "@/data/cities";
 import { memoryTime, type Memory } from "@/data/memories";
 import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore";
 import { Modal } from "@/components/ui/modal";
+import {
+  appSettingsUpdatedEvent,
+  defaultSelfCityId,
+  normalizeMemberProfiles,
+  readAppSettings,
+  type PartnerGender,
+  type PartnerProfile,
+} from "@/data/appSettings";
+import { readSession } from "@/lib/authStore";
+import { fetchCityWeather, weatherFallbackTemp, type WeatherInfo, type WeatherKind } from "@/lib/weather";
 
 interface ChinaMapProps {
   width?: number;
@@ -47,6 +57,112 @@ const easyTapProvinceIds = new Set(["hongkong", "macau"]);
 const maxZoom = 1.45;
 const minZoom = 1;
 const stableCoordinate = (value: number) => Number(value.toFixed(3));
+const avatarSpriteByGender: Record<PartnerGender, string> = {
+  female: "/sprites/characters/generated/map-avatar-female.png",
+  male: "/sprites/characters/generated/map-avatar-male.png",
+  neutral: "/sprites/characters/generated/map-avatar-neutral.png",
+};
+
+function MapWeatherIcon({ kind }: Readonly<{ kind: WeatherKind }>) {
+  const hasSun = kind === "sunny" || kind === "partly";
+  const hasCloud = !["sunny", "night-clear", "fog", "wind"].includes(kind);
+  const hasRain = ["rain", "light-rain", "moderate-rain", "heavy-rain", "thunder", "sleet"].includes(kind);
+  const hasSnow = ["snow", "moderate-snow", "heavy-snow", "sleet"].includes(kind);
+
+  return (
+    <svg className="pixelated h-10 w-10" viewBox="0 0 40 40" aria-hidden="true" shapeRendering="crispEdges">
+      {hasSun && (
+        <>
+          <rect x="15" y="2" width="4" height="5" fill="var(--color-amber)" />
+          <rect x="4" y="15" width="5" height="4" fill="var(--color-amber)" />
+          <rect x="28" y="15" width="5" height="4" fill="var(--color-amber)" />
+          <rect x="15" y="28" width="4" height="5" fill="var(--color-amber)" />
+          <rect x="10" y="10" width="18" height="18" fill="var(--color-sunshine)" />
+          <rect x="14" y="8" width="10" height="22" fill="var(--color-sunlit)" />
+        </>
+      )}
+      {hasCloud && (
+        <>
+          <rect x="7" y="17" width="26" height="13" fill={kind === "cloudy" ? "var(--color-storm)" : "var(--color-sky-light)"} />
+          <rect x="13" y="11" width="16" height="10" fill={kind === "cloudy" ? "var(--color-storm-light)" : "white"} />
+          <rect x="4" y="22" width="31" height="9" fill={kind === "cloudy" ? "var(--color-storm-pale)" : "var(--color-rain-mist)"} />
+        </>
+      )}
+      {hasRain && (
+        <>
+          <rect x="10" y="32" width="3" height="6" fill="var(--color-rain-bright)" />
+          <rect x="19" y="32" width="3" height="6" fill="var(--color-rain-bright)" />
+          <rect x="28" y="32" width="3" height="6" fill="var(--color-rain-bright)" />
+        </>
+      )}
+      {hasSnow && (
+        <>
+          <rect x="10" y="32" width="3" height="7" fill="var(--color-frost)" />
+          <rect x="8" y="34" width="7" height="3" fill="var(--color-frost)" />
+          <rect x="24" y="32" width="3" height="7" fill="var(--color-frost)" />
+          <rect x="22" y="34" width="7" height="3" fill="var(--color-frost)" />
+        </>
+      )}
+      {kind === "wind" && (
+        <>
+          <rect x="5" y="13" width="24" height="4" fill="var(--color-wind)" />
+          <rect x="11" y="22" width="24" height="4" fill="var(--color-wind-ink)" />
+          <rect x="5" y="31" width="18" height="4" fill="var(--color-wind)" />
+          <rect x="29" y="9" width="5" height="4" fill="var(--color-sakura)" />
+          <rect x="34" y="13" width="4" height="4" fill="var(--color-sakura)" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function GeneratedPixelAvatar({
+  gender,
+  frameDelay,
+}: Readonly<{
+  gender: PartnerGender;
+  frameDelay: number;
+}>) {
+  return (
+    <span
+      className="map-avatar-sprite pixelated"
+      aria-hidden="true"
+      style={{
+        backgroundImage: `url(${avatarSpriteByGender[gender]})`,
+        animationDelay: `${frameDelay}s`,
+      }}
+    />
+  );
+}
+
+function CoupleMarker({
+  profile,
+  weather,
+  x,
+  y,
+  index,
+}: Readonly<{
+  profile: PartnerProfile;
+  weather: WeatherInfo;
+  x: number;
+  y: number;
+  index: number;
+}>) {
+  return (
+    <div
+      className="pointer-events-none absolute z-10 flex w-28 -translate-x-1/2 -translate-y-full flex-col items-center"
+      style={{ left: `${x}%`, top: `${y}%` }}
+    >
+      <div className="mb-1">
+        <MapWeatherIcon kind={weather.kind} />
+      </div>
+      <GeneratedPixelAvatar gender={profile.gender ?? "neutral"} frameDelay={index * -0.16} />
+      <div className="mt-0.5 max-w-full truncate rounded-[7px] border border-dim/74 bg-cream/88 px-2 py-1 text-[10px] font-semibold text-ink/72 shadow-[0_8px_18px_rgba(90,102,112,0.1)]">
+        {profile.name || "TA"} · {weather.label} {weather.temp}°
+      </div>
+    </div>
+  );
+}
 
 // The South China Sea ten-dash line, drawn as a small standalone inset box so it
 // is always visible and never overlapped by floating cards on the main map.
@@ -102,6 +218,8 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [memberProfiles, setMemberProfiles] = useState<Record<string, PartnerProfile>>({});
+  const [markerWeather, setMarkerWeather] = useState<Record<string, WeatherInfo>>({});
   const router = useRouter();
   const { data: memoryData } = useMemorySummary();
   const memorySummary = useMemo(() => memoryData?.summary ?? {}, [memoryData?.summary]);
@@ -113,6 +231,37 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
     update();
     mql.addEventListener("change", update);
     return () => mql.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const syncSettings = () => {
+      const settings = readAppSettings();
+      const profiles = normalizeMemberProfiles(settings.memberProfiles);
+      const session = readSession();
+      const memberKey = session?.user?.id || session?.user?.username || "local-user";
+
+      if (Object.keys(profiles).length > 0) {
+        setMemberProfiles(profiles);
+        return;
+      }
+
+      setMemberProfiles({
+        [memberKey]: {
+          name: session?.user?.displayName || session?.user?.username || "我",
+          gender: "neutral",
+          cityId: defaultSelfCityId,
+        },
+      });
+    };
+
+    syncSettings();
+    window.addEventListener(appSettingsUpdatedEvent, syncSettings);
+    window.addEventListener("storage", syncSettings);
+
+    return () => {
+      window.removeEventListener(appSettingsUpdatedEvent, syncSettings);
+      window.removeEventListener("storage", syncSettings);
+    };
   }, []);
 
   const provinceStats = useMemo(() => {
@@ -173,6 +322,59 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
       d: curvedRoutePath(points),
     };
   }, [height, localMemories, width]);
+
+  const coupleMarkers = useMemo(() => {
+    const projection = makeProjection(width, height, 24);
+    const entries = Object.entries(memberProfiles).slice(0, 4);
+
+    return entries
+      .map(([key, profile], index) => {
+        const city = cityById.get(profile.cityId ?? "");
+        if (!city) return null;
+
+        const projected = projection([city.lng, city.lat]);
+        if (!projected) return null;
+
+        const [x, y] = projected;
+
+        return {
+          key,
+          profile,
+          index,
+          city,
+          x: (stableCoordinate(x) / width) * 100,
+          y: (stableCoordinate(y) / height) * 100,
+        };
+      })
+      .filter(Boolean) as Array<{
+        key: string;
+        profile: PartnerProfile;
+        index: number;
+        city: (typeof cities)[number];
+        x: number;
+        y: number;
+      }>;
+  }, [height, memberProfiles, width]);
+
+  useEffect(() => {
+    if (coupleMarkers.length === 0) return;
+    let cancelled = false;
+
+    async function loadMarkerWeather() {
+      const entries = await Promise.all(
+        coupleMarkers.map(async (marker) => [marker.city.id, await fetchCityWeather(marker.city)] as const),
+      );
+      if (!cancelled) setMarkerWeather(Object.fromEntries(entries));
+    }
+
+    void loadMarkerWeather();
+    const interval = window.setInterval(loadMarkerWeather, 30 * 60_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [coupleMarkers]);
 
   const selectedPath = selectedProvinceId ? mapPaths.find((path) => path.id === selectedProvinceId) : undefined;
   const selectedStats = selectedProvinceId ? provinceStats.get(selectedProvinceId) : undefined;
@@ -447,6 +649,21 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
             </g>
           </svg>
 
+          {coupleMarkers.map((marker) => (
+            <CoupleMarker
+              key={`${marker.key}-${marker.city.id}`}
+              profile={marker.profile}
+              weather={markerWeather[marker.city.id] ?? {
+                cityId: marker.city.id,
+                temp: weatherFallbackTemp,
+                kind: "partly",
+                label: "多云",
+              }}
+              x={marker.x}
+              y={marker.y}
+              index={marker.index}
+            />
+          ))}
         </div>
       </motion.div>
 

@@ -12,13 +12,14 @@ import {
   Map as MapIcon,
   MessageCircle,
   MoreHorizontal,
+  Settings,
   Star,
 } from "lucide-react";
 import { PageTransition } from "@/components/PageTransition";
 
 const githubUrl = "https://github.com/qq570850096/our-memories";
 
-export type MemoryNavKey = "map" | "memories" | "favorites" | "anniversaries" | "capsule" | "whispers";
+export type MemoryNavKey = "map" | "memories" | "favorites" | "anniversaries" | "capsule" | "whispers" | "settings";
 
 const navItems = [
   { key: "map", label: "地图", icon: MapIcon, href: "/map" },
@@ -27,6 +28,7 @@ const navItems = [
   { key: "favorites", label: "双人日记", icon: NotebookPen, href: "/favorites" },
   { key: "whispers", label: "悄悄话", icon: MessageCircle, href: "/whispers" },
   { key: "capsule", label: "时光宝盒", icon: Archive, href: "/time-capsule" },
+  { key: "settings", label: "设置", icon: Settings, href: "/settings" },
 ] satisfies Array<{
   key: MemoryNavKey;
   label: string;
@@ -35,7 +37,7 @@ const navItems = [
 }>;
 
 const mainNavKeys: MemoryNavKey[] = ["map", "memories", "anniversaries"];
-const moreNavKeys: MemoryNavKey[] = ["whispers", "favorites", "capsule"];
+const moreNavKeys: MemoryNavKey[] = ["whispers", "favorites", "capsule", "settings"];
 
 function MobileBottomNav({
   active,
