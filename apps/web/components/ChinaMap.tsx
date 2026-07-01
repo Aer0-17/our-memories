@@ -63,6 +63,20 @@ const initialZoom = 1.3;
 const maxZoom = 1.75;
 const minZoom = 1;
 const stableCoordinate = (value: number) => Number(value.toFixed(3));
+
+function profileSprite(profile: PartnerProfile, weather: WeatherInfo): GeneratedSpriteAsset {
+  if (profile.avatarSprite) {
+    return {
+      src: profile.avatarSprite,
+      fallbackSrc: profile.avatarSpriteFallback,
+      width: 1024,
+      height: 1024,
+      frames: 4,
+    };
+  }
+  return characterSprite(profile.gender ?? "neutral", weather.kind);
+}
+
 function AnimatedSprite({
   asset,
   className,
@@ -135,7 +149,7 @@ function CoupleMarker({
         </button>
       )}
       <AnimatedSprite
-        asset={characterSprite(profile.gender ?? "neutral", weather.kind)}
+        asset={profileSprite(profile, weather)}
         className="map-avatar-sprite"
         frameDelay={index * -0.16}
       />

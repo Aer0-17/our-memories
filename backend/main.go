@@ -83,6 +83,8 @@ func main() {
 			admin.POST("/orders/:id/confirm", handlers.ConfirmOrder)
 
 			admin.GET("/stats", handlers.GetStats)
+			admin.GET("/image-generation", handlers.GetImageGenerationSettings)
+			admin.PUT("/image-generation", handlers.UpdateImageGenerationSettings)
 		}
 
 		auth := api.Group("")
@@ -126,6 +128,7 @@ func main() {
 
 			auth.GET("/settings", handlers.GetSettings)
 			auth.PUT("/settings/:key", handlers.UpdateSetting)
+			auth.POST("/settings/avatar-sprite", handlers.GenerateAvatarSprite)
 			auth.GET("/agent/settings", handlers.GetAgentSettings)
 			auth.PATCH("/agent/settings", handlers.UpdateAgentSettings)
 			auth.POST("/agent/ignored", handlers.IgnoreAgentSuggestion)

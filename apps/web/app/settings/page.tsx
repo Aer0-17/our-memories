@@ -5,9 +5,11 @@ import Link from "next/link";
 import {
   CloudSun,
   Download,
+  ImageIcon,
   MapPin,
   RefreshCw,
   Save,
+  Sparkles,
   Upload,
   UserRound,
 } from "lucide-react";
@@ -30,6 +32,7 @@ import {
 } from "@/data/appSettings";
 import { cities } from "@/data/cities";
 import { provinces } from "@/data/provinces";
+import { apiJson } from "@/lib/apiClient";
 import { authSessionUpdatedEvent, readSession, sessionKey, type StoredSession } from "@/lib/authStore";
 
 type BackupPayload = {
@@ -98,6 +101,20 @@ function readBackupLocalStorage() {
 
   return data;
 }
+
+function readFileAsDataURL(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+type AvatarSpriteResponse = {
+  profile?: PartnerProfile;
+  url?: string;
+};
 
 function SelfSettingsCard({
   displayName,
@@ -177,7 +194,12 @@ export default function SettingsPage() {
     cityId: defaultSelfCityId,
   });
   const [saving, setSaving] = useState(false);
+  const [avatarPrompt, setAvatarPrompt] = useState("");
+  const [avatarReference, setAvatarReference] = useState("");
+  const [avatarReferenceName, setAvatarReferenceName] = useState("");
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -194,6 +216,7 @@ export default function SettingsPage() {
         ...profiles[memberKey],
         name: sessionDisplayName(nextSession),
       });
+      setAvatarPrompt(profiles[memberKey]?.avatarPrompt ?? "");
     }, 0);
 
     const syncSession = () => setSession(readSession());
@@ -222,6 +245,69 @@ export default function SettingsPage() {
       toast("设置已保存在本机，同步到后端失败", "warning");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleAvatarReference = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast("请选择图片文件", "error");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast("参考图不要超过 8MB", "error");
+      return;
+    }
+    try {
+      setAvatarReference(await readFileAsDataURL(file));
+      setAvatarReferenceName(file.name);
+    } catch {
+      toast("读取图片失败", "error");
+    }
+  };
+
+  const handleGenerateAvatar = async () => {
+    if (!readSession()) {
+      toast("请先登录后再生成地图角色", "warning");
+      return;
+    }
+    if (!avatarPrompt.trim() && !avatarReference) {
+      toast("请先输入提示词或上传参考照片", "warning");
+      return;
+    }
+
+    setGeneratingAvatar(true);
+    try {
+      const response = await apiJson<AvatarSpriteResponse>("/settings/avatar-sprite", {
+        method: "POST",
+        body: JSON.stringify({
+          prompt: avatarPrompt.trim(),
+          referenceImage: avatarReference,
+          gender: profile.gender ?? "neutral",
+          displayName,
+        }),
+      });
+      const nextProfile: PartnerProfile = {
+        ...profile,
+        ...response.profile,
+        avatarSprite: response.profile?.avatarSprite ?? response.url ?? profile.avatarSprite,
+        avatarPrompt: avatarPrompt.trim() || response.profile?.avatarPrompt,
+        name: displayName,
+      };
+      const nextSettings = settingsWithProfile(settings, memberKey, nextProfile, displayName);
+      window.localStorage.setItem(appSettingsStorageKey, JSON.stringify(normalizeAppSettings(nextSettings)));
+      window.dispatchEvent(new CustomEvent(appSettingsUpdatedEvent, { detail: normalizeAppSettings(nextSettings) }));
+      setSettings(normalizeAppSettings(nextSettings));
+      setProfile(nextProfile);
+      setAvatarReference("");
+      setAvatarReferenceName("");
+      toast("地图角色已生成并上传", "success");
+    } catch {
+      toast("地图角色生成失败，请检查管理端生图节点", "error");
+    } finally {
+      setGeneratingAvatar(false);
     }
   };
 
@@ -310,6 +396,13 @@ export default function SettingsPage() {
           accept="application/json,.json"
           onChange={handleRestoreFile}
         />
+        <input
+          ref={avatarInputRef}
+          className="hidden"
+          type="file"
+          accept="image/*"
+          onChange={handleAvatarReference}
+        />
 
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
           <SelfSettingsCard
@@ -331,6 +424,57 @@ export default function SettingsPage() {
             </div>
           </Card>
         </div>
+
+        <Card padding="md">
+          <CardHeader
+            title={
+              <span className="inline-flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-bloom" />
+                生成地图角色
+              </span>
+            }
+            subtitle="上传参考照片或写一段提示词，生成后会自动上传并更新地图上的像素小人。"
+          />
+          <div className="mt-5 grid gap-4 lg:grid-cols-[140px_minmax(0,1fr)]">
+            <div className="flex min-h-36 items-center justify-center rounded-[8px] border border-dim/80 bg-white/58">
+              {profile.avatarSprite ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  className="max-h-32 max-w-32 object-contain pixelated"
+                  src={profile.avatarSprite}
+                  alt="当前地图角色"
+                />
+              ) : (
+                <UserRound className="h-10 w-10 text-ink/32" />
+              )}
+            </div>
+            <div className="grid gap-3">
+              <label className="grid gap-1.5 text-sm font-semibold text-ink/72">
+                提示词
+                <textarea
+                  className="min-h-24 w-full resize-y rounded-[7px] border border-dim/80 bg-cream/76 px-3 py-2 text-sm text-ink outline-none transition focus:border-sky focus:bg-white"
+                  value={avatarPrompt}
+                  maxLength={600}
+                  placeholder="例如：短发、暖色围巾、可爱但清晰的人类像素小人"
+                  onChange={(event) => setAvatarPrompt(event.target.value)}
+                />
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="secondary" onClick={() => avatarInputRef.current?.click()} disabled={generatingAvatar}>
+                  <ImageIcon className="h-4 w-4" />
+                  参考照片
+                </Button>
+                {avatarReferenceName && (
+                  <span className="max-w-full truncate text-sm text-ink/58">{avatarReferenceName}</span>
+                )}
+                <Button onClick={handleGenerateAvatar} disabled={generatingAvatar}>
+                  {generatingAvatar ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {generatingAvatar ? "生成中" : "生成并上传"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
 
         <Card padding="md">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

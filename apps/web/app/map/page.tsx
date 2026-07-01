@@ -3,7 +3,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import ChinaMap, { SouthChinaSeaInset } from "@/components/ChinaMap";
-import BackToLoginButton from "@/components/BackToLoginButton";
 import {
   LegendProgress,
   MobileRitualStats,
@@ -157,9 +156,6 @@ export default function MapPage() {
                 </p>
               </div>
               <ProgressBadge />
-            </div>
-            <div className="pr-14 sm:pr-16">
-              <BackToLoginButton />
             </div>
           </header>
 

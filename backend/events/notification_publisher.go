@@ -63,6 +63,8 @@ func notificationMessage(event DomainEvent) (string, string, bool) {
 		return "新的悄悄话", "TA 留下了一条悄悄话。", true
 	case WhisperReplied:
 		return "悄悄话有回复", "TA 回复了一条悄悄话。", true
+	case AvatarGenerated:
+		return "地图角色已更新", "TA 生成了新的地图像素角色。", true
 	default:
 		return "", "", false
 	}
@@ -80,6 +82,8 @@ func targetType(eventType Type) string {
 		return "whisper"
 	case SignalCreated:
 		return "signal"
+	case AvatarGenerated:
+		return "settings"
 	default:
 		return ""
 	}

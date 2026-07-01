@@ -225,9 +225,15 @@ export function AnniversaryGallery({ card, onClose }: Readonly<AnniversaryGaller
         </div>
       </div>
 
-      <div className="relative z-10 grid h-full place-items-center px-0 py-20 sm:px-12">
+      <div
+        className="relative z-10 grid h-full place-items-center px-0 sm:px-12"
+        style={{
+          paddingTop: "calc(env(safe-area-inset-top) + 5.75rem)",
+          paddingBottom: "calc(env(safe-area-inset-bottom) + 8.75rem)",
+        }}
+      >
         {activePhoto ? (
-          <LocalPrivacyImg className="max-h-full w-full object-contain" src={activePhoto} alt={`${card.title} 画廊照片`} />
+          <LocalPrivacyImg className="h-full max-h-full w-full max-w-full object-contain" src={activePhoto} alt={`${card.title} 画廊照片`} />
         ) : (
           <div className="grid h-full w-full place-items-center text-cream/52">没有照片</div>
         )}
@@ -260,9 +266,9 @@ export function AnniversaryGallery({ card, onClose }: Readonly<AnniversaryGaller
         </>
       )}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-ink/82 to-transparent px-4 pb-5 pt-16">
+      <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-ink/82 to-transparent px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-16">
         <div className="mx-auto max-w-3xl">
-          {card.note && <p className="text-sm leading-7 text-cream/82">{card.note}</p>}
+          {card.note && <p className="max-h-[22dvh] overflow-y-auto text-sm leading-7 text-cream/82">{card.note}</p>}
           <div className="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-cream/58">
             <span>{photos.length > 0 ? `${index + 1} / ${photos.length}` : "0 / 0"}</span>
             {musicBlocked ? (

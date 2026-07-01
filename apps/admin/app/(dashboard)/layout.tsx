@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logout, getSession, type AdminSession } from "@/lib/api";
-import { LayoutDashboard, Users, Package, DollarSign, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Package, DollarSign, LogOut, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { href: "/users", label: "用户管理", icon: Users },
   { href: "/orders", label: "订单管理", icon: DollarSign },
   { href: "/backup", label: "备份迁移", icon: Package },
+  { href: "/image-generation", label: "生图节点", icon: Sparkles },
 ];
 
 export default function DashboardLayout({

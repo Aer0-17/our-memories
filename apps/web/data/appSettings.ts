@@ -28,6 +28,18 @@ export type PartnerProfile = {
   name?: string;
   gender?: PartnerGender;
   cityId?: string;
+  avatarSprite?: string;
+  avatarSpriteFallback?: string;
+  avatarPrompt?: string;
+  avatarSpriteHistory?: AvatarSpriteHistoryItem[];
+};
+
+export type AvatarSpriteHistoryItem = {
+  url: string;
+  key?: string;
+  prompt?: string;
+  generatedAt?: string;
+  nodeId?: string;
 };
 
 export type CoupleProfiles = {
@@ -59,6 +71,9 @@ const validPartnerGenders = new Set<PartnerGender>(["female", "male", "neutral"]
 const isValidLogo = (value: unknown): value is string =>
   typeof value === "string" && (value.startsWith("data:image/") || value.startsWith("/") || value.startsWith("https://"));
 
+const isValidImageURL = (value: unknown): value is string =>
+  typeof value === "string" && (value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://"));
+
 const cleanString = (value: unknown, maxLength: number): string | undefined => {
   if (typeof value !== "string") return undefined;
   const trimmed = value.trim();
@@ -80,7 +95,30 @@ const normalizePartnerProfile = (value: unknown, fallback: PartnerProfile): Part
     name: cleanString(profile.name, 16) ?? fallback.name,
     gender,
     cityId: cleanString(profile.cityId, 40) ?? fallback.cityId,
+    avatarSprite: isValidImageURL(profile.avatarSprite) ? profile.avatarSprite : fallback.avatarSprite,
+    avatarSpriteFallback: isValidImageURL(profile.avatarSpriteFallback) ? profile.avatarSpriteFallback : fallback.avatarSpriteFallback,
+    avatarPrompt: cleanString(profile.avatarPrompt, 260) ?? fallback.avatarPrompt,
+    avatarSpriteHistory: normalizeAvatarSpriteHistory(profile.avatarSpriteHistory ?? fallback.avatarSpriteHistory),
   };
+};
+
+const normalizeAvatarSpriteHistory = (value: unknown): AvatarSpriteHistoryItem[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const items = value
+    .map((item) => {
+      if (typeof item !== "object" || item === null || Array.isArray(item)) return null;
+      const historyItem = item as AvatarSpriteHistoryItem;
+      if (!isValidImageURL(historyItem.url)) return null;
+      return {
+        url: historyItem.url,
+        key: cleanString(historyItem.key, 240),
+        prompt: cleanString(historyItem.prompt, 260),
+        generatedAt: cleanString(historyItem.generatedAt, 40),
+        nodeId: cleanString(historyItem.nodeId, 120),
+      };
+    })
+    .filter(Boolean) as AvatarSpriteHistoryItem[];
+  return items.length > 0 ? items.slice(-5) : undefined;
 };
 
 export const normalizeCoupleProfiles = (value: unknown): Required<CoupleProfiles> => {

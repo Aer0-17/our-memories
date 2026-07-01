@@ -27,6 +27,7 @@ const (
 	WhisperDeleted     Type = "whisper.deleted"
 	WhisperTyping      Type = "whisper.typing"
 	SignalCreated      Type = "signal.created"
+	AvatarGenerated    Type = "avatar.generated"
 )
 
 type DomainEvent struct {

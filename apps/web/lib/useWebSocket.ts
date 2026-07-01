@@ -5,6 +5,7 @@ import { useSWRConfig } from "swr";
 import { apiBaseUrl, refreshAccessToken } from "@/lib/apiClient";
 import { useAuth } from "@/lib/authContext";
 import { readSession } from "@/lib/authStore";
+import { syncAppSettings } from "@/data/appSettings";
 
 export type RealtimeEvent = {
   type: string;
@@ -42,6 +43,10 @@ function shouldRefreshAnniversaries(event: RealtimeEvent) {
 
 function shouldRefreshSignals(event: RealtimeEvent) {
   return event.type.startsWith("signal.") || event.targetType === "signal";
+}
+
+function shouldRefreshSettings(event: RealtimeEvent) {
+  return event.type === "avatar.generated" || event.targetType === "settings";
 }
 
 function tokenExpiresSoon(token: string) {
@@ -85,7 +90,7 @@ export function useWebSocket() {
   const retryRef = useRef(0);
 
   useEffect(() => {
-    if (!session?.accessToken || typeof window === "undefined") return;
+    if (!session || typeof window === "undefined") return;
 
     let closed = false;
     let socket: WebSocket | null = null;
@@ -93,10 +98,11 @@ export function useWebSocket() {
 
     const connect = async () => {
       if (closed) return;
-      if (tokenExpiresSoon(readSession()?.accessToken ?? session.accessToken)) {
+      const currentToken = readSession()?.accessToken;
+      if (currentToken && tokenExpiresSoon(currentToken)) {
         await refreshAccessToken();
       }
-      const token = readSession()?.accessToken ?? session.accessToken;
+      const token = readSession()?.accessToken;
       if (!token || closed) return;
       const url = `${wsBaseUrl()}/api/v1/ws?token=${encodeURIComponent(token)}`;
       socket = new WebSocket(url);
@@ -127,6 +133,9 @@ export function useWebSocket() {
         if (shouldRefreshSignals(event)) {
           void mutate("/signals");
         }
+        if (shouldRefreshSettings(event)) {
+          void syncAppSettings();
+        }
       };
 
       socket.onclose = () => {
@@ -150,5 +159,5 @@ export function useWebSocket() {
       if (activeSocket === socket) activeSocket = null;
       socket?.close();
     };
-  }, [mutate, session?.accessToken]);
+  }, [mutate, session]);
 }
