@@ -28,6 +28,7 @@ type memberProfileForAvatar struct {
 	CityID               string                    `json:"cityId,omitempty"`
 	AvatarSprite         string                    `json:"avatarSprite,omitempty"`
 	AvatarSpriteFallback string                    `json:"avatarSpriteFallback,omitempty"`
+	AvatarSpriteFrames   int                       `json:"avatarSpriteFrames,omitempty"`
 	AvatarPrompt         string                    `json:"avatarPrompt,omitempty"`
 	AvatarSpriteHistory  []avatarSpriteHistoryItem `json:"avatarSpriteHistory,omitempty"`
 }
@@ -111,6 +112,7 @@ func GenerateAvatarSprite(c *gin.Context) {
 		profile.Gender = req.Gender
 	}
 	profile.AvatarSprite = url
+	profile.AvatarSpriteFrames = 1
 	profile.AvatarPrompt = req.Prompt
 	profile.AvatarSpriteHistory = appendAvatarSpriteHistory(profile.AvatarSpriteHistory, avatarSpriteHistoryItem{
 		URL:         url,

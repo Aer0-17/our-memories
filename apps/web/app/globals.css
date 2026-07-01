@@ -161,6 +161,13 @@ button {
   height: 2rem;
 }
 
+.map-custom-avatar-sprite {
+  width: 2.15rem;
+  height: 2.15rem;
+  background-position: center bottom;
+  background-size: contain;
+}
+
 .map-couple-sprite {
   width: 3.72rem;
   height: 2.2rem;
@@ -175,6 +182,11 @@ button {
   .map-avatar-sprite {
     width: 2.08rem;
     height: 2.24rem;
+  }
+
+  .map-custom-avatar-sprite {
+    width: 2.42rem;
+    height: 2.42rem;
   }
 
   .map-couple-sprite {

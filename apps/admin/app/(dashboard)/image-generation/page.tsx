@@ -145,7 +145,7 @@ export default function ImageGenerationPage() {
           <div>
             <h2 className="font-semibold text-[var(--foreground)]">角色提示词模板</h2>
             <p className="text-sm text-[var(--muted-foreground)]">
-              用占位符拼接用户提示词，统一控制像素边缘、帧动画和画风质量。
+              用占位符拼接用户提示词，统一控制人物比例、像素边缘和画风质量。
             </p>
           </div>
         </div>

@@ -71,10 +71,14 @@ function profileSprite(profile: PartnerProfile, weather: WeatherInfo): Generated
       fallbackSrc: profile.avatarSpriteFallback,
       width: 1024,
       height: 1024,
-      frames: 4,
+      frames: profile.avatarSpriteFrames ?? 1,
     };
   }
   return characterSprite(profile.gender ?? "neutral", weather.kind);
+}
+
+function avatarSpriteClass(profile: PartnerProfile) {
+  return profile.avatarSprite ? "map-avatar-sprite map-custom-avatar-sprite" : "map-avatar-sprite";
 }
 
 function AnimatedSprite({
@@ -150,7 +154,7 @@ function CoupleMarker({
       )}
       <AnimatedSprite
         asset={profileSprite(profile, weather)}
-        className="map-avatar-sprite"
+        className={avatarSpriteClass(profile)}
         frameDelay={index * -0.16}
       />
       {!showWeather && (

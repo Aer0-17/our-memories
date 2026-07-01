@@ -30,6 +30,7 @@ export type PartnerProfile = {
   cityId?: string;
   avatarSprite?: string;
   avatarSpriteFallback?: string;
+  avatarSpriteFrames?: number;
   avatarPrompt?: string;
   avatarSpriteHistory?: AvatarSpriteHistoryItem[];
 };
@@ -97,9 +98,15 @@ const normalizePartnerProfile = (value: unknown, fallback: PartnerProfile): Part
     cityId: cleanString(profile.cityId, 40) ?? fallback.cityId,
     avatarSprite: isValidImageURL(profile.avatarSprite) ? profile.avatarSprite : fallback.avatarSprite,
     avatarSpriteFallback: isValidImageURL(profile.avatarSpriteFallback) ? profile.avatarSpriteFallback : fallback.avatarSpriteFallback,
+    avatarSpriteFrames: normalizeSpriteFrames(profile.avatarSpriteFrames ?? fallback.avatarSpriteFrames),
     avatarPrompt: cleanString(profile.avatarPrompt, 260) ?? fallback.avatarPrompt,
     avatarSpriteHistory: normalizeAvatarSpriteHistory(profile.avatarSpriteHistory ?? fallback.avatarSpriteHistory),
   };
+};
+
+const normalizeSpriteFrames = (value: unknown): number | undefined => {
+  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
+  return value >= 1 && value <= 4 ? Math.round(value) : undefined;
 };
 
 const normalizeAvatarSpriteHistory = (value: unknown): AvatarSpriteHistoryItem[] | undefined => {

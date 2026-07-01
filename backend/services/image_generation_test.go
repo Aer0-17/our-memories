@@ -15,7 +15,8 @@ func TestAvatarSpritePromptIncludesPixelQualityGuardrails(t *testing.T) {
 	for _, want := range []string{
 		"crisp hand-placed pixel art",
 		"clear hard pixel edges",
-		"exactly four equal animation frames",
+		"one complete full-body character",
+		"Do not create a sprite sheet",
 		"Negative prompt:",
 		"blurry",
 		"short black hair and red scarf",
