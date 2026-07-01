@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { apiGet, apiPost } from "@/lib/api";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle2, RefreshCw, ReceiptText } from "lucide-react";
+import { Badge, Button, EmptyState, LoadingState, Notice, PageHeader, Pagination, Panel } from "@/components/admin-ui";
+import { formatCurrency, formatDateTime, shortId } from "@/lib/format";
 
 interface Order {
   id: string;
@@ -25,154 +27,157 @@ interface OrdersResponse {
   pageSize: number;
 }
 
+const pageSize = 20;
+
+const statusLabel: Record<string, string> = {
+  pending: "待处理",
+  paid: "已支付",
+  cancelled: "已取消",
+};
+
+function statusTone(status: string) {
+  if (status === "paid") return "success" as const;
+  if (status === "pending") return "warning" as const;
+  if (status === "cancelled") return "danger" as const;
+  return "neutral" as const;
+}
+
 export default function OrdersPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
+  const [busyId, setBusyId] = useState("");
+  const [notice, setNotice] = useState<{ type: "success" | "danger"; text: string } | null>(null);
 
-  const { data, mutate } = useSWR<OrdersResponse>(
-    `/api/v1/admin/orders?page=${page}&pageSize=20&status=${status}`,
-    apiGet
-  );
+  const query = useMemo(() => {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (status) params.set("status", status);
+    return params.toString();
+  }, [page, status]);
 
-  const handleConfirmOrder = async (orderId: string) => {
-    if (!confirm("确认标记此订单为已付款？")) return;
+  const { data, error, mutate, isLoading } = useSWR<OrdersResponse>(`/api/v1/admin/orders?${query}`, apiGet);
+
+  const handleConfirmOrder = async (order: Order) => {
+    const confirmed = window.confirm(`确认将订单 ${shortId(order.id)} 标记为已付款，并升级空间 ${order.spaceCode}？`);
+    if (!confirmed) return;
+    setBusyId(order.id);
+    setNotice(null);
     try {
-      await apiPost(`/api/v1/admin/orders/${orderId}/confirm`);
-      mutate();
-      alert("订单已确认");
+      await apiPost(`/api/v1/admin/orders/${order.id}/confirm`);
+      await mutate();
+      setNotice({ type: "success", text: "订单已确认，空间已升级为终身版" });
     } catch {
-      alert("操作失败");
+      setNotice({ type: "danger", text: "订单确认失败，可能已被处理或不存在" });
+    } finally {
+      setBusyId("");
     }
   };
 
+  const orders = data?.orders || [];
+
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-[var(--foreground)]">
-          订单管理
-        </h1>
-        <p className="text-[var(--muted-foreground)] mt-2">
-          查看和处理付费订单
-        </p>
-      </div>
+      <PageHeader
+        title="订单管理"
+        description="查看付费订单并手动确认待处理订单，确认后会同步升级对应空间。"
+        actions={
+          <Button variant="secondary" onClick={() => mutate()} disabled={isLoading}>
+            <RefreshCw size={16} />
+            刷新
+          </Button>
+        }
+      />
 
-      {/* Filter */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-6">
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="px-4 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-        >
-          <option value="">全部状态</option>
-          <option value="pending">待处理</option>
-          <option value="paid">已支付</option>
-          <option value="cancelled">已取消</option>
-        </select>
-      </div>
+      {notice && (
+        <div className="mb-5">
+          <Notice type={notice.type}>{notice.text}</Notice>
+        </div>
+      )}
 
-      {/* Table */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-[var(--muted)] border-b border-[var(--border)]">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-medium text-[var(--foreground)]">
-                订单号
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-[var(--foreground)]">
-                空间
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-[var(--foreground)]">
-                金额
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-[var(--foreground)]">
-                状态
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-[var(--foreground)]">
-                创建时间
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-medium text-[var(--foreground)]">
-                操作
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--border)]">
-            {data?.orders.map((order) => (
-              <tr key={order.id} className="hover:bg-[var(--muted)]">
-                <td className="px-6 py-4 text-sm font-mono text-xs">
-                  {order.id.substring(0, 12)}...
-                </td>
-                <td className="px-6 py-4 text-sm">
-                  <div>
-                    <div className="font-medium">{order.spaceName}</div>
-                    <div className="text-xs text-[var(--muted-foreground)]">
-                      {order.spaceCode}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm font-semibold">
-                  ¥{order.amount.toFixed(2)}
-                </td>
-                <td className="px-6 py-4">
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                      order.status === "paid"
-                        ? "bg-green-100 text-green-700"
-                        : order.status === "pending"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {order.status === "paid"
-                      ? "已支付"
-                      : order.status === "pending"
-                      ? "待处理"
-                      : "已取消"}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-[var(--muted-foreground)]">
-                  {new Date(order.createdAt).toLocaleDateString("zh-CN")}
-                </td>
-                <td className="px-6 py-4">
-                  {order.status === "pending" && (
-                    <button
-                      onClick={() => handleConfirmOrder(order.id)}
-                      className="flex items-center gap-1 text-sm text-[var(--primary)] hover:underline"
-                    >
-                      <CheckCircle size={16} />
-                      确认支付
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <Panel className="mb-5">
+        <div className="grid gap-3 p-4 sm:grid-cols-[220px_1fr]">
+          <select
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setPage(1);
+            }}
+            className="rounded-lg border border-[var(--border)] px-3 py-2.5"
+          >
+            <option value="">全部状态</option>
+            <option value="pending">待处理</option>
+            <option value="paid">已支付</option>
+            <option value="cancelled">已取消</option>
+          </select>
+          <div className="flex items-center gap-2 rounded-lg border border-dashed border-[var(--border)] px-3 py-2 text-sm text-[var(--muted-foreground)]">
+            <ReceiptText size={16} />
+            当前筛选：{status ? statusLabel[status] : "全部订单"}
+          </div>
+        </div>
+      </Panel>
 
-        {/* Pagination */}
-        {data && data.total > 0 && (
-          <div className="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between">
-            <div className="text-sm text-[var(--muted-foreground)]">
-              共 {data.total} 个订单
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 text-sm border border-[var(--border)] rounded hover:bg-[var(--muted)] disabled:opacity-50"
-              >
-                上一页
-              </button>
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={!data || data.orders.length < data.pageSize}
-                className="px-3 py-1 text-sm border border-[var(--border)] rounded hover:bg-[var(--muted)] disabled:opacity-50"
-              >
-                下一页
-              </button>
-            </div>
+      <Panel>
+        {error && <EmptyState title="订单加载失败" description="请确认管理端登录状态或后端服务。" />}
+        {!error && isLoading && <LoadingState />}
+        {!error && !isLoading && orders.length === 0 && <EmptyState title="没有匹配的订单" description="调整状态筛选后再试。" />}
+        {!error && orders.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-sm">
+              <thead className="border-b border-[var(--border)] bg-[var(--muted)] text-left">
+                <tr>
+                  <th className="px-5 py-3 font-medium">订单</th>
+                  <th className="px-5 py-3 font-medium">空间</th>
+                  <th className="px-5 py-3 font-medium">金额</th>
+                  <th className="px-5 py-3 font-medium">状态</th>
+                  <th className="px-5 py-3 font-medium">时间</th>
+                  <th className="px-5 py-3 text-right font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {orders.map((order) => (
+                  <tr key={order.id} className="transition hover:bg-[var(--muted)]/70">
+                    <td className="px-5 py-4">
+                      <div className="font-mono text-xs text-[var(--foreground)]">{shortId(order.id)}</div>
+                      <div className="mt-1 text-xs text-[var(--muted-foreground)]">
+                        {order.paymentMethod || "manual"}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="font-medium">{order.spaceName || "未命名空间"}</div>
+                      <div className="mt-1 font-mono text-xs text-[var(--muted-foreground)]">{order.spaceCode}</div>
+                    </td>
+                    <td className="px-5 py-4 font-semibold">{formatCurrency(order.amount, order.currency || "CNY")}</td>
+                    <td className="px-5 py-4">
+                      <Badge tone={statusTone(order.status)}>{statusLabel[order.status] || order.status}</Badge>
+                    </td>
+                    <td className="px-5 py-4 text-[var(--muted-foreground)]">
+                      <div>{formatDateTime(order.createdAt)}</div>
+                      {order.paidAt && <div className="mt-1 text-xs">支付：{formatDateTime(order.paidAt)}</div>}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      {order.status === "pending" ? (
+                        <Button
+                          variant="secondary"
+                          loading={busyId === order.id}
+                          onClick={() => handleConfirmOrder(order)}
+                        >
+                          <CheckCircle2 size={16} />
+                          确认支付
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-[var(--muted-foreground)]">无可用操作</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
-      </div>
+        {data && data.total > 0 && <Pagination page={page} total={data.total} pageSize={data.pageSize} onPageChange={setPage} />}
+      </Panel>
     </div>
   );
 }

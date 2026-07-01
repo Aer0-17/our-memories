@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { login } from "@/lib/api";
+import { Button, Notice } from "@/components/admin-ui";
+import { LockKeyhole, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,8 +13,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError("");
     setLoading(true);
 
@@ -27,60 +29,91 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--muted)] p-4">
-      <div className="w-full max-w-md bg-[var(--card)] rounded-xl shadow-sm border border-[var(--border)] p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-[var(--foreground)] mb-2">
-            Our Memories Admin
-          </h1>
-          <p className="text-sm text-[var(--muted-foreground)]">管理员登录</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="username" className="block text-sm font-medium mb-2">
-              用户名
-            </label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              required
-              disabled={loading}
-            />
+    <div className="min-h-screen bg-slate-950 px-4 py-8 text-white">
+      <div className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-6xl items-center gap-8 lg:grid-cols-[1fr_420px]">
+        <section className="hidden lg:block">
+          <div className="mb-8 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300">
+            <ShieldCheck size={18} className="text-teal-300" />
+            私有部署管理控制台
           </div>
+          <h1 className="max-w-2xl text-5xl font-semibold leading-tight tracking-normal">
+            Our Memories
+            <span className="mt-3 block text-slate-300">把空间、用户、订单和迁移集中管理。</span>
+          </h1>
+          <div className="mt-10 grid max-w-3xl grid-cols-3 gap-3">
+            {["空间状态", "备份迁移", "生图节点"].map((item) => (
+              <div key={item} className="rounded-lg border border-white/10 bg-white/5 px-4 py-5">
+                <Sparkles size={20} className="mb-4 text-teal-300" />
+                <div className="text-sm font-medium text-white">{item}</div>
+                <div className="mt-1 text-xs text-slate-400">Admin ready</div>
+              </div>
+            ))}
+          </div>
+        </section>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-2">
-              密码
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
-              required
-              disabled={loading}
-            />
+        <div className="w-full rounded-lg border border-white/10 bg-white p-6 text-[var(--foreground)] shadow-2xl sm:p-8">
+          <div className="mb-8">
+            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-50 text-[var(--primary)]">
+              <ShieldCheck size={24} />
+            </div>
+            <h2 className="text-2xl font-semibold">管理员登录</h2>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+              使用部署时创建的管理员账号进入后台。
+            </p>
           </div>
 
           {error && (
-            <div className="text-sm text-[var(--destructive)] bg-red-50 border border-red-200 rounded-lg p-3">
-              {error}
+            <div className="mb-5">
+              <Notice type="danger">{error}</Notice>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[var(--primary)] text-white py-2 px-4 rounded-lg hover:opacity-90 transition disabled:opacity-50"
-          >
-            {loading ? "登录中..." : "登录"}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <label className="grid gap-2 text-sm font-medium">
+              用户名
+              <div className="relative">
+                <UserRound
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]"
+                />
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  className="w-full rounded-lg border border-[var(--border)] py-2.5 pl-10 pr-3"
+                  required
+                  disabled={loading}
+                  autoComplete="username"
+                />
+              </div>
+            </label>
+
+            <label className="grid gap-2 text-sm font-medium">
+              密码
+              <div className="relative">
+                <LockKeyhole
+                  size={18}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]"
+                />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="w-full rounded-lg border border-[var(--border)] py-2.5 pl-10 pr-3"
+                  required
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+              </div>
+            </label>
+
+            <Button type="submit" loading={loading} className="w-full">
+              登录后台
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );

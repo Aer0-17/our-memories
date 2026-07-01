@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fefdfb;
-  --foreground: #1f2421;
+  --background: #f6f7f9;
+  --foreground: #18202f;
   --card: #ffffff;
-  --card-foreground: #1f2421;
-  --border: #e7e1d7;
-  --primary: #c4612f;
+  --card-foreground: #18202f;
+  --border: #dce2ea;
+  --primary: #0f766e;
+  --primary-hover: #115e59;
   --primary-foreground: #ffffff;
-  --secondary: #f2e3d6;
-  --muted: #f7f4ef;
-  --muted-foreground: #5c635d;
-  --destructive: #dc2626;
+  --secondary: #e7f4f2;
+  --muted: #eef2f6;
+  --muted-foreground: #647084;
+  --destructive: #e11d48;
   --destructive-foreground: #ffffff;
   --radius: 0.5rem;
 }
@@ -22,10 +23,10 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background: var(--background);
   color: var(--foreground);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 a {
@@ -36,4 +37,30 @@ a {
 button {
   font-family: inherit;
   cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  background: #ffffff;
+  color: var(--foreground);
+  font: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 68%, white);
+  outline-offset: 2px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+::selection {
+  background: #99f6e4;
+  color: #0f172a;
 }
