@@ -154,36 +154,113 @@
   "weather": {
     "sunny": {
       "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-sunny.webp",
-      "width": 160,
-      "height": 160,
+      "width": 176,
+      "height": 44,
       "frames": 4,
       "fallbackSrc": "/sprites/weather/generated/weather-sunny.webp"
     },
+    "night-clear": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-night-clear.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-night-clear.webp"
+    },
+    "partly": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-partly.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-partly.webp"
+    },
+    "night-partly": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-night-partly.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-night-partly.webp"
+    },
     "cloudy": {
       "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-cloudy.webp",
-      "width": 160,
-      "height": 160,
+      "width": 176,
+      "height": 44,
       "frames": 4,
       "fallbackSrc": "/sprites/weather/generated/weather-cloudy.webp"
     },
+    "fog": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-fog.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-fog.webp"
+    },
+    "light-rain": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-light-rain.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-light-rain.webp"
+    },
     "rain": {
       "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-rain.webp",
-      "width": 160,
-      "height": 160,
+      "width": 176,
+      "height": 44,
       "frames": 4,
       "fallbackSrc": "/sprites/weather/generated/weather-rain.webp"
     },
+    "moderate-rain": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-moderate-rain.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-moderate-rain.webp"
+    },
+    "heavy-rain": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-heavy-rain.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-heavy-rain.webp"
+    },
+    "thunder": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-thunder.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-thunder.webp"
+    },
+    "sleet": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-sleet.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-sleet.webp"
+    },
     "snow": {
       "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-snow.webp",
-      "width": 160,
-      "height": 160,
+      "width": 176,
+      "height": 44,
       "frames": 4,
       "fallbackSrc": "/sprites/weather/generated/weather-snow.webp"
     },
+    "moderate-snow": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-moderate-snow.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-moderate-snow.webp"
+    },
+    "heavy-snow": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-heavy-snow.webp",
+      "width": 176,
+      "height": 44,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-heavy-snow.webp"
+    },
     "wind": {
       "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-wind.webp",
-      "width": 160,
-      "height": 160,
+      "width": 176,
+      "height": 44,
       "frames": 4,
       "fallbackSrc": "/sprites/weather/generated/weather-wind.webp"
     }

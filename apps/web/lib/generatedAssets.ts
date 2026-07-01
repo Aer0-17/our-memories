@@ -11,6 +11,7 @@ export type GeneratedSpriteAsset = {
 };
 
 export type GeneratedWeatherGroup = "sunny" | "cloudy" | "rain" | "snow" | "wind";
+type GeneratedWeatherIconMap = Partial<Record<WeatherKind, GeneratedSpriteAsset>> & Record<GeneratedWeatherGroup, GeneratedSpriteAsset>;
 
 const weatherGroupByKind: Record<WeatherKind, GeneratedWeatherGroup> = {
   sunny: "sunny",
@@ -35,7 +36,7 @@ const generatedAssets = manifest as {
   frameCount: number;
   characters: Record<PartnerGender, Record<GeneratedWeatherGroup, GeneratedSpriteAsset>>;
   couple: Record<GeneratedWeatherGroup, GeneratedSpriteAsset>;
-  weather: Record<GeneratedWeatherGroup, GeneratedSpriteAsset>;
+  weather: GeneratedWeatherIconMap;
   flowers: GeneratedSpriteAsset[];
 };
 
@@ -62,7 +63,7 @@ export function coupleSprite(kind: WeatherKind) {
 }
 
 export function weatherSprite(kind: WeatherKind) {
-  return preferLocalAsset(generatedAssets.weather[weatherAssetGroup(kind)]);
+  return preferLocalAsset(generatedAssets.weather[kind] ?? generatedAssets.weather[weatherAssetGroup(kind)]);
 }
 
 export function flowerSprite(variant: number) {

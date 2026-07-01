@@ -94,7 +94,34 @@ function AnimatedSprite({
   frameDelay?: number;
 }>) {
   const [failedSrc, setFailedSrc] = useState("");
+  const [naturalSize, setNaturalSize] = useState({ src: "", width: asset.width, height: asset.height });
   const src = failedSrc === asset.src && asset.fallbackSrc ? asset.fallbackSrc : asset.src;
+  const frames = asset.frames ?? 4;
+  const spriteSize = naturalSize.src === src ? naturalSize : { width: asset.width, height: asset.height };
+  const frameWidth = Math.max(1, spriteSize.width / frames);
+  const frameHeight = Math.max(1, spriteSize.height);
+
+  useEffect(() => {
+    let active = true;
+    const image = new window.Image();
+    image.onload = () => {
+      if (!active) return;
+      setNaturalSize({
+        src,
+        width: image.naturalWidth || asset.width,
+        height: image.naturalHeight || asset.height,
+      });
+    };
+    image.onerror = () => {
+      if (active && asset.fallbackSrc && src === asset.src) {
+        setFailedSrc(asset.src);
+      }
+    };
+    image.src = src;
+    return () => {
+      active = false;
+    };
+  }, [asset.fallbackSrc, asset.height, asset.src, asset.width, src]);
 
   return (
     <span
@@ -102,23 +129,11 @@ function AnimatedSprite({
       aria-hidden="true"
       style={{
         "--sprite-url": `url(${src})`,
-        "--sprite-frames": asset.frames ?? 4,
+        "--sprite-frames": frames,
+        "--sprite-frame-aspect": `${frameWidth} / ${frameHeight}`,
         animationDelay: `${frameDelay}s`,
       } as CSSProperties}
-    >
-      {asset.fallbackSrc && src === asset.src ? (
-        <Image
-          className="hidden"
-          src={asset.src}
-          alt=""
-          width={1}
-          height={1}
-          unoptimized
-          aria-hidden="true"
-          onError={() => setFailedSrc(asset.src)}
-        />
-      ) : null}
-    </span>
+    />
   );
 }
 
