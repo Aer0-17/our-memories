@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode, type SVGProps } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { CalendarDays, Heart, Images, RefreshCw } from "lucide-react";
 import { LocalPrivacyImage } from "@/components/LocalPrivacyImage";
 import { cities } from "@/data/cities";
@@ -27,9 +28,9 @@ import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore
 import { pullRefreshEvent } from "@/lib/refresh";
 import { useDeferredReady } from "@/lib/useDeferredReady";
 import { useIsMobile } from "@/lib/useIsMobile";
+import { flowerSprite } from "@/lib/generatedAssets";
 import {
-  buildWeatherUrl,
-  getWeatherKind,
+  fetchCitiesWeather,
   weatherFallbackTemp,
   type WeatherInfo,
   type WeatherKind,
@@ -65,15 +66,6 @@ function useAppSettings(): AppSettings {
 
   return settings;
 }
-
-type OpenMeteoCurrent = {
-  current?: {
-    temperature_2m?: number;
-    weather_code?: number;
-    wind_speed_10m?: number;
-    is_day?: number;
-  };
-};
 
 const daysTogether = (date?: string) => {
   const normalizedDate = normalizeAnniversaryDate(date);
@@ -248,29 +240,10 @@ function WeatherCard() {
 
     async function loadWeather() {
       setIsLoading(true);
-      const entries = await Promise.all(
-        locationCities.map(async ({ city, fallbackTemp }) => {
-          const response = await fetch(buildWeatherUrl(city.lat, city.lng)).catch(() => null);
-          const data = response?.ok ? ((await response.json().catch(() => null)) as OpenMeteoCurrent | null) : null;
-          const current = data?.current;
-          const temp = Math.round(current?.temperature_2m ?? fallbackTemp);
-          const weatherCode = current?.weather_code ?? 0;
-          const windSpeed = current?.wind_speed_10m ?? 0;
-          const mapped = getWeatherKind(weatherCode, windSpeed, (current?.is_day ?? 1) === 1);
-
-          return [
-            city.id,
-            {
-              cityId: city.id,
-              temp,
-              ...mapped,
-            },
-          ] as const;
-        }),
-      );
+      const nextWeather = await fetchCitiesWeather(locationCities.map(({ city, fallbackTemp }) => ({ city, fallbackTemp })));
 
       if (!cancelled) {
-        setWeather(Object.fromEntries(entries));
+        setWeather(nextWeather);
         setUpdatedAt(new Date());
         setIsLoading(false);
       }
@@ -597,13 +570,6 @@ export function MobileRitualStats() {
   );
 }
 
-const flowerVariants = [
-  "/sprites/decorations/generated/flower-v0.png",
-  "/sprites/decorations/generated/flower-v1.png",
-  "/sprites/decorations/generated/flower-v2.png",
-  "/sprites/decorations/generated/flower-v3.png",
-];
-
 function PixelFlower({
   className,
   variant,
@@ -611,12 +577,20 @@ function PixelFlower({
   className?: string;
   variant: number;
 }>) {
+  const flower = flowerSprite(variant);
+
   return (
-    <img
-      src={flowerVariants[variant % 4]}
+    <Image
+      src={flower.src}
       alt=""
+      width={64}
+      height={64}
       className={`pixelated h-8 w-8 ${className ?? ""}`}
       aria-hidden="true"
+      onError={(event) => {
+        if (!flower.fallbackSrc || event.currentTarget.src.endsWith(flower.fallbackSrc)) return;
+        event.currentTarget.src = flower.fallbackSrc;
+      }}
     />
   );
 }

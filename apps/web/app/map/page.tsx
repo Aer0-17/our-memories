@@ -13,6 +13,7 @@ import {
 } from "@/components/HomeProgress";
 import RandomPhotoCard from "@/components/RandomPhotoCard";
 import { MapTimeCapsules } from "@/components/MapTimeCapsules";
+import MapWeatherCarousel from "@/components/MapWeatherCarousel";
 import { MapPageShell } from "@/components/MemoryNav";
 
 function BrandMark() {
@@ -147,8 +148,9 @@ export default function MapPage() {
                 <h1 className="truncate text-xl font-semibold leading-tight tracking-normal text-ink sm:text-[28px]">
                   我们的回忆
                 </h1>
-                <div className="mt-1 sm:hidden">
+                <div className="mt-1.5 grid gap-1">
                   <TogetherDaysBadge compact />
+                  <MapWeatherCarousel />
                 </div>
                 <p className="mt-0.5 hidden text-sm font-medium text-ink/62 sm:mt-1 sm:block sm:text-base">
                   我们的地图

@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "frameCount": 4,
+  "characters": {
+    "female": {
+      "sunny": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-female-sunny.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-female-sunny.webp"
+      },
+      "cloudy": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-female-cloudy.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-female-cloudy.webp"
+      },
+      "rain": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-female-rain.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-female-rain.webp"
+      },
+      "snow": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-female-snow.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-female-snow.webp"
+      },
+      "wind": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-female-wind.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-female-wind.webp"
+      }
+    },
+    "male": {
+      "sunny": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-male-sunny.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-male-sunny.webp"
+      },
+      "cloudy": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-male-cloudy.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-male-cloudy.webp"
+      },
+      "rain": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-male-rain.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-male-rain.webp"
+      },
+      "snow": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-male-snow.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-male-snow.webp"
+      },
+      "wind": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-male-wind.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-male-wind.webp"
+      }
+    },
+    "neutral": {
+      "sunny": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-neutral-sunny.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-neutral-sunny.webp"
+      },
+      "cloudy": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-neutral-cloudy.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-neutral-cloudy.webp"
+      },
+      "rain": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-neutral-rain.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-neutral-rain.webp"
+      },
+      "snow": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-neutral-snow.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-neutral-snow.webp"
+      },
+      "wind": {
+        "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-avatar-neutral-wind.webp",
+        "width": 320,
+        "height": 160,
+        "frames": 4,
+        "fallbackSrc": "/sprites/characters/generated/map-avatar-neutral-wind.webp"
+      }
+    }
+  },
+  "couple": {
+    "sunny": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-couple-holding-sunny.webp",
+      "width": 448,
+      "height": 176,
+      "frames": 4,
+      "fallbackSrc": "/sprites/characters/generated/map-couple-holding-sunny.webp"
+    },
+    "cloudy": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-couple-holding-cloudy.webp",
+      "width": 448,
+      "height": 176,
+      "frames": 4,
+      "fallbackSrc": "/sprites/characters/generated/map-couple-holding-cloudy.webp"
+    },
+    "rain": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-couple-holding-rain.webp",
+      "width": 448,
+      "height": 176,
+      "frames": 4,
+      "fallbackSrc": "/sprites/characters/generated/map-couple-holding-rain.webp"
+    },
+    "snow": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-couple-holding-snow.webp",
+      "width": 448,
+      "height": 176,
+      "frames": 4,
+      "fallbackSrc": "/sprites/characters/generated/map-couple-holding-snow.webp"
+    },
+    "wind": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/map-couple-holding-wind.webp",
+      "width": 448,
+      "height": 176,
+      "frames": 4,
+      "fallbackSrc": "/sprites/characters/generated/map-couple-holding-wind.webp"
+    }
+  },
+  "weather": {
+    "sunny": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-sunny.webp",
+      "width": 160,
+      "height": 160,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-sunny.webp"
+    },
+    "cloudy": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-cloudy.webp",
+      "width": 160,
+      "height": 160,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-cloudy.webp"
+    },
+    "rain": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-rain.webp",
+      "width": 160,
+      "height": 160,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-rain.webp"
+    },
+    "snow": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-snow.webp",
+      "width": 160,
+      "height": 160,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-snow.webp"
+    },
+    "wind": {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/weather-wind.webp",
+      "width": 160,
+      "height": 160,
+      "frames": 4,
+      "fallbackSrc": "/sprites/weather/generated/weather-wind.webp"
+    }
+  },
+  "flowers": [
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/badge-flower-0.png",
+      "width": 96,
+      "height": 96,
+      "fallbackSrc": "/sprites/decorations/generated/badge-flower-0.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/badge-flower-1.png",
+      "width": 96,
+      "height": 96,
+      "fallbackSrc": "/sprites/decorations/generated/badge-flower-1.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/badge-flower-2.png",
+      "width": 96,
+      "height": 96,
+      "fallbackSrc": "/sprites/decorations/generated/badge-flower-2.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/badge-flower-3.png",
+      "width": 96,
+      "height": 96,
+      "fallbackSrc": "/sprites/decorations/generated/badge-flower-3.png"
+    }
+  ]
+}

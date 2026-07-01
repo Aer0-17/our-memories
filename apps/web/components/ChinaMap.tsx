@@ -30,11 +30,16 @@ import {
   defaultSelfCityId,
   normalizeMemberProfiles,
   readAppSettings,
-  type PartnerGender,
   type PartnerProfile,
 } from "@/data/appSettings";
 import { readSession } from "@/lib/authStore";
-import { fetchCityWeather, weatherFallbackTemp, type WeatherInfo, type WeatherKind } from "@/lib/weather";
+import { fetchCitiesWeather, weatherFallbackTemp, type WeatherInfo } from "@/lib/weather";
+import {
+  characterSprite,
+  coupleSprite,
+  weatherSprite,
+  type GeneratedSpriteAsset,
+} from "@/lib/generatedAssets";
 
 interface ChinaMapProps {
   width?: number;
@@ -54,84 +59,45 @@ const colors = {
 const provinceById = new Map(provinces.map((province) => [province.id, province]));
 const cityById = new Map(cities.map((city) => [city.id, city]));
 const easyTapProvinceIds = new Set(["hongkong", "macau"]);
-const maxZoom = 1.45;
+const initialZoom = 1.3;
+const maxZoom = 1.75;
 const minZoom = 1;
 const stableCoordinate = (value: number) => Number(value.toFixed(3));
-const avatarSpriteByGender: Record<PartnerGender, string> = {
-  female: "/sprites/characters/generated/map-avatar-female.png",
-  male: "/sprites/characters/generated/map-avatar-male.png",
-  neutral: "/sprites/characters/generated/map-avatar-neutral.png",
-};
-
-function MapWeatherIcon({ kind }: Readonly<{ kind: WeatherKind }>) {
-  const hasSun = kind === "sunny" || kind === "partly";
-  const hasCloud = !["sunny", "night-clear", "fog", "wind"].includes(kind);
-  const hasRain = ["rain", "light-rain", "moderate-rain", "heavy-rain", "thunder", "sleet"].includes(kind);
-  const hasSnow = ["snow", "moderate-snow", "heavy-snow", "sleet"].includes(kind);
-
-  return (
-    <svg className="pixelated h-10 w-10" viewBox="0 0 40 40" aria-hidden="true" shapeRendering="crispEdges">
-      {hasSun && (
-        <>
-          <rect x="15" y="2" width="4" height="5" fill="var(--color-amber)" />
-          <rect x="4" y="15" width="5" height="4" fill="var(--color-amber)" />
-          <rect x="28" y="15" width="5" height="4" fill="var(--color-amber)" />
-          <rect x="15" y="28" width="4" height="5" fill="var(--color-amber)" />
-          <rect x="10" y="10" width="18" height="18" fill="var(--color-sunshine)" />
-          <rect x="14" y="8" width="10" height="22" fill="var(--color-sunlit)" />
-        </>
-      )}
-      {hasCloud && (
-        <>
-          <rect x="7" y="17" width="26" height="13" fill={kind === "cloudy" ? "var(--color-storm)" : "var(--color-sky-light)"} />
-          <rect x="13" y="11" width="16" height="10" fill={kind === "cloudy" ? "var(--color-storm-light)" : "white"} />
-          <rect x="4" y="22" width="31" height="9" fill={kind === "cloudy" ? "var(--color-storm-pale)" : "var(--color-rain-mist)"} />
-        </>
-      )}
-      {hasRain && (
-        <>
-          <rect x="10" y="32" width="3" height="6" fill="var(--color-rain-bright)" />
-          <rect x="19" y="32" width="3" height="6" fill="var(--color-rain-bright)" />
-          <rect x="28" y="32" width="3" height="6" fill="var(--color-rain-bright)" />
-        </>
-      )}
-      {hasSnow && (
-        <>
-          <rect x="10" y="32" width="3" height="7" fill="var(--color-frost)" />
-          <rect x="8" y="34" width="7" height="3" fill="var(--color-frost)" />
-          <rect x="24" y="32" width="3" height="7" fill="var(--color-frost)" />
-          <rect x="22" y="34" width="7" height="3" fill="var(--color-frost)" />
-        </>
-      )}
-      {kind === "wind" && (
-        <>
-          <rect x="5" y="13" width="24" height="4" fill="var(--color-wind)" />
-          <rect x="11" y="22" width="24" height="4" fill="var(--color-wind-ink)" />
-          <rect x="5" y="31" width="18" height="4" fill="var(--color-wind)" />
-          <rect x="29" y="9" width="5" height="4" fill="var(--color-sakura)" />
-          <rect x="34" y="13" width="4" height="4" fill="var(--color-sakura)" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-function GeneratedPixelAvatar({
-  gender,
-  frameDelay,
+function AnimatedSprite({
+  asset,
+  className,
+  frameDelay = 0,
 }: Readonly<{
-  gender: PartnerGender;
-  frameDelay: number;
+  asset: GeneratedSpriteAsset;
+  className: string;
+  frameDelay?: number;
 }>) {
+  const [failedSrc, setFailedSrc] = useState("");
+  const src = failedSrc === asset.src && asset.fallbackSrc ? asset.fallbackSrc : asset.src;
+
   return (
     <span
-      className="map-avatar-sprite pixelated"
+      className={`generated-sprite pixelated ${className}`}
       aria-hidden="true"
       style={{
-        backgroundImage: `url(${avatarSpriteByGender[gender]})`,
+        "--sprite-url": `url(${src})`,
+        "--sprite-frames": asset.frames ?? 4,
         animationDelay: `${frameDelay}s`,
-      }}
-    />
+      } as CSSProperties}
+    >
+      {asset.fallbackSrc && src === asset.src ? (
+        <Image
+          className="hidden"
+          src={asset.src}
+          alt=""
+          width={1}
+          height={1}
+          unoptimized
+          aria-hidden="true"
+          onError={() => setFailedSrc(asset.src)}
+        />
+      ) : null}
+    </span>
   );
 }
 
@@ -148,18 +114,87 @@ function CoupleMarker({
   y: number;
   index: number;
 }>) {
+  const [showWeather, setShowWeather] = useState(true);
+
   return (
     <div
-      className="pointer-events-none absolute z-10 flex w-28 -translate-x-1/2 -translate-y-full flex-col items-center"
+      className="absolute z-10 flex w-10 -translate-x-1/2 -translate-y-full flex-col items-center sm:w-12"
       style={{ left: `${x}%`, top: `${y}%` }}
     >
-      <div className="mb-1">
-        <MapWeatherIcon kind={weather.kind} />
-      </div>
-      <GeneratedPixelAvatar gender={profile.gender ?? "neutral"} frameDelay={index * -0.16} />
-      <div className="mt-0.5 max-w-full truncate rounded-[7px] border border-dim/74 bg-cream/88 px-2 py-1 text-[10px] font-semibold text-ink/72 shadow-[0_8px_18px_rgba(90,102,112,0.1)]">
-        {profile.name || "TA"} · {weather.label} {weather.temp}°
-      </div>
+      {showWeather && (
+        <button
+          className="pointer-events-auto"
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setShowWeather(false);
+          }}
+          aria-label="隐藏天气图标"
+        >
+          <AnimatedSprite asset={weatherSprite(weather.kind)} className="map-weather-sprite" frameDelay={index * -0.12} />
+        </button>
+      )}
+      <AnimatedSprite
+        asset={characterSprite(profile.gender ?? "neutral", weather.kind)}
+        className="map-avatar-sprite"
+        frameDelay={index * -0.16}
+      />
+      {!showWeather && (
+        <button
+          className="pointer-events-auto mt-0.5 h-2.5 w-2.5 rounded-full bg-sky/55"
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setShowWeather(true);
+          }}
+          aria-label="显示天气图标"
+        />
+      )}
+    </div>
+  );
+}
+
+function CoupleTogetherMarker({
+  weather,
+  x,
+  y,
+}: Readonly<{
+  weather: WeatherInfo;
+  x: number;
+  y: number;
+}>) {
+  const [showWeather, setShowWeather] = useState(true);
+
+  return (
+    <div
+      className="absolute z-10 flex w-20 -translate-x-1/2 -translate-y-full flex-col items-center sm:w-24"
+      style={{ left: `${x}%`, top: `${y}%` }}
+    >
+      {showWeather && (
+        <button
+          className="pointer-events-auto"
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setShowWeather(false);
+          }}
+          aria-label="隐藏天气图标"
+        >
+          <AnimatedSprite asset={weatherSprite(weather.kind)} className="map-weather-sprite" />
+        </button>
+      )}
+      <AnimatedSprite asset={coupleSprite(weather.kind)} className="map-couple-sprite" />
+      {!showWeather && (
+        <button
+          className="pointer-events-auto mt-0.5 h-2.5 w-2.5 rounded-full bg-sky/55"
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            setShowWeather(true);
+          }}
+          aria-label="显示天气图标"
+        />
+      )}
     </div>
   );
 }
@@ -216,7 +251,7 @@ export function SouthChinaSeaInset({ compact = false }: Readonly<{ compact?: boo
 export default function ChinaMap({ width = 1100, height = 860, className }: ChinaMapProps) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(initialZoom);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [memberProfiles, setMemberProfiles] = useState<Record<string, PartnerProfile>>({});
   const [markerWeather, setMarkerWeather] = useState<Record<string, WeatherInfo>>({});
@@ -356,15 +391,25 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
       }>;
   }, [height, memberProfiles, width]);
 
+  const sameCityCoupleMarker = useMemo(() => {
+    if (coupleMarkers.length < 2) return null;
+    const firstCityId = coupleMarkers[0]?.city.id;
+    if (!firstCityId || !coupleMarkers.every((marker) => marker.city.id === firstCityId)) return null;
+
+    return {
+      city: coupleMarkers[0].city,
+      x: coupleMarkers.reduce((sum, marker) => sum + marker.x, 0) / coupleMarkers.length,
+      y: coupleMarkers.reduce((sum, marker) => sum + marker.y, 0) / coupleMarkers.length,
+    };
+  }, [coupleMarkers]);
+
   useEffect(() => {
     if (coupleMarkers.length === 0) return;
     let cancelled = false;
 
     async function loadMarkerWeather() {
-      const entries = await Promise.all(
-        coupleMarkers.map(async (marker) => [marker.city.id, await fetchCityWeather(marker.city)] as const),
-      );
-      if (!cancelled) setMarkerWeather(Object.fromEntries(entries));
+      const weather = await fetchCitiesWeather(coupleMarkers.map((marker) => ({ city: marker.city })));
+      if (!cancelled) setMarkerWeather(weather);
     }
 
     void loadMarkerWeather();
@@ -439,8 +484,8 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
         <button
           className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-mint/48 disabled:opacity-35 sm:h-9 sm:w-9"
           type="button"
-          onClick={() => setZoom(1)}
-          disabled={zoom === 1}
+          onClick={() => setZoom(initialZoom)}
+          disabled={zoom === initialZoom}
           aria-label="重置中国地图缩放"
         >
           <RotateCcw className="h-4 w-4" />
@@ -649,21 +694,34 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
             </g>
           </svg>
 
-          {coupleMarkers.map((marker) => (
-            <CoupleMarker
-              key={`${marker.key}-${marker.city.id}`}
-              profile={marker.profile}
-              weather={markerWeather[marker.city.id] ?? {
-                cityId: marker.city.id,
+          {sameCityCoupleMarker ? (
+            <CoupleTogetherMarker
+              weather={markerWeather[sameCityCoupleMarker.city.id] ?? {
+                cityId: sameCityCoupleMarker.city.id,
                 temp: weatherFallbackTemp,
                 kind: "partly",
                 label: "多云",
               }}
-              x={marker.x}
-              y={marker.y}
-              index={marker.index}
+              x={sameCityCoupleMarker.x}
+              y={sameCityCoupleMarker.y}
             />
-          ))}
+          ) : (
+            coupleMarkers.map((marker) => (
+              <CoupleMarker
+                key={`${marker.key}-${marker.city.id}`}
+                profile={marker.profile}
+                weather={markerWeather[marker.city.id] ?? {
+                  cityId: marker.city.id,
+                  temp: weatherFallbackTemp,
+                  kind: "partly",
+                  label: "多云",
+                }}
+                x={marker.x}
+                y={marker.y}
+                index={marker.index}
+              />
+            ))
+          )}
         </div>
       </motion.div>
 

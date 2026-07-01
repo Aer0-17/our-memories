@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/config"
@@ -40,9 +41,15 @@ func main() {
 	jobs.StartScheduler(db.Gorm, dispatcher)
 
 	r := gin.Default()
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Fatal("Failed to configure trusted proxies:", err)
+	}
 
 	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.OriginGuard())
 	r.Use(middleware.BodySizeLimit(64 << 20)) // 64MB 上限：图片走前端直传 OSS，本服务只收 JSON（含备份导入）
+	authLimiter := middleware.RateLimit(5*time.Minute, 20)
+	refreshLimiter := middleware.RateLimit(time.Minute, 60)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"ok": true})
@@ -51,12 +58,14 @@ func main() {
 
 	api := r.Group("/api/v1")
 	{
-		api.POST("/auth/login", handlers.Login)
-		api.POST("/auth/refresh", handlers.Refresh)
+		api.POST("/auth/login", authLimiter, handlers.Login)
+		api.POST("/auth/refresh", refreshLimiter, handlers.Refresh)
+		api.POST("/auth/logout", handlers.Logout)
 		api.GET("/ws", handlers.WebSocket)
 
 		// 管理员路由
-		api.POST("/admin/login", handlers.AdminLogin)
+		api.POST("/admin/login", authLimiter, handlers.AdminLogin)
+		api.POST("/admin/logout", handlers.AdminLogout)
 		admin := api.Group("/admin")
 		admin.Use(middleware.AdminAuthMiddleware())
 		{
@@ -88,6 +97,7 @@ func main() {
 			auth.PATCH("/notifications/:id/read", handlers.MarkNotificationRead)
 			auth.GET("/signals", handlers.GetSignals)
 			auth.POST("/signals", handlers.CreateSignal)
+			auth.POST("/weather", handlers.GetWeather)
 
 			auth.GET("/memories", handlers.GetMemories)
 			auth.GET("/memories/search", handlers.SearchMemories)

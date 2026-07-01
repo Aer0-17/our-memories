@@ -1,4 +1,5 @@
 import type { City } from "@/data/cities";
+import { apiJson } from "@/lib/apiClient";
 
 export const weatherFallbackTemp = 24;
 
@@ -36,6 +37,15 @@ type OpenMeteoCurrent = {
   };
 };
 
+type WeatherPoint = {
+  city: City;
+  fallbackTemp?: number;
+};
+
+type WeatherApiResponse = {
+  weather?: Record<string, WeatherInfo>;
+};
+
 export function getWeatherKind(code: number, windSpeed: number, isDay: boolean): { kind: WeatherKind; label: string } {
   if (windSpeed >= 38) return { kind: "wind", label: "大风" };
   if (code === 0) return isDay ? { kind: "sunny", label: "晴" } : { kind: "night-clear", label: "夜晴" };
@@ -69,6 +79,43 @@ export function buildWeatherUrl(lat: number, lng: number) {
 }
 
 export async function fetchCityWeather(city: City, fallbackTemp = weatherFallbackTemp): Promise<WeatherInfo> {
+  const weather = await fetchCitiesWeather([{ city, fallbackTemp }]);
+  return weather[city.id] ?? fetchCityWeatherDirect(city, fallbackTemp);
+}
+
+export async function fetchCitiesWeather(points: WeatherPoint[]): Promise<Record<string, WeatherInfo>> {
+  const uniquePoints = Array.from(
+    new Map(points.map((point) => [point.city.id, point])).values(),
+  );
+  if (uniquePoints.length === 0) return {};
+
+  try {
+    const data = await apiJson<WeatherApiResponse>("/weather", {
+      method: "POST",
+      body: JSON.stringify({
+        points: uniquePoints.map(({ city, fallbackTemp = weatherFallbackTemp }) => ({
+          cityId: city.id,
+          lat: city.lat,
+          lng: city.lng,
+          fallbackTemp,
+        })),
+      }),
+    });
+    if (data.weather) return data.weather;
+  } catch {
+    // Fall through to direct Open-Meteo calls for static export or offline backend cases.
+  }
+
+  const entries = await Promise.all(
+    uniquePoints.map(async ({ city, fallbackTemp = weatherFallbackTemp }) => [
+      city.id,
+      await fetchCityWeatherDirect(city, fallbackTemp),
+    ] as const),
+  );
+  return Object.fromEntries(entries);
+}
+
+export async function fetchCityWeatherDirect(city: City, fallbackTemp = weatherFallbackTemp): Promise<WeatherInfo> {
   const response = await fetch(buildWeatherUrl(city.lat, city.lng)).catch(() => null);
   const data = response?.ok ? ((await response.json().catch(() => null)) as OpenMeteoCurrent | null) : null;
   const current = data?.current;

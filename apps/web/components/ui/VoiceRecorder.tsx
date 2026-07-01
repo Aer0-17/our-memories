@@ -21,13 +21,85 @@ const preferredMimeTypes = [
   "audio/mpeg",
 ];
 
+type LegacyGetUserMedia = (
+  constraints: MediaStreamConstraints,
+  onSuccess: (stream: MediaStream) => void,
+  onError: (error: DOMException) => void,
+) => void;
+
+type LegacyNavigator = Navigator & {
+  getUserMedia?: LegacyGetUserMedia;
+  mozGetUserMedia?: LegacyGetUserMedia;
+  webkitGetUserMedia?: LegacyGetUserMedia;
+};
+
 function supportedMimeType() {
   if (typeof MediaRecorder === "undefined") return "";
+  if (typeof MediaRecorder.isTypeSupported !== "function") return "";
   return preferredMimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) ?? "";
 }
 
 function formatSeconds(seconds: number) {
   return `0:${Math.max(0, seconds).toString().padStart(2, "0")}`;
+}
+
+function isLocalSecureException(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function hasAudioInputAccess() {
+  if (typeof navigator === "undefined") return undefined;
+  const legacyNavigator = navigator as LegacyNavigator;
+  return Boolean(legacyNavigator.mediaDevices?.getUserMedia ?? legacyNavigator.getUserMedia ?? legacyNavigator.webkitGetUserMedia ?? legacyNavigator.mozGetUserMedia);
+}
+
+function recordingSupportError() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return "录音功能需要在浏览器中使用";
+  }
+  if (!window.isSecureContext && !isLocalSecureException(window.location.hostname)) {
+    return "录音需要 HTTPS 或 localhost 环境，请用 HTTPS 地址打开后再试";
+  }
+  if (!hasAudioInputAccess()) {
+    return "当前浏览器或内置 WebView 不支持麦克风访问，请用 Chrome、Edge、Safari 或系统浏览器打开";
+  }
+  if (typeof MediaRecorder === "undefined") {
+    return "当前浏览器不支持网页录音编码，请用 Chrome、Edge 或 Safari 14.1 以上版本打开";
+  }
+  return "";
+}
+
+function getAudioStream(constraints: MediaStreamConstraints) {
+  if (navigator.mediaDevices?.getUserMedia) {
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }
+  const legacyNavigator = navigator as LegacyNavigator;
+  const getUserMedia = legacyNavigator.getUserMedia ?? legacyNavigator.webkitGetUserMedia ?? legacyNavigator.mozGetUserMedia;
+  if (!getUserMedia) return Promise.reject(new DOMException("getUserMedia is not supported", "NotSupportedError"));
+
+  return new Promise<MediaStream>((resolve, reject) => {
+    getUserMedia.call(legacyNavigator, constraints, resolve, reject);
+  });
+}
+
+function recordingStartErrorMessage(error: unknown) {
+  const name = error instanceof DOMException ? error.name : "";
+  if (name === "NotAllowedError" || name === "PermissionDeniedError") {
+    return "麦克风权限被拒绝，请在系统设置中允许后再录音";
+  }
+  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
+    return "没有检测到可用麦克风，请连接麦克风后再试";
+  }
+  if (name === "NotReadableError" || name === "TrackStartError") {
+    return "麦克风正被其他应用占用，请关闭占用后再录音";
+  }
+  if (name === "SecurityError") {
+    return "录音需要 HTTPS 或 localhost 环境，请用 HTTPS 地址打开后再试";
+  }
+  if (name === "NotSupportedError") {
+    return "当前浏览器或内置 WebView 不支持录音，请用 Chrome、Edge、Safari 或系统浏览器打开";
+  }
+  return "麦克风启动失败，请检查权限后再试";
 }
 
 export function VoiceRecorder({
@@ -83,13 +155,14 @@ export function VoiceRecorder({
 
   const start = async () => {
     if (disabled || recording || uploading) return;
-    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
-      fail("当前浏览器不支持录音");
+    const supportError = recordingSupportError();
+    if (supportError) {
+      fail(supportError);
       return;
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await getAudioStream({ audio: true });
       const mimeType = supportedMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
@@ -122,8 +195,7 @@ export function VoiceRecorder({
       stopTimerRef.current = window.setTimeout(() => stop(), maxSeconds * 1000);
     } catch (error) {
       cleanupStream();
-      const name = error instanceof DOMException ? error.name : "";
-      fail(name === "NotAllowedError" ? "麦克风权限被拒绝，请在系统设置中允许后再录音" : "请允许麦克风权限后再录音");
+      fail(recordingStartErrorMessage(error));
     }
   };
 
