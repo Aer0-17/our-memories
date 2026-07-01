@@ -7,23 +7,24 @@ import (
 	"our-memories-backend/utils"
 )
 
+const (
+	AccessTokenCookieName  = "mapofus_access_token"
+	RefreshTokenCookieName = "mapofus_refresh_token"
+)
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
+		token := bearerToken(c.GetHeader("Authorization"))
+		if token == "" {
+			token, _ = c.Cookie(AccessTokenCookieName)
+		}
+		if token == "" {
 			utils.Error(c, 401, "Authentication required")
 			c.Abort()
 			return
 		}
 
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			utils.Error(c, 401, "Invalid authorization header")
-			c.Abort()
-			return
-		}
-
-		claims, err := utils.VerifyToken(parts[1])
+		claims, err := utils.VerifyToken(token)
 		if err != nil {
 			utils.Error(c, 401, "Invalid or expired token")
 			c.Abort()
@@ -34,4 +35,12 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set("spaceID", claims.SpaceID)
 		c.Next()
 	}
+}
+
+func bearerToken(authHeader string) string {
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		return ""
+	}
+	return strings.TrimSpace(parts[1])
 }
