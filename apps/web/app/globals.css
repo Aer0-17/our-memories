@@ -149,9 +149,11 @@ button {
 }
 
 .map-weather-sprite {
+  display: block;
   width: 1.28rem;
   height: 1.28rem;
   margin-bottom: -0.1rem;
+  filter: drop-shadow(0 5px 6px rgba(90, 102, 112, 0.13));
 }
 
 .map-avatar-sprite {

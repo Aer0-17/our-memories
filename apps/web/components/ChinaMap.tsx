@@ -34,10 +34,10 @@ import {
 } from "@/data/appSettings";
 import { readSession } from "@/lib/authStore";
 import { fetchCitiesWeather, weatherFallbackTemp, type WeatherInfo } from "@/lib/weather";
+import { WeatherPixelIcon } from "@/components/WeatherPixelIcon";
 import {
   characterSprite,
   coupleSprite,
-  weatherSprite,
   type GeneratedSpriteAsset,
 } from "@/lib/generatedAssets";
 
@@ -145,7 +145,7 @@ function CoupleMarker({
           }}
           aria-label="隐藏天气图标"
         >
-          <AnimatedSprite asset={weatherSprite(weather.kind)} className="map-weather-sprite" frameDelay={index * -0.12} />
+          <WeatherPixelIcon kind={weather.kind} className="map-weather-sprite" />
         </button>
       )}
       <AnimatedSprite
@@ -194,7 +194,7 @@ function CoupleTogetherMarker({
           }}
           aria-label="隐藏天气图标"
         >
-          <AnimatedSprite asset={weatherSprite(weather.kind)} className="map-weather-sprite" />
+          <WeatherPixelIcon kind={weather.kind} className="map-weather-sprite" />
         </button>
       )}
       <AnimatedSprite asset={coupleSprite(weather.kind)} className="map-couple-sprite" />

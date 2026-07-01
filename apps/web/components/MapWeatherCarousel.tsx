@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { cities } from "@/data/cities";
 import {
   appSettingsUpdatedEvent,
@@ -10,7 +10,7 @@ import {
   readAppSettings,
 } from "@/data/appSettings";
 import { fetchCitiesWeather, weatherFallbackTemp, type WeatherInfo } from "@/lib/weather";
-import { weatherSprite, type GeneratedSpriteAsset } from "@/lib/generatedAssets";
+import { WeatherPixelIcon } from "@/components/WeatherPixelIcon";
 
 const cityById = new Map(cities.map((city) => [city.id, city]));
 const defaultWeatherCityIds = [defaultSelfCityId, "city-451100"];
@@ -22,35 +22,6 @@ function readCarouselCityIds() {
     .filter((cityId): cityId is string => Boolean(cityId && cityById.has(cityId)));
 
   return Array.from(new Set(ids.length > 0 ? ids : defaultWeatherCityIds)).slice(0, 4);
-}
-
-function WeatherSpriteIcon({ asset }: Readonly<{ asset: GeneratedSpriteAsset }>) {
-  const [failedSrc, setFailedSrc] = useState("");
-  const src = failedSrc === asset.src && asset.fallbackSrc ? asset.fallbackSrc : asset.src;
-
-  return (
-    <span
-      className="generated-sprite pixelated h-4 w-4 shrink-0 sm:h-5 sm:w-5"
-      aria-hidden="true"
-      style={{
-        "--sprite-url": `url(${src})`,
-        "--sprite-frames": asset.frames ?? 4,
-      } as CSSProperties}
-    >
-      {asset.fallbackSrc && src === asset.src ? (
-        <Image
-          className="hidden"
-          src={asset.src}
-          alt=""
-          width={1}
-          height={1}
-          unoptimized
-          aria-hidden="true"
-          onError={() => setFailedSrc(asset.src)}
-        />
-      ) : null}
-    </span>
-  );
 }
 
 export default function MapWeatherCarousel() {
@@ -104,16 +75,26 @@ export default function MapWeatherCarousel() {
   const activeCityId = cityIds[safeActiveIndex] ?? cityIds[0] ?? defaultSelfCityId;
   const city = cityById.get(activeCityId) ?? cityById.get(defaultSelfCityId);
   const weather = weatherByCityId[activeCityId];
-  const icon = weatherSprite(weather?.kind ?? "partly");
   const label = useMemo(() => {
     if (!city) return "天气读取中";
     return `${city.name} ${weather?.label ?? "多云"} ${weather?.temp ?? weatherFallbackTemp}°`;
   }, [city, weather?.label, weather?.temp]);
 
   return (
-    <div className="flex min-h-7 items-center gap-2 text-sm font-semibold text-ink/68 sm:text-base">
-      <WeatherSpriteIcon asset={icon} />
-      <span className="min-w-0 truncate">{label}</span>
+    <div className="relative h-8 min-w-0 overflow-hidden text-sm font-semibold text-ink/68 sm:h-9 sm:text-base">
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={`${activeCityId}-${weather?.kind ?? "partly"}-${weather?.temp ?? weatherFallbackTemp}`}
+          className="absolute inset-0 flex min-w-0 items-center gap-2"
+          initial={{ y: "100%", opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: "-100%", opacity: 0 }}
+          transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <WeatherPixelIcon kind={weather?.kind ?? "partly"} className="h-6 w-6 shrink-0 sm:h-7 sm:w-7" />
+          <span className="min-w-0 truncate">{label}</span>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

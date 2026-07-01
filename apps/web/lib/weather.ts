@@ -64,7 +64,7 @@ export function getWeatherKind(code: number, windSpeed: number, isDay: boolean):
   if (code === 75 || code === 86) return { kind: "heavy-snow", label: "大雪" };
   if (code === 95 || code === 96 || code === 99) return { kind: "thunder", label: "雷雨" };
 
-  return { kind: "rain", label: "阵雨" };
+  return { kind: "cloudy", label: "阴" };
 }
 
 export function buildWeatherUrl(lat: number, lng: number) {

@@ -228,5 +228,5 @@ func mapWeatherKind(code int, windSpeed float64, isDay bool) (string, string) {
 	if code == 95 || code == 96 || code == 99 {
 		return "thunder", "雷雨"
 	}
-	return "rain", "阵雨"
+	return "cloudy", "阴"
 }

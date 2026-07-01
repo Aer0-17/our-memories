@@ -18,6 +18,8 @@ interface ImageGenerationNode {
 
 interface ImageGenerationSettings {
   nodes: ImageGenerationNode[];
+  avatarPromptTemplate: string;
+  avatarNegativePrompt: string;
 }
 
 const emptyNode = (priority: number): ImageGenerationNode => ({
@@ -36,6 +38,8 @@ export default function ImageGenerationPage() {
     apiGet,
   );
   const [nodes, setNodes] = useState<ImageGenerationNode[]>([]);
+  const [avatarPromptTemplate, setAvatarPromptTemplate] = useState("");
+  const [avatarNegativePrompt, setAvatarNegativePrompt] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
@@ -44,6 +48,8 @@ export default function ImageGenerationPage() {
     if (data?.nodes) {
       queueMicrotask(() => {
         setNodes(data.nodes.length > 0 ? data.nodes : [emptyNode(0)]);
+        setAvatarPromptTemplate(data.avatarPromptTemplate || "");
+        setAvatarNegativePrompt(data.avatarNegativePrompt || "");
       });
     }
   }, [data]);
@@ -78,8 +84,14 @@ export default function ImageGenerationPage() {
         apiKey: node.apiKey?.trim() || "",
         priority: Number.isFinite(node.priority) ? node.priority : index,
       }));
-      const result = await apiPut<ImageGenerationSettings>("/api/v1/admin/image-generation", { nodes: normalized });
+      const result = await apiPut<ImageGenerationSettings>("/api/v1/admin/image-generation", {
+        nodes: normalized,
+        avatarPromptTemplate,
+        avatarNegativePrompt,
+      });
       setNodes(result.nodes.length > 0 ? result.nodes : [emptyNode(0)]);
+      setAvatarPromptTemplate(result.avatarPromptTemplate || "");
+      setAvatarNegativePrompt(result.avatarNegativePrompt || "");
       await mutate(result, false);
       setMessage("生图节点已保存");
     } catch {
@@ -124,6 +136,44 @@ export default function ImageGenerationPage() {
           <span>{formError || message || "还没有可用节点，用户设置页将无法生成地图角色。"}</span>
         </div>
       )}
+
+      <section className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--card)] p-6">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--secondary)] text-[var(--primary)]">
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-[var(--foreground)]">角色提示词模板</h2>
+            <p className="text-sm text-[var(--muted-foreground)]">
+              用占位符拼接用户提示词，统一控制像素边缘、帧动画和画风质量。
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-4">
+          <label className="grid gap-2 text-sm font-medium">
+            正向模板
+            <textarea
+              value={avatarPromptTemplate}
+              onChange={(event) => setAvatarPromptTemplate(event.target.value)}
+              rows={12}
+              className="min-h-64 resize-y rounded-lg border border-[var(--border)] px-4 py-3 font-mono text-xs leading-5 outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium">
+            负面提示词
+            <textarea
+              value={avatarNegativePrompt}
+              onChange={(event) => setAvatarNegativePrompt(event.target.value)}
+              rows={4}
+              className="resize-y rounded-lg border border-[var(--border)] px-4 py-3 font-mono text-xs leading-5 outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            />
+          </label>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-xs leading-6 text-[var(--muted-foreground)]">
+            可用占位符：{"{gender}"} 性别描述、{"{prompt}"} 用户提示词、{"{reference}"} 参考图说明、{"{displayName}"} 用户名、{"{negative}"} 负面提示词。
+          </div>
+        </div>
+      </section>
 
       <div className="space-y-4">
         {nodes.map((node, index) => (

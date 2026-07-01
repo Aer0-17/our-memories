@@ -21,6 +21,7 @@ func TestMapWeatherKind(t *testing.T) {
 		{name: "heavy rain", code: 82, isDay: true, wantKind: "heavy-rain", wantLabel: "大雨"},
 		{name: "snow", code: 71, isDay: true, wantKind: "snow", wantLabel: "小雪"},
 		{name: "wind", code: 0, windSpeed: 38, isDay: true, wantKind: "wind", wantLabel: "大风"},
+		{name: "unknown code falls back to cloudy", code: 255, isDay: true, wantKind: "cloudy", wantLabel: "阴"},
 	}
 
 	for _, tt := range tests {

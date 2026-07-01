@@ -24,6 +24,18 @@ const (
 	maskedAPIKey                 = "********"
 )
 
+const defaultAvatarPromptTemplate = `Create one premium avatar sprite sheet for a couple memory map.
+{reference}
+Subject: {gender}, full-body chibi human, original design, {prompt}.
+Output format: exactly four equal animation frames arranged in one horizontal row, front-facing idle/walk loop, identical canvas size per frame, consistent character scale and foot position, no panel borders.
+Pixel art requirements: crisp hand-placed pixel art, clear hard pixel edges, no blur, no anti-aliased soft brush look, no watercolor, no oil painting, no 3D render, no vector icon. Use clean 16-bit HD-2D JRPG sprite aesthetics with readable face, cute proportions, coherent human anatomy, strong silhouette, and polished tiny-map readability.
+Resolution guidance: draw the character as a compact sprite occupying about 70% of frame height with generous transparent padding. Make details simple enough to remain clear when displayed at 32-48 px tall.
+Background: transparent PNG if supported; otherwise perfectly flat solid #00ff00 chroma-key background. The background must be one uniform color with no shadow, gradient, floor, texture, or lighting variation. Do not use #00ff00 inside the character.
+Quality constraints: the character must clearly look like a cute human. No text, watermark, logo, cropped limbs, extra characters, animal features, monster features, distorted face, broken hands, messy pixels, low-resolution blur, compression artifacts, or mixed art styles.
+Negative prompt: {negative}`
+
+const defaultAvatarNegativePrompt = "blurry, soft edges, anti-aliased painting, watercolor, oil painting, 3D render, vector icon, sticker, photorealistic, low quality, malformed human, monster, animal ears, extra limbs, broken hands, cropped body, text, watermark, logo, shadowed background, gradient background, rain overlay, weather effects"
+
 type ImageGenerationNode struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
@@ -36,14 +48,18 @@ type ImageGenerationNode struct {
 }
 
 type ImageGenerationSettings struct {
-	Nodes []ImageGenerationNode `json:"nodes"`
+	Nodes                []ImageGenerationNode `json:"nodes"`
+	AvatarPromptTemplate string                `json:"avatarPromptTemplate"`
+	AvatarNegativePrompt string                `json:"avatarNegativePrompt"`
 }
 
 type AvatarSpriteSpec struct {
-	Prompt         string
-	ReferenceImage string
-	Gender         string
-	DisplayName    string
+	Prompt               string
+	ReferenceImage       string
+	Gender               string
+	DisplayName          string
+	AvatarPromptTemplate string
+	AvatarNegativePrompt string
 }
 
 type ImageGenerationResult struct {
@@ -62,6 +78,8 @@ func (s *SettingService) ImageGenerationSettings() (ImageGenerationSettings, err
 		return ImageGenerationSettings{}, err
 	}
 	settings.Nodes = normalizeImageGenerationNodes(settings.Nodes, nil)
+	settings.AvatarPromptTemplate = normalizePromptTemplate(settings.AvatarPromptTemplate)
+	settings.AvatarNegativePrompt = normalizeNegativePrompt(settings.AvatarNegativePrompt)
 	return settings, nil
 }
 
@@ -79,7 +97,9 @@ func (s *SettingService) UpdateImageGenerationSettings(next ImageGenerationSetti
 		return ImageGenerationSettings{}, err
 	}
 	normalized := ImageGenerationSettings{
-		Nodes: normalizeImageGenerationNodes(next.Nodes, current.Nodes),
+		Nodes:                normalizeImageGenerationNodes(next.Nodes, current.Nodes),
+		AvatarPromptTemplate: normalizePromptTemplate(next.AvatarPromptTemplate),
+		AvatarNegativePrompt: normalizeNegativePrompt(next.AvatarNegativePrompt),
 	}
 	if err := s.repo.UpsertJSON(utils.NewID(), imageGenerationGlobalSpaceID, imageGenerationSettingsKey, normalized); err != nil {
 		return ImageGenerationSettings{}, err
@@ -102,7 +122,14 @@ func (g *ImageGenerator) GenerateAvatarSprite(ctx context.Context, spec AvatarSp
 		return ImageGenerationResult{}, errors.New("image generation node not configured")
 	}
 
-	prompt := avatarSpritePrompt(spec)
+	prompt := avatarSpritePrompt(AvatarSpriteSpec{
+		Prompt:               spec.Prompt,
+		ReferenceImage:       spec.ReferenceImage,
+		Gender:               spec.Gender,
+		DisplayName:          spec.DisplayName,
+		AvatarPromptTemplate: g.settings.AvatarPromptTemplate,
+		AvatarNegativePrompt: g.settings.AvatarNegativePrompt,
+	})
 	var errs []string
 	for _, node := range nodes {
 		if spec.ReferenceImage != "" {
@@ -173,7 +200,11 @@ func maskImageGenerationSettings(settings ImageGenerationSettings) ImageGenerati
 		nodes[index].APIKeySet = node.APIKey != ""
 		nodes[index].APIKey = ""
 	}
-	return ImageGenerationSettings{Nodes: nodes}
+	return ImageGenerationSettings{
+		Nodes:                nodes,
+		AvatarPromptTemplate: settings.AvatarPromptTemplate,
+		AvatarNegativePrompt: settings.AvatarNegativePrompt,
+	}
 }
 
 func enabledImageGenerationNodes(nodes []ImageGenerationNode) []ImageGenerationNode {
@@ -226,12 +257,48 @@ func avatarSpritePrompt(spec AvatarSpriteSpec) string {
 		referenceHint = "Use the uploaded reference photo only as appearance guidance while keeping the result original and pixel-art styled. "
 	}
 
-	return fmt.Sprintf(`Create one polished avatar sprite sheet for a couple memory map.
-%sSubject: %s, full-body chibi human, original design, %s.
-Style: high-end HD-2D 16-bit JRPG pixel art, detailed but readable at tiny map size, charming proportions, clean silhouette, expressive face, soft rim light, hand-crafted sprite look.
-Layout: exactly four equal animation frames in one horizontal row, front-facing idle/walk loop, consistent character size and position, no panel borders.
-Background: transparent PNG if supported; otherwise perfectly flat solid #00ff00 chroma-key background with no shadows or gradients.
-Quality constraints: the character must clearly look human, cute, complete, and coherent. No text, watermark, logo, cropped limbs, extra characters, animal features, distorted face, broken hands, or messy pixels.`, referenceHint, genderHint, userPrompt)
+	template := normalizePromptTemplate("")
+	negative := normalizeNegativePrompt("")
+	if specTemplate := strings.TrimSpace(spec.AvatarPromptTemplate); specTemplate != "" {
+		template = normalizePromptTemplate(specTemplate)
+	}
+	if specNegative := strings.TrimSpace(spec.AvatarNegativePrompt); specNegative != "" {
+		negative = normalizeNegativePrompt(specNegative)
+	}
+
+	replacements := map[string]string{
+		"{gender}":      genderHint,
+		"{prompt}":      userPrompt,
+		"{reference}":   referenceHint,
+		"{displayName}": strings.TrimSpace(spec.DisplayName),
+		"{negative}":    negative,
+	}
+	for placeholder, value := range replacements {
+		template = strings.ReplaceAll(template, placeholder, value)
+	}
+	return template
+}
+
+func normalizePromptTemplate(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return defaultAvatarPromptTemplate
+	}
+	if len([]rune(value)) > 3000 {
+		return string([]rune(value)[:3000])
+	}
+	return value
+}
+
+func normalizeNegativePrompt(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return defaultAvatarNegativePrompt
+	}
+	if len([]rune(value)) > 1200 {
+		return string([]rune(value)[:1200])
+	}
+	return value
 }
 
 func (g *ImageGenerator) callImageGeneration(ctx context.Context, node ImageGenerationNode, prompt string) (string, error) {
