@@ -166,6 +166,14 @@ button {
   height: 2.15rem;
   background-position: center bottom;
   background-size: contain;
+  animation: none;
+  transform: translateY(0.22rem);
+}
+
+.map-custom-avatar-sheet {
+  width: 2.15rem;
+  height: 2.15rem;
+  transform: translateY(0.22rem);
 }
 
 .map-couple-sprite {
@@ -187,6 +195,13 @@ button {
   .map-custom-avatar-sprite {
     width: 2.42rem;
     height: 2.42rem;
+    transform: translateY(0.26rem);
+  }
+
+  .map-custom-avatar-sheet {
+    width: 2.42rem;
+    height: 2.42rem;
+    transform: translateY(0.26rem);
   }
 
   .map-couple-sprite {

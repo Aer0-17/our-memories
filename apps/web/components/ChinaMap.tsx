@@ -71,14 +71,17 @@ function profileSprite(profile: PartnerProfile, weather: WeatherInfo): Generated
       fallbackSrc: profile.avatarSpriteFallback,
       width: 1024,
       height: 1024,
-      frames: profile.avatarSpriteFrames ?? 1,
+      frames: profile.avatarSpriteFrames ?? 4,
     };
   }
   return characterSprite(profile.gender ?? "neutral", weather.kind);
 }
 
 function avatarSpriteClass(profile: PartnerProfile) {
-  return profile.avatarSprite ? "map-avatar-sprite map-custom-avatar-sprite" : "map-avatar-sprite";
+  if (!profile.avatarSprite) return "map-avatar-sprite";
+  return (profile.avatarSpriteFrames ?? 4) === 1
+    ? "map-avatar-sprite map-custom-avatar-sprite"
+    : "map-avatar-sprite map-custom-avatar-sheet";
 }
 
 function AnimatedSprite({
