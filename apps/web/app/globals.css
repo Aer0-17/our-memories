@@ -160,27 +160,27 @@ button {
 
 .map-avatar-sprite {
   width: auto;
-  height: 2.36rem;
+  height: 2.95rem;
 }
 
 .map-custom-avatar-sprite {
-  height: 2.15rem;
+  height: 2.75rem;
   width: auto;
   background-position: center bottom;
   background-size: contain;
   animation: none;
-  transform: translateY(0.22rem);
+  transform: translateY(0.28rem);
 }
 
 .map-custom-avatar-sheet {
-  height: 2.15rem;
+  height: 2.75rem;
   width: auto;
-  transform: translateY(0.22rem);
+  transform: translateY(0.28rem);
 }
 
 .map-couple-sprite {
   width: auto;
-  height: 2.48rem;
+  height: 3.1rem;
 }
 
 @media (min-width: 640px) {
@@ -190,21 +190,21 @@ button {
   }
 
   .map-avatar-sprite {
-    height: 2.64rem;
+    height: 3.3rem;
   }
 
   .map-custom-avatar-sprite {
-    height: 2.42rem;
-    transform: translateY(0.26rem);
+    height: 3.05rem;
+    transform: translateY(0.32rem);
   }
 
   .map-custom-avatar-sheet {
-    height: 2.42rem;
-    transform: translateY(0.26rem);
+    height: 3.05rem;
+    transform: translateY(0.32rem);
   }
 
   .map-couple-sprite {
-    height: 2.76rem;
+    height: 3.45rem;
   }
 }
 
