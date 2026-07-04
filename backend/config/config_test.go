@@ -14,10 +14,20 @@ func TestValidateAllowsExplicitSecureConfig(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsWeakAutoSeedPassword(t *testing.T) {
+func TestValidateAllowsFourCharacterAutoSeedPassword(t *testing.T) {
 	cfg := secureTestConfig()
 	cfg.AutoSeed = true
 	cfg.DefaultPassword = "1234"
+
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("expected four-character seed password to pass, got %v", err)
+	}
+}
+
+func TestValidateRejectsWeakAutoSeedPassword(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.AutoSeed = true
+	cfg.DefaultPassword = "123"
 
 	if err := Validate(cfg); err == nil {
 		t.Fatal("expected weak seed password to fail")

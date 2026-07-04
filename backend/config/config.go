@@ -84,8 +84,8 @@ func Validate(cfg *Config) error {
 		}
 	}
 
-	if cfg.AutoSeed && (len(cfg.DefaultPassword) < 8 || cfg.DefaultPassword == "1234") {
-		return fmt.Errorf("DEFAULT_PASSWORD must be at least 8 characters when AUTO_SEED=true")
+	if cfg.AutoSeed && len(cfg.DefaultPassword) < 4 {
+		return fmt.Errorf("DEFAULT_PASSWORD must be at least 4 characters when AUTO_SEED=true")
 	}
 
 	if cfg.AdminUsername != "" || cfg.AdminPassword != "" {
