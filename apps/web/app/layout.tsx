@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ApiBaseScript } from "@/app/api-base-script";
 import { ApiCacheProvider } from "@/lib/apiCache";
 import { AuthProvider } from "@/lib/authContext";
 import { AuthenticatedRuntime } from "@/components/AuthenticatedRuntime";
@@ -22,7 +21,6 @@ export default function RootLayout({
       className="antialiased"
     >
       <body className="flex flex-col">
-        <ApiBaseScript />
         <ApiCacheProvider>
           <AuthProvider>
             <ToastProvider>

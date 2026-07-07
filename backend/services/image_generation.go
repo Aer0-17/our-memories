@@ -11,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -24,7 +25,37 @@ const (
 	maskedAPIKey                 = "********"
 )
 
-const defaultAvatarPromptTemplate = `Create one premium single-frame avatar sprite for a couple memory map.
+const defaultAvatarPromptTemplate = `Create one premium high-resolution Studio Ghibli-inspired hand-drawn traveler image for a couple memory map.
+{reference}
+Subject: {gender}, cute human traveler in a lively walking pose, original design, {prompt}.
+Location inspiration: {location}
+Style direction: Studio Ghibli-inspired warm hand-drawn animation look. Use rich watercolor-and-gouache texture, soft cel-animation linework, gentle natural daylight, airy backgrounds, rounded friendly proportions, earthy clothing colors, subtle wind-swept details, and a calm countryside-adventure mood. Keep it original: do not copy any existing Studio Ghibli film, character, mascot, logo, poster, shot composition, or exact costume.
+Local character details: incorporate understated local features from the selected place: architecture silhouettes, climate, plants, street textures, regional color accents, travel-map icons, and small background props. Prefer everyday travel clothing with local color accents rather than stereotyped ceremonial outfits.
+Pose: show the complete traveler mid-step with one foot forward, natural arm swing, balanced body, and readable walking action. Keep the pose energetic but stable for a moving map illustration.
+Output format: one polished square illustration, not a cutout. The traveler should be the clear focal point and occupy about 55-70% of frame height. If the prompt asks for two people or a couple, keep both complete full bodies together inside the same canvas; do not split them into panels, do not place either person across a frame boundary, and do not crop heads, hands, feet, hair, clothing, or accessories. Do not create a sprite sheet, animation strip, multiple poses, panels, borders, or repeated frames.
+Map integration: include a soft warm paper-map or travel-journal background with subtle paths, rivers, location sketches, postcards, or foliage. The image will be displayed as a high-resolution moving layer on top of the map, so preserve beautiful details while keeping the silhouette readable at 96-180 px wide.
+Background: do not use transparent background, chroma key, green screen, flat color backdrop, sticker cutout, or isolated product-style background. Use a finished illustrated background that blends with a romantic memory map.
+Quality constraints: the character must clearly look like a cute human with natural proportions. No text, watermark, logo, cropped limbs, extra characters, animal features, monster features, distorted face, broken hands, squashed body, stretched body, plastic toy look, hard pixel edges, low-resolution blur, compression artifacts, or mixed art styles.
+Negative prompt: {negative}`
+
+const defaultAvatarNegativePrompt = "transparent background, chroma key, green screen, flat color backdrop, sticker, cutout, isolated product image, sprite sheet, animation strip, multiple frames, multiple poses, split composition, separated panels, frame boundary slicing, cropped partner, cropped head, cropped hands, cropped feet, pixel art, hard pixel edges, 16-bit JRPG, 3D render, plastic toy, vector icon, photorealistic, low quality, malformed human, squashed body, stretched body, monster, animal ears, extra limbs, broken hands, cropped body, exact famous character, copyrighted character, exact Studio Ghibli character, copied Studio Ghibli scene, copied film still, trademark logo, text, watermark, logo, rain overlay, weather effects"
+
+// Old built-in templates are kept only to upgrade saved admin settings.
+const previousStorybookAvatarPromptTemplate = `Create one premium high-resolution hand-drawn traveler image for a couple memory map.
+{reference}
+Subject: {gender}, cute human traveler in a lively walking pose, original design, {prompt}.
+Location inspiration: {location}
+Style direction: premium warm hand-painted storybook animation. Use rich watercolor-and-gouache texture, clean cel-animation linework, gentle natural daylight, rounded friendly proportions, earthy clothing colors, subtle wind-swept details, and a calm countryside-adventure mood. Avoid copying any specific studio, artist, film, or existing character.
+Pose: show the complete traveler mid-step with one foot forward, natural arm swing, balanced body, and readable walking action. Keep the pose energetic but stable for a moving map illustration.
+Output format: one polished square illustration, not a cutout. The traveler should be the clear focal point and occupy about 55-70% of frame height. If the prompt asks for two people or a couple, keep both complete full bodies together inside the same canvas; do not split them into panels, do not place either person across a frame boundary, and do not crop heads, hands, feet, hair, clothing, or accessories. Do not create a sprite sheet, animation strip, multiple poses, panels, borders, or repeated frames.
+Map integration: include a soft warm paper-map or travel-journal background with subtle paths, rivers, location sketches, postcards, or foliage. The image will be displayed as a high-resolution moving layer on top of the map, so preserve beautiful details while keeping the silhouette readable at 96-180 px wide.
+Background: do not use transparent background, chroma key, green screen, flat color backdrop, sticker cutout, or isolated product-style background. Use a finished illustrated background that blends with a romantic memory map.
+Quality constraints: the character must clearly look like a cute human with natural proportions. No text, watermark, logo, cropped limbs, extra characters, animal features, monster features, distorted face, broken hands, squashed body, stretched body, plastic toy look, hard pixel edges, low-resolution blur, compression artifacts, or mixed art styles.
+Negative prompt: {negative}`
+
+const previousStorybookAvatarNegativePrompt = "transparent background, chroma key, green screen, flat color backdrop, sticker, cutout, isolated product image, sprite sheet, animation strip, multiple frames, multiple poses, split composition, separated panels, frame boundary slicing, cropped partner, cropped head, cropped hands, cropped feet, pixel art, hard pixel edges, 16-bit JRPG, 3D render, plastic toy, vector icon, photorealistic, low quality, malformed human, squashed body, stretched body, monster, animal ears, extra limbs, broken hands, cropped body, exact famous character, copyrighted character, text, watermark, logo, rain overlay, weather effects"
+
+const previousPixelAvatarPromptTemplate = `Create one premium single-frame avatar sprite for a couple memory map.
 {reference}
 Subject: {gender}, full-body chibi human in a lively walking pose, original design, {prompt}.
 Pose: show the complete character mid-step with one foot forward, natural arm swing, balanced body, and readable full-body walking action. Keep the pose energetic but stable for a tiny map marker.
@@ -35,7 +66,7 @@ Background: transparent PNG if supported; otherwise perfectly flat solid #00ff00
 Quality constraints: the character must clearly look like a cute human with natural proportions. No text, watermark, logo, cropped limbs, extra characters, animal features, monster features, distorted face, broken hands, squashed body, stretched body, messy pixels, low-resolution blur, compression artifacts, or mixed art styles.
 Negative prompt: {negative}`
 
-const defaultAvatarNegativePrompt = "sprite sheet, animation strip, multiple frames, multiple poses, split composition, separated panels, frame boundary slicing, cropped partner, cropped head, cropped hands, cropped feet, blurry, soft edges, anti-aliased painting, watercolor, oil painting, 3D render, vector icon, sticker, photorealistic, low quality, malformed human, squashed body, stretched body, monster, animal ears, extra limbs, broken hands, cropped body, text, watermark, logo, shadowed background, gradient background, rain overlay, weather effects"
+const previousPixelAvatarNegativePrompt = "sprite sheet, animation strip, multiple frames, multiple poses, split composition, separated panels, frame boundary slicing, cropped partner, cropped head, cropped hands, cropped feet, blurry, soft edges, anti-aliased painting, watercolor, oil painting, 3D render, vector icon, sticker, photorealistic, low quality, malformed human, squashed body, stretched body, monster, animal ears, extra limbs, broken hands, cropped body, text, watermark, logo, shadowed background, gradient background, rain overlay, weather effects"
 
 const legacyDefaultAvatarPromptTemplate = `Create one premium single-frame avatar sprite for a couple memory map.
 {reference}
@@ -71,6 +102,9 @@ type AvatarSpriteSpec struct {
 	ReferenceImage       string
 	Gender               string
 	DisplayName          string
+	CityName             string
+	ProvinceName         string
+	Landmark             string
 	AvatarPromptTemplate string
 	AvatarNegativePrompt string
 }
@@ -140,6 +174,9 @@ func (g *ImageGenerator) GenerateAvatarSprite(ctx context.Context, spec AvatarSp
 		ReferenceImage:       spec.ReferenceImage,
 		Gender:               spec.Gender,
 		DisplayName:          spec.DisplayName,
+		CityName:             spec.CityName,
+		ProvinceName:         spec.ProvinceName,
+		Landmark:             spec.Landmark,
 		AvatarPromptTemplate: g.settings.AvatarPromptTemplate,
 		AvatarNegativePrompt: g.settings.AvatarNegativePrompt,
 	})
@@ -177,8 +214,8 @@ func normalizeImageGenerationNodes(nodes []ImageGenerationNode, current []ImageG
 			id = utils.NewID()
 		}
 		name := trimWithDefault(node.Name, fmt.Sprintf("生图节点 %d", index+1), 60)
-		baseURL := strings.TrimRight(strings.TrimSpace(node.BaseURL), "/")
-		model := trimWithDefault(node.Model, "gpt-image-1", 80)
+		baseURL := normalizeImageGenerationBaseURL(node.BaseURL)
+		model := trimWithDefault(node.Model, "gpt-image-2", 80)
 
 		apiKey := strings.TrimSpace(node.APIKey)
 		if apiKey == "" || apiKey == maskedAPIKey {
@@ -204,6 +241,24 @@ func normalizeImageGenerationNodes(nodes []ImageGenerationNode, current []ImageG
 		return normalized[i].Priority < normalized[j].Priority
 	})
 	return normalized
+}
+
+func normalizeImageGenerationBaseURL(value string) string {
+	baseURL := strings.TrimRight(strings.TrimSpace(value), "/")
+	if baseURL == "" {
+		return ""
+	}
+
+	parsed, err := url.Parse(baseURL)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return baseURL
+	}
+	if parsed.Path == "" || parsed.Path == "/" {
+		parsed.Path = "/v1"
+		parsed.RawPath = ""
+		return strings.TrimRight(parsed.String(), "/")
+	}
+	return baseURL
 }
 
 func maskImageGenerationSettings(settings ImageGenerationSettings) ImageGenerationSettings {
@@ -267,7 +322,7 @@ func avatarSpritePrompt(spec AvatarSpriteSpec) string {
 
 	referenceHint := ""
 	if spec.ReferenceImage != "" {
-		referenceHint = "Use the uploaded reference photo only as appearance guidance while keeping the result original and pixel-art styled. "
+		referenceHint = "Use the uploaded reference photo only as appearance guidance while keeping the result an original hand-drawn animation illustration. "
 	}
 
 	template := normalizePromptTemplate("")
@@ -284,6 +339,7 @@ func avatarSpritePrompt(spec AvatarSpriteSpec) string {
 		"{prompt}":      userPrompt,
 		"{reference}":   referenceHint,
 		"{displayName}": strings.TrimSpace(spec.DisplayName),
+		"{location}":    locationInspiration(spec),
 		"{negative}":    negative,
 	}
 	for placeholder, value := range replacements {
@@ -292,9 +348,48 @@ func avatarSpritePrompt(spec AvatarSpriteSpec) string {
 	return template
 }
 
+func locationInspiration(spec AvatarSpriteSpec) string {
+	cityName := trimPromptPart(spec.CityName, 40)
+	provinceName := trimPromptPart(spec.ProvinceName, 40)
+	landmark := trimPromptPart(spec.Landmark, 80)
+	if landmark == "城市地标待添加" {
+		landmark = ""
+	}
+
+	parts := []string{}
+	if cityName != "" && provinceName != "" {
+		parts = append(parts, fmt.Sprintf("%s, %s", cityName, provinceName))
+	} else if cityName != "" {
+		parts = append(parts, cityName)
+	} else if provinceName != "" {
+		parts = append(parts, provinceName)
+	}
+	if landmark != "" {
+		parts = append(parts, "local landmark or atmosphere: "+landmark)
+	}
+	if len(parts) == 0 {
+		return "use subtle local travel-map atmosphere based on the user's selected city when available, without adding text labels"
+	}
+	return strings.Join(parts, "; ") + ". Add subtle local architecture, climate, plants, colors, regional textures, street details, and travel-map motifs inspired by this place, without text labels or stereotyped costumes."
+}
+
+func trimPromptPart(value string, maxLength int) string {
+	value = strings.TrimSpace(value)
+	if len([]rune(value)) <= maxLength {
+		return value
+	}
+	return string([]rune(value)[:maxLength])
+}
+
 func normalizePromptTemplate(value string) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
+		return defaultAvatarPromptTemplate
+	}
+	if value == previousStorybookAvatarPromptTemplate {
+		return defaultAvatarPromptTemplate
+	}
+	if value == previousPixelAvatarPromptTemplate {
 		return defaultAvatarPromptTemplate
 	}
 	if value == legacyDefaultAvatarPromptTemplate {
@@ -311,6 +406,12 @@ func normalizeNegativePrompt(value string) string {
 	if value == "" {
 		return defaultAvatarNegativePrompt
 	}
+	if value == previousStorybookAvatarNegativePrompt {
+		return defaultAvatarNegativePrompt
+	}
+	if value == previousPixelAvatarNegativePrompt {
+		return defaultAvatarNegativePrompt
+	}
 	if value == legacyDefaultAvatarNegativePrompt {
 		return defaultAvatarNegativePrompt
 	}
@@ -322,11 +423,17 @@ func normalizeNegativePrompt(value string) string {
 
 func (g *ImageGenerator) callImageGeneration(ctx context.Context, node ImageGenerationNode, prompt string) (string, error) {
 	payload := map[string]any{
-		"model":           node.Model,
-		"prompt":          prompt,
-		"n":               1,
-		"size":            "1024x1024",
-		"response_format": "b64_json",
+		"model":  node.Model,
+		"prompt": prompt,
+		"n":      1,
+		"size":   "1024x1024",
+	}
+	if isGPTImageModel(node.Model) {
+		payload["quality"] = "high"
+		payload["background"] = "opaque"
+		payload["output_format"] = "png"
+	} else {
+		payload["response_format"] = "b64_json"
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -353,7 +460,13 @@ func (g *ImageGenerator) callImageEdit(ctx context.Context, node ImageGeneration
 	_ = writer.WriteField("prompt", prompt)
 	_ = writer.WriteField("n", "1")
 	_ = writer.WriteField("size", "1024x1024")
-	_ = writer.WriteField("response_format", "b64_json")
+	if isGPTImageModel(node.Model) {
+		_ = writer.WriteField("quality", "high")
+		_ = writer.WriteField("background", "opaque")
+		_ = writer.WriteField("output_format", "png")
+	} else {
+		_ = writer.WriteField("response_format", "b64_json")
+	}
 
 	header := make(textproto.MIMEHeader)
 	header.Set("Content-Disposition", `form-data; name="image"; filename="reference.png"`)
@@ -376,6 +489,10 @@ func (g *ImageGenerator) callImageEdit(ctx context.Context, node ImageGeneration
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Set("Authorization", "Bearer "+node.APIKey)
 	return g.decodeImageResponse(req)
+}
+
+func isGPTImageModel(model string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(model)), "gpt-image")
 }
 
 func (g *ImageGenerator) decodeImageResponse(req *http.Request) (string, error) {

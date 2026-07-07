@@ -82,3 +82,38 @@ func TestRunSchedulerOnceDispatchesDueEventsOncePerDay(t *testing.T) {
 		t.Fatalf("expected same-day scheduler de-dupe, count=%d items=%#v", count, publisher.items)
 	}
 }
+
+func TestCleanupExcessNotificationsKeepsLatestThreePerUser(t *testing.T) {
+	database := setupSchedulerTestDB(t)
+	if err := database.Exec(`
+		INSERT INTO notifications (id, space_id, user_id, type, target_type, target_id, title, body, is_read, created_at)
+		VALUES
+			('n-1', 'space-1', 'user-1', 'memory.created', 'memory', 'm-1', '1', '', 0, '2026-06-26T00:00:00Z'),
+			('n-2', 'space-1', 'user-1', 'memory.created', 'memory', 'm-2', '2', '', 0, '2026-06-27T00:00:00Z'),
+			('n-3', 'space-1', 'user-1', 'memory.created', 'memory', 'm-3', '3', '', 0, '2026-06-28T00:00:00Z'),
+			('n-4', 'space-1', 'user-1', 'memory.created', 'memory', 'm-4', '4', '', 0, '2026-06-29T00:00:00Z'),
+			('n-5', 'space-1', 'user-2', 'memory.created', 'memory', 'm-5', '5', '', 0, '2026-06-25T00:00:00Z'),
+			('n-6', 'space-1', 'user-2', 'memory.created', 'memory', 'm-6', '6', '', 0, '2026-06-26T00:00:00Z'),
+			('n-7', 'space-1', 'user-2', 'memory.created', 'memory', 'm-7', '7', '', 0, '2026-06-27T00:00:00Z');
+	`).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cleanupExcessNotifications(database); err != nil {
+		t.Fatal(err)
+	}
+
+	var ids []string
+	if err := database.
+		Table("notifications").
+		Select("id").
+		Order("user_id ASC, created_at ASC").
+		Pluck("id", &ids).
+		Error; err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"n-2", "n-3", "n-4", "n-5", "n-6", "n-7"}
+	if strings.Join(ids, ",") != strings.Join(want, ",") {
+		t.Fatalf("expected notifications %v, got %v", want, ids)
+	}
+}

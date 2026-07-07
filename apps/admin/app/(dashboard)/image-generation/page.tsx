@@ -28,7 +28,7 @@ const emptyNode = (priority: number): ImageGenerationNode => ({
   name: `生图节点 ${priority + 1}`,
   baseUrl: "",
   apiKey: "",
-  model: "gpt-image-1",
+  model: "gpt-image-2",
   enabled: true,
   priority,
 });
@@ -143,7 +143,7 @@ export default function ImageGenerationPage() {
 
       <Panel
         title="角色提示词模板"
-        description="用占位符拼接用户提示词，统一控制人物比例、像素边缘和画风质量。"
+        description="用占位符拼接设置页资料和用户提示词，统一控制人物比例、地方特色和画风质量。"
         className="mb-5"
         actions={<Sparkles size={20} className="text-[var(--primary)]" />}
       >
@@ -166,7 +166,7 @@ export default function ImageGenerationPage() {
           </Field>
           <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-xs leading-6 text-[var(--muted-foreground)]">
             可用占位符：{"{gender}"} 性别描述、{"{prompt}"} 用户提示词、{"{reference}"} 参考图说明、
-            {"{displayName}"} 用户名、{"{negative}"} 负面提示词。
+            {"{displayName}"} 用户名、{"{location}"} 设置页地点、{"{negative}"} 负面提示词。
           </div>
         </div>
       </Panel>
@@ -220,7 +220,7 @@ export default function ImageGenerationPage() {
               <Field label="模型">
                 <input
                   value={node.model}
-                  placeholder="gpt-image-1"
+                  placeholder="gpt-image-2"
                   onChange={(event) => updateNode(index, { model: event.target.value })}
                   className="rounded-lg border border-[var(--border)] px-4 py-2.5"
                 />

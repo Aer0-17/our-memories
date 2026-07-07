@@ -10,7 +10,7 @@ import (
 )
 
 func GetNotifications(c *gin.Context) {
-	notifications, err := notificationRepo().List(c.GetString("spaceID"), c.GetString("userID"), 50)
+	notifications, err := notificationRepo().List(c.GetString("spaceID"), c.GetString("userID"), 3)
 	if err != nil {
 		utils.Error(c, 500, "Failed to fetch notifications")
 		return

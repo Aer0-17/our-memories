@@ -65,16 +65,22 @@ func GenerateAvatarSprite(c *gin.Context) {
 		ReferenceImage string `json:"referenceImage"`
 		Gender         string `json:"gender"`
 		DisplayName    string `json:"displayName"`
+		CityID         string `json:"cityId"`
+		CityName       string `json:"cityName"`
+		ProvinceName   string `json:"provinceName"`
+		Landmark       string `json:"landmark"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.Error(c, 400, "Invalid request")
 		return
 	}
 	req.Prompt = strings.TrimSpace(req.Prompt)
-	if req.Prompt == "" && req.ReferenceImage == "" {
-		utils.Error(c, 400, "Prompt or reference image is required")
-		return
-	}
+	req.Gender = trimAvatarRequestField(req.Gender, 20)
+	req.DisplayName = trimAvatarRequestField(req.DisplayName, 40)
+	req.CityID = trimAvatarRequestField(req.CityID, 80)
+	req.CityName = trimAvatarRequestField(req.CityName, 80)
+	req.ProvinceName = trimAvatarRequestField(req.ProvinceName, 80)
+	req.Landmark = trimAvatarRequestField(req.Landmark, 120)
 
 	settingSvc := settingService()
 	imageSettings, err := settingSvc.ImageGenerationSettings()
@@ -88,6 +94,9 @@ func GenerateAvatarSprite(c *gin.Context) {
 		ReferenceImage: req.ReferenceImage,
 		Gender:         req.Gender,
 		DisplayName:    req.DisplayName,
+		CityName:       req.CityName,
+		ProvinceName:   req.ProvinceName,
+		Landmark:       req.Landmark,
 	})
 	if err != nil {
 		log.Printf("avatar sprite generation failed: %v", err)
@@ -110,6 +119,9 @@ func GenerateAvatarSprite(c *gin.Context) {
 	}
 	if req.Gender != "" {
 		profile.Gender = req.Gender
+	}
+	if req.CityID != "" {
+		profile.CityID = req.CityID
 	}
 	profile.AvatarSprite = url
 	profile.AvatarSpriteFrames = 1
@@ -146,6 +158,14 @@ func GenerateAvatarSprite(c *gin.Context) {
 		"url":     url,
 		"key":     key,
 	})
+}
+
+func trimAvatarRequestField(value string, maxLength int) string {
+	value = strings.TrimSpace(value)
+	if len([]rune(value)) <= maxLength {
+		return value
+	}
+	return string([]rune(value)[:maxLength])
 }
 
 func appendAvatarSpriteHistory(history []avatarSpriteHistoryItem, item avatarSpriteHistoryItem) []avatarSpriteHistoryItem {

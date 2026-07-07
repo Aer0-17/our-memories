@@ -54,7 +54,6 @@ function PhotoImage({ photo }: Readonly<{ photo: RandomPhoto }>) {
 }
 
 export default function RandomPhotoCard() {
-  const [initialPhotoSeed] = useState(() => Math.random());
   const [selectedPhotoId, setSelectedPhotoId] = useState("");
   const { data } = useMemorySummary();
 
@@ -65,8 +64,8 @@ export default function RandomPhotoCard() {
 
   const photo = useMemo(() => {
     if (photos.length === 0) return null;
-    return photos.find((candidate) => candidate.id === selectedPhotoId) ?? photos[Math.floor(initialPhotoSeed * photos.length)];
-  }, [initialPhotoSeed, photos, selectedPhotoId]);
+    return photos.find((candidate) => candidate.id === selectedPhotoId) ?? photos[0];
+  }, [photos, selectedPhotoId]);
 
   const href = useMemo(() => {
     if (!photo) return "/memories";

@@ -34,6 +34,7 @@ const weatherGroupByKind: Record<WeatherKind, GeneratedWeatherGroup> = {
 
 const generatedAssets = manifest as {
   frameCount: number;
+  futureSpirits: GeneratedSpriteAsset[];
   characters: Record<PartnerGender, Record<GeneratedWeatherGroup, GeneratedSpriteAsset>>;
   couple: Record<GeneratedWeatherGroup, GeneratedSpriteAsset>;
   weather: GeneratedWeatherIconMap;
@@ -68,4 +69,8 @@ export function weatherSprite(kind: WeatherKind) {
 
 export function flowerSprite(variant: number) {
   return preferLocalAsset(generatedAssets.flowers[variant % generatedAssets.flowers.length]);
+}
+
+export function futureSpiritSprite(variant: number) {
+  return preferLocalAsset(generatedAssets.futureSpirits[variant % generatedAssets.futureSpirits.length]);
 }

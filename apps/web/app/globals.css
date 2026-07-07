@@ -144,6 +144,16 @@ button {
   animation: generated-sprite-play 0.96s steps(var(--sprite-frames, 4), end) infinite;
 }
 
+.map-storybook-sprite {
+  image-rendering: auto;
+  filter:
+    saturate(0.92)
+    contrast(0.98)
+    drop-shadow(0 8px 9px rgba(63, 78, 78, 0.13))
+    drop-shadow(0 1px 0 rgba(255, 248, 230, 0.42));
+  animation: none;
+}
+
 .map-weather-sprite {
   display: block;
   width: 1.28rem;
@@ -157,12 +167,27 @@ button {
   height: 2.95rem;
 }
 
+@keyframes map-custom-avatar-pan {
+  0%, 100% {
+    transform: translateX(-14%) translateY(0.28rem) rotate(-1.4deg);
+  }
+  50% {
+    transform: translateX(14%) translateY(-0.06rem) rotate(1.2deg);
+  }
+}
+
 .map-custom-avatar-sprite {
-  height: 2.75rem;
+  height: clamp(5.6rem, 18vw, 7.2rem);
   width: auto;
+  border-radius: 8px;
   background-position: center bottom;
-  background-size: contain;
-  animation: none;
+  background-size: cover;
+  box-shadow:
+    0 14px 24px rgba(63, 78, 78, 0.14),
+    inset 0 0 24px rgba(255, 248, 230, 0.36);
+  opacity: 0.94;
+  mix-blend-mode: multiply;
+  animation: map-custom-avatar-pan 7.5s ease-in-out infinite;
   transform: translateY(0.28rem);
 }
 
@@ -177,6 +202,43 @@ button {
   height: 3.1rem;
 }
 
+@keyframes future-checkin-float {
+  0%, 100% {
+    transform: translate(-50%, -100%) translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translate(-50%, -100%) translateY(-5px) rotate(1deg);
+  }
+}
+
+@keyframes future-checkin-pulse {
+  0%, 100% {
+    opacity: 0.28;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+  50% {
+    opacity: 0.48;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.future-checkin-marker {
+  transform: translate(-50%, -100%);
+  animation: future-checkin-float 3.8s ease-in-out infinite;
+}
+
+.future-checkin-spirit {
+  image-rendering: auto;
+  filter:
+    drop-shadow(0 4px 5px rgba(63, 78, 78, 0.13))
+    drop-shadow(0 1px 0 rgba(255, 248, 230, 0.62));
+}
+
+.future-checkin-pulse {
+  transform: translate(-50%, -50%);
+  animation: future-checkin-pulse 2.8s ease-in-out infinite;
+}
+
 @media (min-width: 640px) {
   .map-weather-sprite {
     width: 1.45rem;
@@ -188,7 +250,7 @@ button {
   }
 
   .map-custom-avatar-sprite {
-    height: 3.05rem;
+    height: clamp(6.8rem, 13vw, 8.6rem);
     transform: translateY(0.32rem);
   }
 
@@ -204,6 +266,15 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .generated-sprite {
+    animation: none;
+  }
+
+  .future-checkin-marker,
+  .future-checkin-pulse {
+    animation: none;
+  }
+
+  .map-custom-avatar-sprite {
     animation: none;
   }
 }

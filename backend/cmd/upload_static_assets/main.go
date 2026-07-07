@@ -68,6 +68,7 @@ func main() {
 	allowedPrefixes := []string{
 		"map-avatar-",
 		"map-couple-holding-",
+		"future-spirit-",
 		"weather-",
 		"badge-flower-",
 	}

@@ -230,6 +230,8 @@ export default function SettingsPage() {
 
   const displayName = sessionDisplayName(session);
   const memberKey = sessionMemberKey(session);
+  const selectedCity = cities.find((city) => city.id === profile.cityId);
+  const selectedProvince = selectedCity ? provinces.find((province) => province.id === selectedCity.provinceId) : undefined;
   const summary = useMemo(() => {
     return `${displayName} 在 ${cityName(profile.cityId)}`;
   }, [displayName, profile.cityId]);
@@ -273,10 +275,6 @@ export default function SettingsPage() {
       toast("请先登录后再生成地图角色", "warning");
       return;
     }
-    if (!avatarPrompt.trim() && !avatarReference) {
-      toast("请先输入提示词或上传参考照片", "warning");
-      return;
-    }
 
     setGeneratingAvatar(true);
     try {
@@ -287,6 +285,10 @@ export default function SettingsPage() {
           referenceImage: avatarReference,
           gender: profile.gender ?? "neutral",
           displayName,
+          cityId: selectedCity?.id ?? profile.cityId ?? "",
+          cityName: selectedCity?.name ?? "",
+          provinceName: selectedProvince?.name ?? "",
+          landmark: selectedCity?.landmark ?? "",
         }),
       });
       const nextProfile: PartnerProfile = {
@@ -433,14 +435,14 @@ export default function SettingsPage() {
                 生成地图角色
               </span>
             }
-            subtitle="上传参考照片或写一段提示词，生成后会自动上传并更新地图上的像素小人。"
+            subtitle="会自动带上当前性别和地点，生成带地方特色的吉卜力工作室画风人物，并上传到地图角色。"
           />
           <div className="mt-5 grid gap-4 lg:grid-cols-[140px_minmax(0,1fr)]">
             <div className="flex min-h-36 items-center justify-center rounded-[8px] border border-dim/80 bg-white/58">
               {profile.avatarSprite ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  className="max-h-32 max-w-32 object-contain pixelated"
+                  className="max-h-32 max-w-32 object-contain"
                   src={profile.avatarSprite}
                   alt="当前地图角色"
                 />
@@ -455,7 +457,7 @@ export default function SettingsPage() {
                   className="min-h-24 w-full resize-y rounded-[7px] border border-dim/80 bg-cream/76 px-3 py-2 text-sm text-ink outline-none transition focus:border-sky focus:bg-white"
                   value={avatarPrompt}
                   maxLength={600}
-                  placeholder="例如：短发、暖色围巾、可爱但清晰的人类像素小人"
+                  placeholder="可选，例如：短发、暖色围巾、自然光下走过手绘旅行地图"
                   onChange={(event) => setAvatarPrompt(event.target.value)}
                 />
               </label>

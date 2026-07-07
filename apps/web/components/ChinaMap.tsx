@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Minus, Plus, RotateCcw } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, MapPinPlus, Minus, Plus, PlusCircle, RotateCcw, Trash2 } from "lucide-react";
+import { createPortal } from "react-dom";
 import {
   chinaFeatures,
   dashLineFeature,
@@ -38,8 +39,18 @@ import { WeatherPixelIcon } from "@/components/WeatherPixelIcon";
 import {
   characterSprite,
   coupleSprite,
+  futureSpiritSprite,
   type GeneratedSpriteAsset,
 } from "@/lib/generatedAssets";
+import {
+  createFutureCheckin,
+  forestSpiritVariantCount,
+  futureCheckinLabel,
+  futureCheckinsUpdatedEvent,
+  readFutureCheckins,
+  writeFutureCheckins,
+  type FutureCheckin,
+} from "@/lib/futureCheckins";
 
 interface ChinaMapProps {
   width?: number;
@@ -63,6 +74,91 @@ const initialZoom = 1.3;
 const maxZoom = 1.75;
 const minZoom = 1;
 const stableCoordinate = (value: number) => Number(value.toFixed(3));
+const spriteFrameDurationMs = 240;
+
+type CityRegionFeature = {
+  properties?: {
+    adcode?: number;
+    name?: string;
+    center?: [number, number];
+    centroid?: [number, number];
+    provinceAdcode?: number;
+    parent?: { adcode?: number };
+  };
+  geometry?: {
+    type?: string;
+  };
+};
+
+type FutureRegionOption = {
+  id: string;
+  name: string;
+  lng: number;
+  lat: number;
+};
+
+const normalizeRegionName = (name: string) =>
+  name
+    .replace(/[·•\s]/g, "")
+    .replace(/臺/g, "台")
+    .replace(/(特别行政区|回族自治区|维吾尔自治区|壮族自治区|自治区|省|市|地区|盟|自治州|县|区)$/g, "");
+
+const isLngLat = (value: unknown): value is [number, number] =>
+  Array.isArray(value) &&
+  value.length >= 2 &&
+  typeof value[0] === "number" &&
+  Number.isFinite(value[0]) &&
+  typeof value[1] === "number" &&
+  Number.isFinite(value[1]);
+
+const cityRegionUrl = (provinceId: string) => `/geo/city-regions/${provinceId}.json`;
+
+async function loadFutureCityRegionFeatures(provinceId: string, signal?: AbortSignal) {
+  const response = await fetch(cityRegionUrl(provinceId), { signal }).catch(() => null);
+  if (!response?.ok) return [];
+  const data = (await response.json().catch(() => null)) as { features?: CityRegionFeature[] } | null;
+
+  return (data?.features ?? []).filter(
+    (feature) => feature.geometry?.type === "Polygon" || feature.geometry?.type === "MultiPolygon",
+  );
+}
+
+function cityRegionFeatureOf(city: (typeof cities)[number], features: CityRegionFeature[]) {
+  const adcodeMatch = /^city-(\d+)$/.exec(city.id);
+  if (adcodeMatch) {
+    const adcode = Number(adcodeMatch[1]);
+    const byAdcode = features.find((feature) => feature.properties?.adcode === adcode);
+    if (byAdcode) return byAdcode;
+  }
+
+  const normalizedCityName = normalizeRegionName(city.name);
+  return features.find((feature) => normalizeRegionName(feature.properties?.name ?? "") === normalizedCityName);
+}
+
+function centerOfCityRegionFeature(feature: CityRegionFeature | undefined, city: (typeof cities)[number]) {
+  const center = feature?.properties?.centroid ?? feature?.properties?.center;
+  if (isLngLat(center)) {
+    return { lng: center[0], lat: center[1] };
+  }
+
+  return { lng: city.lng, lat: city.lat };
+}
+
+function regionOptionsOfCity(city: (typeof cities)[number] | undefined, features: CityRegionFeature[]) {
+  if (!city) return [];
+  const feature = cityRegionFeatureOf(city, features);
+  const center = centerOfCityRegionFeature(feature, city);
+  const adcode = feature?.properties?.adcode;
+
+  return [
+    {
+      id: adcode ? `region-${adcode}` : `${city.id}-center`,
+      name: city.id === city.provinceId ? "全市" : "中心区域",
+      lng: center.lng,
+      lat: center.lat,
+    },
+  ] satisfies FutureRegionOption[];
+}
 
 function profileSprite(profile: PartnerProfile, weather: WeatherInfo): GeneratedSpriteAsset {
   if (profile.avatarSprite) {
@@ -88,18 +184,23 @@ function AnimatedSprite({
   asset,
   className,
   frameDelay = 0,
+  paused = false,
 }: Readonly<{
   asset: GeneratedSpriteAsset;
   className: string;
   frameDelay?: number;
+  paused?: boolean;
 }>) {
   const [failedSrc, setFailedSrc] = useState("");
   const [naturalSize, setNaturalSize] = useState({ src: "", width: asset.width, height: asset.height });
+  const [frameIndex, setFrameIndex] = useState(0);
   const src = failedSrc === asset.src && asset.fallbackSrc ? asset.fallbackSrc : asset.src;
   const frames = asset.frames ?? 4;
   const spriteSize = naturalSize.src === src ? naturalSize : { width: asset.width, height: asset.height };
   const frameWidth = Math.max(1, spriteSize.width / frames);
   const frameHeight = Math.max(1, spriteSize.height);
+  const effectiveFrameIndex = paused || frames <= 1 ? 0 : frameIndex % frames;
+  const framePosition = frames <= 1 ? 50 : (effectiveFrameIndex / (frames - 1)) * 100;
 
   useEffect(() => {
     let active = true;
@@ -123,15 +224,33 @@ function AnimatedSprite({
     };
   }, [asset.fallbackSrc, asset.height, asset.src, asset.width, src]);
 
+  useEffect(() => {
+    if (frames <= 1 || paused) return;
+
+    let interval = 0;
+    const delay = ((frameDelay * 1000) % spriteFrameDurationMs + spriteFrameDurationMs) % spriteFrameDurationMs;
+    const timeout = window.setTimeout(() => {
+      setFrameIndex((current) => (current + 1) % frames);
+      interval = window.setInterval(() => {
+        setFrameIndex((current) => (current + 1) % frames);
+      }, spriteFrameDurationMs);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timeout);
+      if (interval) window.clearInterval(interval);
+    };
+  }, [frameDelay, frames, paused, src]);
+
   return (
     <span
-      className={`generated-sprite pixelated ${className}`}
+      className={`generated-sprite map-storybook-sprite ${className}`}
       aria-hidden="true"
       style={{
         "--sprite-url": `url(${src})`,
         "--sprite-frames": frames,
         "--sprite-frame-aspect": `${frameWidth} / ${frameHeight}`,
-        animationDelay: `${frameDelay}s`,
+        backgroundPosition: `${framePosition}% 0`,
       } as CSSProperties}
     />
   );
@@ -143,18 +262,23 @@ function CoupleMarker({
   x,
   y,
   index,
+  reduceMotion,
 }: Readonly<{
   profile: PartnerProfile;
   weather: WeatherInfo;
   x: number;
   y: number;
   index: number;
+  reduceMotion: boolean;
 }>) {
   const [showWeather, setShowWeather] = useState(true);
+  const markerClassName = profile.avatarSprite
+    ? "absolute z-10 flex w-28 -translate-x-1/2 -translate-y-full flex-col items-center sm:w-36"
+    : "absolute z-10 flex w-10 -translate-x-1/2 -translate-y-full flex-col items-center sm:w-12";
 
   return (
     <div
-      className="absolute z-10 flex w-10 -translate-x-1/2 -translate-y-full flex-col items-center sm:w-12"
+      className={markerClassName}
       style={{ left: `${x}%`, top: `${y}%` }}
     >
       {showWeather && (
@@ -174,6 +298,7 @@ function CoupleMarker({
         asset={profileSprite(profile, weather)}
         className={avatarSpriteClass(profile)}
         frameDelay={index * -0.16}
+        paused={reduceMotion}
       />
       {!showWeather && (
         <button
@@ -194,10 +319,12 @@ function CoupleTogetherMarker({
   weather,
   x,
   y,
+  reduceMotion,
 }: Readonly<{
   weather: WeatherInfo;
   x: number;
   y: number;
+  reduceMotion: boolean;
 }>) {
   const [showWeather, setShowWeather] = useState(true);
 
@@ -219,7 +346,7 @@ function CoupleTogetherMarker({
           <WeatherPixelIcon kind={weather.kind} className="map-weather-sprite" />
         </button>
       )}
-      <AnimatedSprite asset={coupleSprite(weather.kind)} className="map-couple-sprite" />
+      <AnimatedSprite asset={coupleSprite(weather.kind)} className="map-couple-sprite" paused={reduceMotion} />
       {!showWeather && (
         <button
           className="pointer-events-auto mt-0.5 h-2.5 w-2.5 rounded-full bg-sky/55"
@@ -232,6 +359,321 @@ function CoupleTogetherMarker({
         />
       )}
     </div>
+  );
+}
+
+function FutureSpiritImage({
+  variant,
+  className,
+}: Readonly<{
+  variant: number;
+  className?: string;
+}>) {
+  const asset = futureSpiritSprite(variant);
+  const [src, setSrc] = useState(asset.src);
+
+  useEffect(() => {
+    setSrc(asset.src);
+  }, [asset.src]);
+
+  return (
+    <img
+      className={`block object-contain ${className ?? ""}`}
+      src={src}
+      alt=""
+      aria-hidden="true"
+      draggable={false}
+      onError={() => {
+        if (asset.fallbackSrc && src !== asset.fallbackSrc) setSrc(asset.fallbackSrc);
+      }}
+    />
+  );
+}
+
+function FutureCheckinMarker({
+  checkin,
+  x,
+  y,
+  index,
+}: Readonly<{
+  checkin: FutureCheckin;
+  x: number;
+  y: number;
+  index: number;
+}>) {
+  return (
+    <button
+      className="future-checkin-marker pointer-events-auto absolute z-10 h-[34px] w-[34px] sm:h-[38px] sm:w-[38px]"
+      style={{ left: `${x}%`, top: `${y}%`, animationDelay: `${index * -0.38}s` }}
+      type="button"
+      title={futureCheckinLabel(checkin)}
+      aria-label={`未来打卡：${futureCheckinLabel(checkin)}`}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <span
+        className="future-checkin-pulse pointer-events-none absolute left-1/2 top-[90%] h-2.5 w-5 rounded-full bg-mint/38 blur-[1px]"
+        aria-hidden="true"
+      />
+      <FutureSpiritImage
+        variant={checkin.mascotVariant}
+        className="future-checkin-spirit relative z-10 h-full w-full"
+      />
+    </button>
+  );
+}
+
+function FutureCheckinPanel({
+  checkins,
+  onCheckinsChange,
+  trigger,
+}: Readonly<{
+  checkins: FutureCheckin[];
+  onCheckinsChange: (checkins: FutureCheckin[]) => void;
+  trigger: (props: { onOpen: () => void; count: number }) => ReactNode;
+}>) {
+  const [open, setOpen] = useState(false);
+  const [selectedProvinceId, setSelectedProvinceId] = useState(provinces[0]?.id ?? "");
+  const [selectedCityId, setSelectedCityId] = useState("");
+  const [selectedRegionId, setSelectedRegionId] = useState("");
+  const [cityRegionFeatures, setCityRegionFeatures] = useState<CityRegionFeature[]>([]);
+  const [regionsLoading, setRegionsLoading] = useState(false);
+
+  const cityOptions = useMemo(
+    () => cities.filter((city) => city.provinceId === selectedProvinceId),
+    [selectedProvinceId],
+  );
+  const activeCityId =
+    selectedCityId && cityOptions.some((city) => city.id === selectedCityId)
+      ? selectedCityId
+      : cityOptions[0]?.id ?? "";
+  const selectedCity = activeCityId ? cityById.get(activeCityId) : undefined;
+  const regionOptions = useMemo(
+    () => regionOptionsOfCity(selectedCity, cityRegionFeatures),
+    [cityRegionFeatures, selectedCity],
+  );
+  const activeRegionId =
+    selectedRegionId && regionOptions.some((region) => region.id === selectedRegionId)
+      ? selectedRegionId
+      : regionOptions[0]?.id ?? "";
+
+  useEffect(() => {
+    if (!open || !selectedProvinceId) return;
+
+    const controller = new AbortController();
+    loadFutureCityRegionFeatures(selectedProvinceId, controller.signal)
+      .then((features) => {
+        if (!controller.signal.aborted) setCityRegionFeatures(features);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCityRegionFeatures([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setRegionsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [open, selectedProvinceId]);
+
+  const persistCheckins = (nextCheckins: FutureCheckin[]) => {
+    writeFutureCheckins(nextCheckins);
+    onCheckinsChange(nextCheckins);
+  };
+
+  const handleAdd = () => {
+    const province = provinceById.get(selectedProvinceId);
+    const city = cityById.get(activeCityId);
+    const region = regionOptions.find((option) => option.id === activeRegionId);
+    if (!province || !city || !region) return;
+
+    const nextCheckin = createFutureCheckin({
+      provinceId: province.id,
+      provinceName: province.name,
+      cityId: city.id,
+      cityName: city.name,
+      regionId: region.id,
+      regionName: region.name,
+      lng: region.lng,
+      lat: region.lat,
+      mascotVariant: Math.floor(Math.random() * forestSpiritVariantCount),
+    });
+    const withoutDuplicate = checkins.filter(
+      (checkin) =>
+        checkin.provinceId !== nextCheckin.provinceId ||
+        checkin.cityId !== nextCheckin.cityId ||
+        checkin.regionId !== nextCheckin.regionId,
+    );
+
+    persistCheckins([nextCheckin, ...withoutDuplicate]);
+  };
+
+  const handleRemove = (id: string) => {
+    persistCheckins(checkins.filter((checkin) => checkin.id !== id));
+  };
+
+  return (
+    <>
+      {trigger({
+        count: checkins.length,
+        onOpen: () => {
+          setRegionsLoading(true);
+          setOpen(true);
+        },
+      })}
+
+      <Modal open={open} onClose={() => setOpen(false)} title="未来打卡" size="lg">
+        <div className="grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="grid gap-1.5 text-xs font-semibold text-ink/58">
+              省份
+              <select
+                className="min-h-10 rounded-[7px] border border-dim/80 bg-cream/76 px-3 text-sm font-semibold text-ink outline-none transition focus:border-sky focus:bg-white"
+                value={selectedProvinceId}
+                onChange={(event) => {
+                  setSelectedProvinceId(event.target.value);
+                  setSelectedCityId("");
+                  setSelectedRegionId("");
+                  setCityRegionFeatures([]);
+                  setRegionsLoading(true);
+                }}
+              >
+                {provinces.map((province) => (
+                  <option key={province.id} value={province.id}>
+                    {province.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1.5 text-xs font-semibold text-ink/58">
+              城市
+              <select
+                className="min-h-10 rounded-[7px] border border-dim/80 bg-cream/76 px-3 text-sm font-semibold text-ink outline-none transition focus:border-sky focus:bg-white"
+                value={activeCityId}
+                onChange={(event) => {
+                  setSelectedCityId(event.target.value);
+                  setSelectedRegionId("");
+                }}
+              >
+                {cityOptions.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-1.5 text-xs font-semibold text-ink/58">
+              区域
+              <select
+                className="min-h-10 rounded-[7px] border border-dim/80 bg-cream/76 px-3 text-sm font-semibold text-ink outline-none transition focus:border-sky focus:bg-white disabled:opacity-55"
+                value={activeRegionId}
+                onChange={(event) => setSelectedRegionId(event.target.value)}
+                disabled={regionsLoading || regionOptions.length === 0}
+              >
+                {regionOptions.map((region) => (
+                  <option key={region.id} value={region.id}>
+                    {region.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <button
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[8px] bg-sakura px-4 text-sm font-semibold text-bloom transition hover:bg-bloom hover:text-cream disabled:opacity-45"
+            type="button"
+            onClick={handleAdd}
+            disabled={!selectedProvinceId || !activeCityId || !activeRegionId}
+          >
+            <PlusCircle className="h-4 w-4" />
+            添加打卡点
+          </button>
+
+          <div className="grid gap-2">
+            {checkins.length > 0 ? (
+              checkins.map((checkin) => (
+                <div
+                  key={checkin.id}
+                  className="flex min-h-12 items-center gap-3 rounded-[8px] border border-dim/72 bg-white/48 px-3 py-2"
+                >
+                  <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink/76">
+                    {futureCheckinLabel(checkin)}
+                  </p>
+                  <button
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-[7px] text-ink/46 transition hover:bg-sakura/55 hover:text-bloom"
+                    type="button"
+                    onClick={() => handleRemove(checkin.id)}
+                    aria-label={`删除未来打卡：${futureCheckinLabel(checkin)}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="grid min-h-16 place-items-center rounded-[8px] border border-dashed border-dim/80 bg-white/32 text-sm font-medium text-ink/48">
+                还没有未来打卡
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+function MapFloatingControls({
+  futureCheckinCount,
+  showCharacters,
+  onOpenFutureCheckins,
+  onToggleCharacters,
+}: Readonly<{
+  futureCheckinCount: number;
+  showCharacters: boolean;
+  onOpenFutureCheckins: () => void;
+  onToggleCharacters: () => void;
+}>) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed right-4 top-[4.25rem] z-[70] flex flex-col gap-2">
+      <button
+        className="relative grid h-11 w-11 place-items-center rounded-[8px] border border-dim/80 bg-cream/92 text-ink shadow-[var(--shadow-card)] backdrop-blur transition hover:border-sakura hover:bg-white hover:text-bloom"
+        type="button"
+        title="未来打卡"
+        aria-label="未来打卡"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenFutureCheckins();
+        }}
+      >
+        <MapPinPlus className="h-5 w-5" />
+        {futureCheckinCount > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-sakura px-1.5 text-[11px] font-semibold leading-none text-rose-ink shadow-[0_0_0_3px_rgba(255,248,230,0.88)]">
+            {futureCheckinCount}
+          </span>
+        )}
+      </button>
+      <button
+        className="grid h-11 w-11 place-items-center rounded-[8px] border border-dim/80 bg-cream/92 text-ink shadow-[var(--shadow-card)] backdrop-blur transition hover:border-sky hover:text-sky"
+        type="button"
+        title={showCharacters ? "隐藏人物" : "显示人物"}
+        aria-pressed={showCharacters}
+        aria-label={showCharacters ? "隐藏地图人物" : "显示地图人物"}
+        onClick={(event) => {
+          event.stopPropagation();
+          onToggleCharacters();
+        }}
+      >
+        {showCharacters ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+      </button>
+    </div>,
+    document.body,
   );
 }
 
@@ -291,6 +733,8 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
   const [reduceMotion, setReduceMotion] = useState(false);
   const [memberProfiles, setMemberProfiles] = useState<Record<string, PartnerProfile>>({});
   const [markerWeather, setMarkerWeather] = useState<Record<string, WeatherInfo>>({});
+  const [futureCheckins, setFutureCheckins] = useState<FutureCheckin[]>([]);
+  const [showCharacters, setShowCharacters] = useState(true);
   const router = useRouter();
   const { data: memoryData } = useMemorySummary();
   const memorySummary = useMemo(() => memoryData?.summary ?? {}, [memoryData?.summary]);
@@ -302,6 +746,19 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
     update();
     mql.addEventListener("change", update);
     return () => mql.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const syncFutureCheckins = () => setFutureCheckins(readFutureCheckins());
+
+    syncFutureCheckins();
+    window.addEventListener(futureCheckinsUpdatedEvent, syncFutureCheckins);
+    window.addEventListener("storage", syncFutureCheckins);
+
+    return () => {
+      window.removeEventListener(futureCheckinsUpdatedEvent, syncFutureCheckins);
+      window.removeEventListener("storage", syncFutureCheckins);
+    };
   }, []);
 
   useEffect(() => {
@@ -427,6 +884,31 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
       }>;
   }, [height, memberProfiles, width]);
 
+  const futureMarkers = useMemo(() => {
+    const projection = makeProjection(width, height, 24);
+
+    return futureCheckins
+      .map((checkin, index) => {
+        const projected = projection([checkin.lng, checkin.lat]);
+        if (!projected) return null;
+
+        const [x, y] = projected;
+
+        return {
+          checkin,
+          index,
+          x: (stableCoordinate(x) / width) * 100,
+          y: (stableCoordinate(y) / height) * 100,
+        };
+      })
+      .filter(Boolean) as Array<{
+        checkin: FutureCheckin;
+        index: number;
+        x: number;
+        y: number;
+      }>;
+  }, [futureCheckins, height, width]);
+
   const sameCityCoupleMarker = useMemo(() => {
     if (coupleMarkers.length < 2) return null;
     const firstCityId = coupleMarkers[0]?.city.id;
@@ -482,6 +964,19 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
       transition={{ type: "spring", stiffness: 100, damping: 20 }}
       style={{ aspectRatio: `${width} / ${height}` }}
     >
+      <FutureCheckinPanel
+        checkins={futureCheckins}
+        onCheckinsChange={setFutureCheckins}
+        trigger={({ count, onOpen }) => (
+          <MapFloatingControls
+            futureCheckinCount={count}
+            showCharacters={showCharacters}
+            onOpenFutureCheckins={onOpen}
+            onToggleCharacters={() => setShowCharacters((current) => !current)}
+          />
+        )}
+      />
+
       <div className="absolute right-2 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-1 rounded-full border border-dim/85 bg-cream/86 px-1.5 py-1.5 shadow-[0_12px_28px_rgba(90,102,112,0.1)] backdrop-blur sm:left-4 sm:right-auto sm:gap-2 sm:px-2 sm:py-3">
         <button
           className="grid h-8 w-8 place-items-center rounded-full text-ink transition hover:bg-mist/42 disabled:opacity-35 sm:h-9 sm:w-9"
@@ -730,7 +1225,17 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
             </g>
           </svg>
 
-          {sameCityCoupleMarker ? (
+          {futureMarkers.map((marker) => (
+            <FutureCheckinMarker
+              key={marker.checkin.id}
+              checkin={marker.checkin}
+              x={marker.x}
+              y={marker.y}
+              index={marker.index}
+            />
+          ))}
+
+          {showCharacters && sameCityCoupleMarker ? (
             <CoupleTogetherMarker
               weather={markerWeather[sameCityCoupleMarker.city.id] ?? {
                 cityId: sameCityCoupleMarker.city.id,
@@ -740,8 +1245,9 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
               }}
               x={sameCityCoupleMarker.x}
               y={sameCityCoupleMarker.y}
+              reduceMotion={reduceMotion}
             />
-          ) : (
+          ) : showCharacters ? (
             coupleMarkers.map((marker) => (
               <CoupleMarker
                 key={`${marker.key}-${marker.city.id}`}
@@ -755,8 +1261,11 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
                 x={marker.x}
                 y={marker.y}
                 index={marker.index}
+                reduceMotion={reduceMotion}
               />
             ))
+          ) : (
+            null
           )}
         </div>
       </motion.div>

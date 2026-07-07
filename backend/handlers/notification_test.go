@@ -46,7 +46,9 @@ func setupNotificationHandlerTestDB(t *testing.T) {
 		INSERT INTO notifications (id, space_id, user_id, type, target_type, target_id, title, body, is_read, created_at)
 		VALUES
 			('notification-1', 'space-1', 'user-1', 'memory.created', 'memory', 'memory-1', 'New', 'Body', 0, '2026-06-29T00:00:00Z'),
-			('notification-2', 'space-1', 'user-1', 'memory.updated', 'memory', 'memory-1', 'Read', 'Body', 1, '2026-06-28T00:00:00Z');
+			('notification-2', 'space-1', 'user-1', 'memory.updated', 'memory', 'memory-1', 'Read', 'Body', 1, '2026-06-28T00:00:00Z'),
+			('notification-3', 'space-1', 'user-1', 'memory.updated', 'memory', 'memory-2', 'Older', 'Body', 1, '2026-06-27T00:00:00Z'),
+			('notification-4', 'space-1', 'user-1', 'memory.updated', 'memory', 'memory-3', 'Oldest', 'Body', 1, '2026-06-26T00:00:00Z');
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +74,7 @@ func TestNotificationHandlersListAndMarkRead(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatal(err)
 	}
-	if len(response.Notifications) != 2 || response.Notifications[0]["id"] != "notification-1" {
+	if len(response.Notifications) != 3 || response.Notifications[0]["id"] != "notification-1" || response.Notifications[2]["id"] != "notification-3" {
 		t.Fatalf("unexpected notifications: %#v", response)
 	}
 

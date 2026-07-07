@@ -1,6 +1,104 @@
 {
   "version": 1,
   "frameCount": 4,
+  "futureSpirits": [
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-0.png",
+      "width": 314,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-0.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-1.png",
+      "width": 313,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-1.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-2.png",
+      "width": 314,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-2.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-3.png",
+      "width": 313,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-3.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-4.png",
+      "width": 314,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-4.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-5.png",
+      "width": 313,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-5.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-6.png",
+      "width": 314,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-6.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-7.png",
+      "width": 313,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-7.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-8.png",
+      "width": 314,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-8.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-9.png",
+      "width": 313,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-9.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-10.png",
+      "width": 314,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-10.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-11.png",
+      "width": 313,
+      "height": 314,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-11.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-12.png",
+      "width": 314,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-12.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-13.png",
+      "width": 313,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-13.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-14.png",
+      "width": 314,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-14.png"
+    },
+    {
+      "src": "https://our-memories.oss-cn-shanghai.aliyuncs.com/static/generated-assets/future-spirit-cutout-15.png",
+      "width": 313,
+      "height": 313,
+      "fallbackSrc": "/sprites/characters/generated/future-spirit-cutout-15.png"
+    }
+  ],
   "characters": {
     "female": {
       "sunny": {

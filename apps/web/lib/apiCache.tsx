@@ -104,9 +104,13 @@ function persistCache(cache: Cache, scope = sessionCacheScope()) {
 }
 
 export function ApiCacheProvider({ children }: Readonly<{ children: ReactNode }>) {
-  const [cache] = useState(() => reviveCache());
+  const [cache] = useState<Map<string, State<unknown, unknown>>>(() => new Map());
+  const [, setCacheReady] = useState(false);
 
   useEffect(() => {
+    replaceCache(cache, reviveCache());
+    setCacheReady(true);
+
     const save = () => persistCache(cache);
     const handleSessionScopeUpdate = (event: Event) => {
       const detail = (event as CustomEvent<SessionScopeUpdateDetail>).detail;

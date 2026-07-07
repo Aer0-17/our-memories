@@ -75,6 +75,9 @@ func RunSchedulerOnce(ctx context.Context, database *gorm.DB, publisher events.P
 	if err := cleanupReadNotifications(database, now); err != nil {
 		return count, err
 	}
+	if err := cleanupExcessNotifications(database); err != nil {
+		return count, err
+	}
 	return count, cleanupExpiredSignals(database, now)
 }
 
@@ -185,6 +188,11 @@ func startOfDay(t time.Time) time.Time {
 
 func cleanupReadNotifications(database *gorm.DB, now time.Time) error {
 	_, err := repositories.NewNotificationRepository(database).DeleteReadBefore(now.AddDate(0, 0, -30), 500)
+	return err
+}
+
+func cleanupExcessNotifications(database *gorm.DB) error {
+	_, err := repositories.NewNotificationRepository(database).DeleteBeyondRecentPerUser(3, 500)
 	return err
 }
 

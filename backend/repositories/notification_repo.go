@@ -25,6 +25,13 @@ type NotificationRecord struct {
 	CreatedAt  string `gorm:"column:created_at"`
 }
 
+type notificationRecordKey struct {
+	ID        string `gorm:"column:id"`
+	SpaceID   string `gorm:"column:space_id"`
+	UserID    string `gorm:"column:user_id"`
+	CreatedAt string `gorm:"column:created_at"`
+}
+
 func (NotificationRecord) TableName() string {
 	return "notifications"
 }
@@ -73,7 +80,7 @@ func (r *NotificationRepository) List(spaceID string, userID string, limit int) 
 	var records []NotificationRecord
 	if err := r.db.
 		Where("space_id = ? AND user_id = ?", spaceID, userID).
-		Order("is_read ASC, created_at DESC").
+		Order("created_at DESC, id DESC").
 		Limit(limit).
 		Find(&records).
 		Error; err != nil {
@@ -123,6 +130,45 @@ func (r *NotificationRepository) DeleteReadBefore(cutoff time.Time, limit int) (
 	for _, record := range records {
 		ids = append(ids, record.ID)
 	}
+	result := r.db.Where("id IN ?", ids).Delete(&NotificationRecord{})
+	return result.RowsAffected, result.Error
+}
+
+func (r *NotificationRepository) DeleteBeyondRecentPerUser(keep int, limit int) (int64, error) {
+	if keep <= 0 {
+		keep = 3
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+
+	var records []notificationRecordKey
+	if err := r.db.
+		Table("notifications").
+		Select("id, space_id, user_id, created_at").
+		Order("space_id ASC, user_id ASC, created_at DESC, id DESC").
+		Find(&records).
+		Error; err != nil {
+		return 0, err
+	}
+
+	seenByUser := map[string]int{}
+	ids := make([]string, 0, limit)
+	for _, record := range records {
+		userKey := record.SpaceID + "\x00" + record.UserID
+		seenByUser[userKey]++
+		if seenByUser[userKey] <= keep {
+			continue
+		}
+		ids = append(ids, record.ID)
+		if len(ids) >= limit {
+			break
+		}
+	}
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
 	result := r.db.Where("id IN ?", ids).Delete(&NotificationRecord{})
 	return result.RowsAffected, result.Error
 }

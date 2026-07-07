@@ -30,7 +30,7 @@ export function NotificationBell() {
     enabled: Boolean(session),
     refreshInterval: open ? 15000 : 0,
   });
-  const notifications = useMemo(() => data?.notifications ?? [], [data?.notifications]);
+  const notifications = useMemo(() => (data?.notifications ?? []).slice(0, 3), [data?.notifications]);
 
   const unreadCount = useMemo(() => notifications.filter((item) => !item.isRead).length, [notifications]);
   if (!session) return null;
