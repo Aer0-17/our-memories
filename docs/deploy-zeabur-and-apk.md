@@ -26,7 +26,7 @@ JWT_SECRET=<a long random secret, at least 24 chars>
 WEB_ORIGIN=capacitor://localhost,http://localhost,https://localhost
 SEED_ON_START=true
 
-DEFAULT_SPACE_NAME=我们的回忆
+DEFAULT_SPACE_NAME=回忆地图
 DEFAULT_SPACE_SLUG=our-memories
 DEFAULT_USER_1_USERNAME=me
 DEFAULT_USER_1_PASSWORD=<your password>

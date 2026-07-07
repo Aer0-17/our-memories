@@ -17,7 +17,7 @@
   },
   "build": {
     "appId": "com.mapofus.desktop",
-    "productName": "我们的回忆",
+    "productName": "回忆地图",
     "directories": {
       "output": "dist"
     },

@@ -12,7 +12,7 @@ export default function IndexPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
-  const [spaceName, setSpaceName] = useState("我们的回忆");
+  const [spaceName, setSpaceName] = useState("回忆地图");
   const [firstName, setFirstName] = useState("me");
   const [firstPassword, setFirstPassword] = useState("");
   const [secondName, setSecondName] = useState("her");
@@ -68,7 +68,7 @@ export default function IndexPage() {
     <View className="page entry-page">
       <View className="entry-hero">
         <Text className="entry-eyebrow">private couple space</Text>
-        <Text className="entry-title">我们的回忆</Text>
+        <Text className="entry-title">回忆地图</Text>
         <Text className="entry-subtitle">用四位密码打开地图、照片和纪念日墙。</Text>
       </View>
 

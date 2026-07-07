@@ -1,4 +1,4 @@
 export default definePageConfig({
-  navigationBarTitleText: "我们的回忆",
+  navigationBarTitleText: "回忆地图",
   enablePullDownRefresh: true,
 });

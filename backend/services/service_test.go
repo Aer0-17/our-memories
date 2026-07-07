@@ -465,6 +465,47 @@ func TestAccountServiceLoginPasswordAndAdminRules(t *testing.T) {
 	}
 }
 
+func TestAccountServiceEnsureDefaultSpaceUsesConfiguredMemberNames(t *testing.T) {
+	setupServiceTestDB(t)
+	t.Setenv("DEFAULT_USER_ME_DISPLAY_NAME", "成员A")
+	t.Setenv("DEFAULT_USER_TA_DISPLAY_NAME", "成员B")
+	config.Load()
+
+	if _, err := db.DB.Exec(`DELETE FROM users; DELETE FROM spaces;`); err != nil {
+		t.Fatal(err)
+	}
+
+	service := NewAccountService(repositories.NewAccountRepository(db.Gorm))
+	created, err := service.EnsureDefaultSpace("home", "local-password", "测试空间")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created {
+		t.Fatal("expected default space to be created")
+	}
+
+	rows, err := db.DB.Query(`SELECT username, display_name FROM users ORDER BY username`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	got := map[string]string{}
+	for rows.Next() {
+		var username, displayName string
+		if err := rows.Scan(&username, &displayName); err != nil {
+			t.Fatal(err)
+		}
+		got[username] = displayName
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if got["me"] != "成员A" || got["ta"] != "成员B" {
+		t.Fatalf("expected configured display names, got %#v", got)
+	}
+}
+
 func TestTimeCapsuleServiceLimitAndOpenRules(t *testing.T) {
 	setupServiceTestDB(t)
 	recorder := &recordedEvents{}

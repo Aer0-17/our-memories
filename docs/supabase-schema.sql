@@ -1,4 +1,4 @@
--- 我们的回忆 Supabase setup
+-- 回忆地图 Supabase setup
 -- Run this in Supabase SQL Editor before deploying with Supabase env vars.
 
 create table if not exists public.map_of_us_store (

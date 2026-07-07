@@ -27,6 +27,7 @@ import TripGuidesCard from "@/components/TripGuidesCard";
 import { WeatherPixelIcon } from "@/components/WeatherPixelIcon";
 import { summaryToMemoryStore, useMemorySummary } from "@/lib/memorySummaryStore";
 import { pullRefreshEvent } from "@/lib/refresh";
+import { useAuth } from "@/lib/authContext";
 import { useDeferredReady } from "@/lib/useDeferredReady";
 import { useIsMobile } from "@/lib/useIsMobile";
 import { flowerSprite } from "@/lib/generatedAssets";
@@ -102,8 +103,9 @@ const formatWeekday = (value: Date) =>
 function useTogetherDays() {
   const settings = useAppSettings();
   const startDate = normalizeAnniversaryDate(settings.anniversaryDate) ?? defaultAnniversaryDate;
-  const label = settings.anniversaryLabel ?? defaultAnniversaryLabel;
-  const days = daysTogether(startDate) ?? 0;
+  const configuredLabel = settings.anniversaryLabel || defaultAnniversaryLabel;
+  const label = startDate ? configuredLabel || "在一起" : configuredLabel;
+  const days = startDate ? daysTogether(startDate) : null;
 
   return { days, label, startDate };
 }
@@ -243,6 +245,21 @@ function DateTimeCard() {
 function TogetherDaysCard() {
   const { days, label, startDate } = useTogetherDays();
 
+  if (days === null || !startDate) {
+    return (
+      <div className="mt-3 rounded-[8px] border border-dim/70 bg-cream/62 px-4 py-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)]">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold text-ink/58">纪念日</p>
+            <p className="mt-1 text-sm font-semibold text-ink">还未设置</p>
+          </div>
+          <span className="text-sm font-semibold text-ink/50">设置</span>
+        </div>
+        <p className="mt-1 truncate text-xs text-ink/45">在设置里填写纪念日后开始计算</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3 rounded-[8px] border border-dim/70 bg-cream/62 px-4 py-3 text-ink shadow-[0_10px_24px_rgba(90,102,112,0.05)]">
       <div className="flex items-center justify-between gap-4">
@@ -263,6 +280,19 @@ function TogetherDaysCard() {
 export function TogetherDaysBadge({ compact = false }: Readonly<{ compact?: boolean }> = {}) {
   const { days, label } = useTogetherDays();
 
+  if (days === null) {
+    return (
+      <div
+        className={`flex w-fit max-w-full items-center gap-1.5 rounded-full border border-dim/80 bg-cream/78 text-ink/78 shadow-[0_8px_22px_rgba(90,102,112,0.08)] backdrop-blur ${
+          compact ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs"
+        }`}
+      >
+        <CalendarDays className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} shrink-0 text-sky`} />
+        <span className="min-w-0 truncate">设置纪念日</span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex w-fit max-w-full items-center gap-1.5 rounded-full border border-dim/80 bg-cream/78 text-ink/78 shadow-[0_8px_22px_rgba(90,102,112,0.08)] backdrop-blur ${
@@ -271,7 +301,7 @@ export function TogetherDaysBadge({ compact = false }: Readonly<{ compact?: bool
     >
       <CalendarDays className={`${compact ? "h-3.5 w-3.5" : "h-4 w-4"} shrink-0 text-sky`} />
       <span className="min-w-0 truncate">
-        {compact ? "在一起" : label}
+        {label}
         <strong className="mx-1 font-semibold text-bloom">{days}</strong>
         天
       </span>
@@ -281,6 +311,8 @@ export function TogetherDaysBadge({ compact = false }: Readonly<{ compact?: bool
 
 function AlbumProgressCard() {
   const progress = useProgress();
+  const { session } = useAuth();
+  const spaceName = session?.space?.name || "回忆地图";
   const provincePercent = Math.round((progress.provinceCount / TOTAL_PROVINCES) * 100);
   const cityPercent = Math.round((progress.cityCount / cities.length) * 100);
 
@@ -308,7 +340,7 @@ function AlbumProgressCard() {
         <div className="mb-3 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-ink">我们的进度</p>
-            <p className="mt-0.5 text-xs text-ink/52">我们的回忆</p>
+            <p className="mt-0.5 text-xs text-ink/52">{spaceName}</p>
           </div>
           <Heart className="h-5 w-5 fill-sakura text-bloom" />
         </div>
@@ -436,7 +468,7 @@ function useMapRitualStats() {
 export function MobileRitualStats() {
   const stats = useMapRitualStats();
   const badges = [
-    { label: "在一起", value: stats.days, unit: "天", accent: "text-bloom" },
+    { label: "纪念日", value: stats.days ?? "--", unit: stats.days === null ? "" : "天", accent: "text-bloom" },
     { label: "省份", value: stats.provinceCount, unit: "枚", accent: "text-sky" },
     { label: "城市", value: stats.cityCount, unit: "座", accent: "text-ink" },
     { label: "回忆", value: stats.memoryCount, unit: "条", accent: "text-bloom" },

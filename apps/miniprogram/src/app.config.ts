@@ -8,7 +8,7 @@ export default defineAppConfig({
   window: {
     backgroundTextStyle: "light",
     navigationBarBackgroundColor: "#FAFBF7",
-    navigationBarTitleText: "我们的回忆",
+    navigationBarTitleText: "回忆地图",
     navigationBarTextStyle: "black",
     backgroundColor: "#FAFBF7",
   },

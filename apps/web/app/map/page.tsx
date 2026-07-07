@@ -13,7 +13,7 @@ import {
 import RandomPhotoCard from "@/components/RandomPhotoCard";
 import { MapTimeCapsules } from "@/components/MapTimeCapsules";
 import MapWeatherCarousel from "@/components/MapWeatherCarousel";
-import { MapPageShell } from "@/components/MemoryNav";
+import { MapPageShell, SpaceDisplayName } from "@/components/MemoryNav";
 
 function BrandMark() {
   return (
@@ -145,7 +145,7 @@ export default function MapPage() {
               <BrandMark />
               <div className="min-w-0">
                 <h1 className="truncate text-xl font-semibold leading-tight tracking-normal text-ink sm:text-[28px]">
-                  我们的回忆
+                  <SpaceDisplayName />
                 </h1>
                 <div className="mt-1.5 grid gap-1">
                   <TogetherDaysBadge compact />

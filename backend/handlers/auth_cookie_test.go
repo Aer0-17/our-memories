@@ -45,10 +45,67 @@ func setupAuthCookieTestDB(t *testing.T) {
 
 	_, err = db.DB.Exec(`
 		INSERT INTO spaces (id, space_code, password_hash, name) VALUES ('space-1', 'space-one', ?, 'Space One');
-		INSERT INTO users (id, space_id, username, display_name, role) VALUES ('user-1', 'space-1', 'me', 'Me', 'owner');
+		INSERT INTO users (id, space_id, username, display_name, role) VALUES
+			('user-1', 'space-1', 'me', 'Me', 'owner'),
+			('user-2', 'space-1', 'ta', 'Her', 'member');
 	`, utils.HashPassword("correct-password"))
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestGetPublicConfigUsesExplicitEnvDefaultsBeforeStoredNames(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	t.Setenv("DEFAULT_SPACE_CODE", "space-one")
+	t.Setenv("DEFAULT_SPACE_NAME", "Env Space")
+	t.Setenv("DEFAULT_USER_ME_DISPLAY_NAME", "Env Me")
+	t.Setenv("DEFAULT_USER_TA_DISPLAY_NAME", "Env Ta")
+	t.Setenv("DEFAULT_ANNIVERSARY_DATE", "2026.07.07")
+	t.Setenv("DEFAULT_ANNIVERSARY_LABEL", "Together")
+	setupAuthCookieTestDB(t)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/public/config", nil)
+	response := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(response)
+	c.Request = request
+
+	GetPublicConfig(c)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected public config to pass, got %d: %s", response.Code, response.Body.String())
+	}
+
+	var payload struct {
+		SpaceCode        string `json:"spaceCode"`
+		SpaceName        string `json:"spaceName"`
+		AnniversaryDate  string `json:"anniversaryDate"`
+		AnniversaryLabel string `json:"anniversaryLabel"`
+		Users            []struct {
+			Username    string `json:"username"`
+			DisplayName string `json:"displayName"`
+		} `json:"users"`
+		Password  string `json:"password"`
+		JWTSecret string `json:"jwtSecret"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+
+	if payload.SpaceCode != "space-one" || payload.SpaceName != "Env Space" {
+		t.Fatalf("expected env space name with stored space code, got %#v", payload)
+	}
+	if payload.AnniversaryDate != "2026.07.07" || payload.AnniversaryLabel != "Together" {
+		t.Fatalf("expected env anniversary defaults, got %#v", payload)
+	}
+	gotUsers := map[string]string{}
+	for _, user := range payload.Users {
+		gotUsers[user.Username] = user.DisplayName
+	}
+	if gotUsers["me"] != "Env Me" || gotUsers["ta"] != "Env Ta" {
+		t.Fatalf("expected env user display names, got %#v", gotUsers)
+	}
+	if payload.Password != "" || payload.JWTSecret != "" {
+		t.Fatalf("public config leaked secrets: %#v", payload)
 	}
 }
 

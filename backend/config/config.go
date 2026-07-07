@@ -10,28 +10,33 @@ import (
 )
 
 type Config struct {
-	Port              string
-	DatabasePath      string
-	PublicDir         string
-	JWTSecret         string
-	AllowedOrigins    []string
-	DefaultSpaceCode  string
-	DefaultPassword   string
-	AdminUsername     string
-	AdminPassword     string
-	AdminDisplayName  string
-	AutoSeed          bool
-	S3Endpoint        string
-	S3Region          string
-	S3AccessKeyID     string
-	S3SecretAccessKey string
-	S3Bucket          string
-	S3PublicBaseURL   string
-	S3ObjectACL       string
-	LocalImageDir     string
-	PhotoSyncInterval string
-	JPushAppKey       string
-	JPushMasterSecret string
+	Port                     string
+	DatabasePath             string
+	PublicDir                string
+	JWTSecret                string
+	AllowedOrigins           []string
+	DefaultSpaceCode         string
+	DefaultSpaceName         string
+	DefaultPassword          string
+	DefaultUserMeDisplayName string
+	DefaultUserTaDisplayName string
+	DefaultAnniversaryDate   string
+	DefaultAnniversaryLabel  string
+	AdminUsername            string
+	AdminPassword            string
+	AdminDisplayName         string
+	AutoSeed                 bool
+	S3Endpoint               string
+	S3Region                 string
+	S3AccessKeyID            string
+	S3SecretAccessKey        string
+	S3Bucket                 string
+	S3PublicBaseURL          string
+	S3ObjectACL              string
+	LocalImageDir            string
+	PhotoSyncInterval        string
+	JPushAppKey              string
+	JPushMasterSecret        string
 }
 
 var cfg *Config
@@ -40,28 +45,33 @@ func Load() {
 	_ = godotenv.Load()
 
 	cfg = &Config{
-		Port:              getEnv("PORT", "8080"),
-		DatabasePath:      getEnv("DATABASE_PATH", "./data/ourMemories.db"),
-		PublicDir:         getEnv("PUBLIC_DIR", "./public"),
-		JWTSecret:         getEnv("JWT_SECRET", "change-me-at-least-24-characters"),
-		AllowedOrigins:    strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3002"), ","),
-		DefaultSpaceCode:  getEnv("DEFAULT_SPACE_CODE", "our-space-2026"),
-		DefaultPassword:   getEnv("DEFAULT_PASSWORD", ""),
-		AdminUsername:     getEnv("ADMIN_USERNAME", ""),
-		AdminPassword:     getEnv("ADMIN_PASSWORD", ""),
-		AdminDisplayName:  getEnv("ADMIN_DISPLAY_NAME", "Admin User"),
-		AutoSeed:          getEnv("AUTO_SEED", "false") == "true",
-		S3Endpoint:        getEnv("S3_ENDPOINT", ""),
-		S3Region:          getEnv("S3_REGION", "us-east-1"),
-		S3AccessKeyID:     getEnv("S3_ACCESS_KEY_ID", ""),
-		S3SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
-		S3Bucket:          getEnv("S3_BUCKET", "our-memories"),
-		S3PublicBaseURL:   getEnv("S3_PUBLIC_BASE_URL", ""),
-		S3ObjectACL:       getEnv("S3_OBJECT_ACL", ""),
-		LocalImageDir:     getEnv("LOCAL_IMAGE_DIR", "./data/images"),
-		PhotoSyncInterval: getEnv("PHOTO_SYNC_INTERVAL", "10m"),
-		JPushAppKey:       getEnv("JPUSH_APP_KEY", ""),
-		JPushMasterSecret: getEnv("JPUSH_MASTER_SECRET", ""),
+		Port:                     getEnv("PORT", "8080"),
+		DatabasePath:             getEnv("DATABASE_PATH", "./data/ourMemories.db"),
+		PublicDir:                getEnv("PUBLIC_DIR", "./public"),
+		JWTSecret:                getEnv("JWT_SECRET", "change-me-at-least-24-characters"),
+		AllowedOrigins:           strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:3002"), ","),
+		DefaultSpaceCode:         getEnv("DEFAULT_SPACE_CODE", "our-space-2026"),
+		DefaultSpaceName:         getEnv("DEFAULT_SPACE_NAME", "回忆地图"),
+		DefaultPassword:          getEnv("DEFAULT_PASSWORD", ""),
+		DefaultUserMeDisplayName: getEnv("DEFAULT_USER_ME_DISPLAY_NAME", "我"),
+		DefaultUserTaDisplayName: getEnv("DEFAULT_USER_TA_DISPLAY_NAME", "TA"),
+		DefaultAnniversaryDate:   getEnv("DEFAULT_ANNIVERSARY_DATE", ""),
+		DefaultAnniversaryLabel:  getEnv("DEFAULT_ANNIVERSARY_LABEL", ""),
+		AdminUsername:            getEnv("ADMIN_USERNAME", ""),
+		AdminPassword:            getEnv("ADMIN_PASSWORD", ""),
+		AdminDisplayName:         getEnv("ADMIN_DISPLAY_NAME", "Admin User"),
+		AutoSeed:                 getEnv("AUTO_SEED", "false") == "true",
+		S3Endpoint:               getEnv("S3_ENDPOINT", ""),
+		S3Region:                 getEnv("S3_REGION", "us-east-1"),
+		S3AccessKeyID:            getEnv("S3_ACCESS_KEY_ID", ""),
+		S3SecretAccessKey:        getEnv("S3_SECRET_ACCESS_KEY", ""),
+		S3Bucket:                 getEnv("S3_BUCKET", "our-memories"),
+		S3PublicBaseURL:          getEnv("S3_PUBLIC_BASE_URL", ""),
+		S3ObjectACL:              getEnv("S3_OBJECT_ACL", ""),
+		LocalImageDir:            getEnv("LOCAL_IMAGE_DIR", "./data/images"),
+		PhotoSyncInterval:        getEnv("PHOTO_SYNC_INTERVAL", "10m"),
+		JPushAppKey:              getEnv("JPUSH_APP_KEY", ""),
+		JPushMasterSecret:        getEnv("JPUSH_MASTER_SECRET", ""),
 	}
 
 	if err := Validate(cfg); err != nil {

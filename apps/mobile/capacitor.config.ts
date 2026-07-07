@@ -4,7 +4,7 @@ const serverUrl = process.env.CAPACITOR_SERVER_URL?.replace(/\/$/, "");
 
 const config: CapacitorConfig = {
   appId: "com.ourmemories.mobile",
-  appName: "我们的回忆",
+  appName: "回忆地图",
   webDir: "../web/out",
   server: serverUrl
     ? {

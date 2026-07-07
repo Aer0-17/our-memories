@@ -48,7 +48,7 @@ CAPACITOR_ALLOW_HTTP=1
 services:
   api:
     container_name: our-memories-api
-    image: "${OUR_MEMORIES_IMAGE:-ghcr.io/qq570850096/our-memories:latest}"
+    image: "${OUR_MEMORIES_IMAGE:-ghcr.io/aer0-17/our-memories:latest}"
     pull_policy: always
     env_file:
       - .env
@@ -74,7 +74,7 @@ volumes:
 ## 1Panel .env
 
 ```env
-OUR_MEMORIES_IMAGE=ghcr.io/qq570850096/our-memories:latest
+OUR_MEMORIES_IMAGE=ghcr.io/aer0-17/our-memories:latest
 
 JWT_SECRET=replace-with-a-long-random-secret
 
@@ -110,7 +110,7 @@ openssl rand -base64 32
 2. 服务器登录 GHCR。
 
 ```bash
-docker login ghcr.io -u qq570850096
+docker login ghcr.io -u Aer0-17
 ```
 
 3. 在 1Panel 创建 Compose 编排。

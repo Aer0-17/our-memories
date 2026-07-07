@@ -67,7 +67,10 @@ func (s *PushService) RegisterDevice(spaceID string, userID string, req Register
 func (s *PushService) SendTest(spaceID string, req TestPushRequest) error {
 	title := strings.TrimSpace(req.Title)
 	if title == "" {
-		title = "我们的回忆"
+		title = config.Get().DefaultSpaceName
+		if title == "" {
+			title = "回忆地图"
+		}
 	}
 	content := strings.TrimSpace(req.Content)
 	if content == "" {

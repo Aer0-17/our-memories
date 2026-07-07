@@ -48,8 +48,8 @@ export type CoupleProfiles = {
   personB?: PartnerProfile;
 };
 
-export const defaultAnniversaryDate = "2026.03.20";
-export const defaultAnniversaryLabel = "我们在一起";
+export const defaultAnniversaryDate = "";
+export const defaultAnniversaryLabel = "";
 export const defaultWeatherCityIds = ["beijing", "shanghai", "guangzhou"];
 export const maxWeatherCities = 3;
 export const defaultCoupleLogo = "/logo/couple-logo-placeholder.svg";

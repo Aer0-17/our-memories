@@ -46,7 +46,7 @@ if (!existsSync(fallbackIndex)) {
       "<head>",
       '  <meta charset="utf-8" />',
       '  <meta name="viewport" content="width=device-width, initial-scale=1" />',
-      "  <title>我们的回忆</title>",
+      "  <title>回忆地图</title>",
       "</head>",
       "<body>",
       "  <p>请连接网络后重新打开应用。</p>",

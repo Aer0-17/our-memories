@@ -1,6 +1,6 @@
 services:
   api:
-    image: ${OUR_MEMORIES_IMAGE:-ghcr.io/qq570850096/our-memories:latest}
+    image: ${OUR_MEMORIES_IMAGE:-ghcr.io/aer0-17/our-memories:latest}
     pull_policy: always
     environment:
       PORT: 8080
@@ -9,7 +9,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a long random value before starting}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002,capacitor://localhost,http://localhost,https://localhost}
       DEFAULT_SPACE_CODE: ${DEFAULT_SPACE_CODE:-our-space-2026}
+      DEFAULT_SPACE_NAME: ${DEFAULT_SPACE_NAME:-回忆地图}
       DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-}
+      DEFAULT_USER_ME_DISPLAY_NAME: ${DEFAULT_USER_ME_DISPLAY_NAME:-我}
+      DEFAULT_USER_TA_DISPLAY_NAME: ${DEFAULT_USER_TA_DISPLAY_NAME:-TA}
+      DEFAULT_ANNIVERSARY_DATE: ${DEFAULT_ANNIVERSARY_DATE:-}
+      DEFAULT_ANNIVERSARY_LABEL: ${DEFAULT_ANNIVERSARY_LABEL:-}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Admin User}

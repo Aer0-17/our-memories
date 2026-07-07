@@ -6,8 +6,8 @@ import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "我们的回忆",
-  description: "只属于两个人的私密地图与纪念日墙。",
+  title: "回忆地图",
+  description: "私密地图、回忆相册与纪念日墙。",
 };
 
 export default function RootLayout({

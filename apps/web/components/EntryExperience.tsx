@@ -19,6 +19,12 @@ import {
 } from "@/data/loginPhotoStore";
 import { apiBaseUrl, login } from "@/lib/apiClient";
 import { useAuth } from "@/lib/authContext";
+import {
+  defaultPublicConfig,
+  fetchPublicConfig,
+  publicUserLabel,
+  type PublicRuntimeConfig,
+} from "@/lib/publicConfig";
 
 const passcodeLength = 4;
 const loginPhotoVersion = "placeholder-20260601";
@@ -162,7 +168,8 @@ export default function EntryExperience() {
   const [loginPhotos, setLoginPhotos] = useState<Record<string, string>>({});
   const [loginPhotoTexts, setLoginPhotoTexts] = useState<AppSettings["loginPhotoTexts"]>({});
   const [activeId, setActiveId] = useState<Stamp["id"]>("hangzhou");
-  const [spaceCode] = useState<string>("our-space-2026");
+  const [publicConfig, setPublicConfig] = useState<PublicRuntimeConfig>(defaultPublicConfig);
+  const spaceCode = publicConfig.spaceCode;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [code, setCode] = useState("");
@@ -183,6 +190,7 @@ export default function EntryExperience() {
 
     const timer = window.setTimeout(() => {
       setSettings(readAppSettings());
+      void fetchPublicConfig().then(setPublicConfig).catch(() => {});
       void syncAppSettings().then(setSettings).catch(() => {});
       void readLoginPhotos().then(setLoginPhotos).catch(() => setLoginPhotos({}));
       void readLoginPhotoTexts().then(setLoginPhotoTexts).catch(() => setLoginPhotoTexts({}));
@@ -315,7 +323,7 @@ export default function EntryExperience() {
               <div className="flex items-center gap-3">
                 <PixelHeart />
                 <div>
-                  <p className="text-lg font-semibold leading-tight text-slate">我们的回忆</p>
+                  <p className="text-lg font-semibold leading-tight text-slate">{publicConfig.spaceName}</p>
                   <p className="mt-0.5 text-xs font-semibold text-clay">private memories</p>
                 </div>
               </div>
@@ -330,7 +338,7 @@ export default function EntryExperience() {
                 <span className="block text-rose">纪念日</span>
               </p>
               <p className="mt-4 max-w-[430px] text-sm font-medium leading-7 text-ink-soft sm:text-base">
-                一扇只给我们的回忆门，密码藏在开始的那一天。
+                一扇只给彼此的回忆门，密码藏在开始的那一天。
               </p>
             </div>
 
@@ -368,7 +376,7 @@ export default function EntryExperience() {
                         onClick={() => setSelectedUserId(userId)}
                         disabled={status === "checking" || status === "open"}
                       >
-                        {userId === "me" ? "刘永伦" : "郭文盈"}
+                        {publicUserLabel(publicConfig, userId)}
                       </button>
                     ))}
                   </>

@@ -2,6 +2,28 @@ package config
 
 import "testing"
 
+func TestLoadReadsDefaultPublicRuntimeConfig(t *testing.T) {
+	t.Setenv("JWT_SECRET", "0123456789abcdef0123456789abcdef")
+	t.Setenv("DEFAULT_SPACE_CODE", "home")
+	t.Setenv("DEFAULT_SPACE_NAME", "测试空间")
+	t.Setenv("DEFAULT_USER_ME_DISPLAY_NAME", "成员A")
+	t.Setenv("DEFAULT_USER_TA_DISPLAY_NAME", "成员B")
+	t.Setenv("DEFAULT_ANNIVERSARY_DATE", "2026.07.07")
+	t.Setenv("DEFAULT_ANNIVERSARY_LABEL", "在一起")
+
+	Load()
+
+	got := Get()
+	if got.DefaultSpaceCode != "home" ||
+		got.DefaultSpaceName != "测试空间" ||
+		got.DefaultUserMeDisplayName != "成员A" ||
+		got.DefaultUserTaDisplayName != "成员B" ||
+		got.DefaultAnniversaryDate != "2026.07.07" ||
+		got.DefaultAnniversaryLabel != "在一起" {
+		t.Fatalf("unexpected default runtime config: %#v", got)
+	}
+}
+
 func TestValidateAllowsExplicitSecureConfig(t *testing.T) {
 	cfg := secureTestConfig()
 	cfg.AutoSeed = true

@@ -62,6 +62,7 @@ func main() {
 		api.POST("/auth/refresh", refreshLimiter, handlers.Refresh)
 		api.POST("/auth/logout", handlers.Logout)
 		api.GET("/ws", handlers.WebSocket)
+		api.GET("/public/config", handlers.GetPublicConfig)
 
 		// 管理员路由
 		api.POST("/admin/login", authLimiter, handlers.AdminLogin)

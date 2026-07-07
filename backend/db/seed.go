@@ -30,11 +30,11 @@ func Seed() {
 			ID:           spaceID,
 			SpaceCode:    cfg.DefaultSpaceCode,
 			PasswordHash: passwordHash,
-			Name:         "我们的回忆",
+			Name:         cfg.DefaultSpaceName,
 		},
 		[]repositories.UserRecord{
-			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: "刘永伦"},
-			{ID: userTaID, SpaceID: spaceID, Username: "ta", DisplayName: "郭文盈"},
+			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: cfg.DefaultUserMeDisplayName},
+			{ID: userTaID, SpaceID: spaceID, Username: "ta", DisplayName: cfg.DefaultUserTaDisplayName},
 		},
 	)
 	if err != nil {

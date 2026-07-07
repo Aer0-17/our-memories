@@ -1,7 +1,7 @@
 const { app, BrowserWindow, shell } = require("electron");
 const path = require("node:path");
 
-app.setName("我们的回忆");
+app.setName("回忆地图");
 
 const isPackaged = app.isPackaged;
 const appRoot = isPackaged ? app.getAppPath() : path.join(__dirname, "..");
@@ -16,7 +16,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
-    title: "我们的回忆",
+    title: "回忆地图",
     backgroundColor: "#fdfaf3",
     show: true,
     webPreferences: {

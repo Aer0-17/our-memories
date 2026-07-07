@@ -98,7 +98,7 @@ manifestPlaceholders = [
 
 ```json
 {
-  "title": "我们的回忆",
+  "title": "回忆地图",
   "content": "极光推送测试成功。"
 }
 ```

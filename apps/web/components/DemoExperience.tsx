@@ -406,7 +406,7 @@ export default function DemoExperience() {
             <div>
               <div className="flex items-center gap-2 text-sm font-semibold text-ink/58">
                 <MapPinned className="h-4 w-4 text-bloom" />
-                我们的回忆
+                回忆地图
               </div>
               <h1 className="mt-2 text-[30px] font-semibold leading-tight text-ink">录屏演示页</h1>
             </div>

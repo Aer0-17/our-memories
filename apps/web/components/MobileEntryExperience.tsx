@@ -5,6 +5,12 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Delete, Heart, LockKeyhole } from "lucide-react";
 import { apiBaseUrl, login } from "@/lib/apiClient";
 import { useAuth } from "@/lib/authContext";
+import {
+  defaultPublicConfig,
+  fetchPublicConfig,
+  publicUserLabel,
+  type PublicRuntimeConfig,
+} from "@/lib/publicConfig";
 
 const passcodeLength = 4;
 const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "delete"] as const;
@@ -34,7 +40,8 @@ function KeyLabel({ value }: Readonly<{ value: (typeof keys)[number] }>) {
 export default function MobileEntryExperience() {
   const router = useRouter();
   const { session } = useAuth();
-  const [spaceCode] = useState("our-space-2026");
+  const [publicConfig, setPublicConfig] = useState<PublicRuntimeConfig>(defaultPublicConfig);
+  const spaceCode = publicConfig.spaceCode;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [code, setCode] = useState("");
@@ -43,6 +50,11 @@ export default function MobileEntryExperience() {
   useEffect(() => {
     if (session) router.replace("/map");
   }, [router, session]);
+
+  useEffect(() => {
+    if (session) return;
+    void fetchPublicConfig().then(setPublicConfig).catch(() => {});
+  }, [session]);
 
   const submitCode = async (nextCode: string) => {
     if (nextCode.length < passcodeLength || status === "checking" || status === "open") return;
@@ -121,7 +133,7 @@ export default function MobileEntryExperience() {
               <div className="flex items-center gap-3">
                 <PixelHeart />
                 <div>
-                  <p className="text-lg font-semibold leading-tight text-slate">我们的回忆</p>
+                  <p className="text-lg font-semibold leading-tight text-slate">{publicConfig.spaceName}</p>
                   <p className="mt-0.5 text-xs font-semibold text-clay">private memories</p>
                 </div>
               </div>
@@ -136,7 +148,7 @@ export default function MobileEntryExperience() {
                 <span className="block text-rose">纪念日</span>
               </p>
               <p className="mt-4 text-sm font-medium leading-7 text-ink-soft">
-                一扇只给我们的回忆门，密码藏在开始的那一天。
+                一扇只给彼此的回忆门，密码藏在开始的那一天。
               </p>
             </div>
 
@@ -164,7 +176,7 @@ export default function MobileEntryExperience() {
                       onClick={() => setSelectedUserId(userId)}
                       disabled={status === "checking" || status === "open"}
                     >
-                      {userId === "me" ? "刘永伦" : "郭文盈"}
+                      {publicUserLabel(publicConfig, userId)}
                     </button>
                   ))
                 )}

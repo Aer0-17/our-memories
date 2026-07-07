@@ -2,7 +2,10 @@ package services
 
 import (
 	"errors"
+	"os"
+	"strings"
 
+	"our-memories-backend/config"
 	"our-memories-backend/models"
 	"our-memories-backend/repositories"
 	"our-memories-backend/utils"
@@ -34,6 +37,19 @@ type AdminLoginRequest struct {
 type AdminLoginResult struct {
 	Token string
 	Admin models.Admin
+}
+
+type PublicRuntimeConfig struct {
+	SpaceCode        string             `json:"spaceCode"`
+	SpaceName        string             `json:"spaceName"`
+	AnniversaryDate  string             `json:"anniversaryDate,omitempty"`
+	AnniversaryLabel string             `json:"anniversaryLabel,omitempty"`
+	Users            []PublicUserConfig `json:"users"`
+}
+
+type PublicUserConfig struct {
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
 }
 
 type AccountService struct {
@@ -100,6 +116,51 @@ func (s *AccountService) UpdatePassword(spaceID string, newPassword string) erro
 	return s.repo.UpdateSpacePassword(spaceID, utils.HashPassword(newPassword))
 }
 
+func (s *AccountService) PublicConfig() PublicRuntimeConfig {
+	cfg := config.Get()
+	spaceNameFromEnv := envHasValue("DEFAULT_SPACE_NAME")
+	userNameFromEnv := map[string]bool{
+		"me": envHasValue("DEFAULT_USER_ME_DISPLAY_NAME"),
+		"ta": envHasValue("DEFAULT_USER_TA_DISPLAY_NAME"),
+	}
+	result := PublicRuntimeConfig{
+		SpaceCode:        cfg.DefaultSpaceCode,
+		SpaceName:        cfg.DefaultSpaceName,
+		AnniversaryDate:  cfg.DefaultAnniversaryDate,
+		AnniversaryLabel: cfg.DefaultAnniversaryLabel,
+		Users: []PublicUserConfig{
+			{Username: "me", DisplayName: cfg.DefaultUserMeDisplayName},
+			{Username: "ta", DisplayName: cfg.DefaultUserTaDisplayName},
+		},
+	}
+
+	space, err := s.repo.SpaceByCode(cfg.DefaultSpaceCode)
+	if err != nil {
+		return result
+	}
+	result.SpaceCode = space.SpaceCode
+	if space.Name != "" && !spaceNameFromEnv {
+		result.SpaceName = space.Name
+	}
+
+	for i := range result.Users {
+		if userNameFromEnv[result.Users[i].Username] {
+			continue
+		}
+		user, err := s.repo.UserByUsername(space.ID, result.Users[i].Username)
+		if err == nil && user.DisplayName != "" {
+			result.Users[i].DisplayName = user.DisplayName
+		}
+	}
+
+	return result
+}
+
+func envHasValue(key string) bool {
+	value, ok := os.LookupEnv(key)
+	return ok && strings.TrimSpace(value) != ""
+}
+
 func (s *AccountService) AdminLogin(req AdminLoginRequest) (AdminLoginResult, error) {
 	admin, err := s.repo.AdminByUsername(req.Username)
 	if err != nil {
@@ -130,6 +191,7 @@ func (s *AccountService) EnsureDefaultSpace(spaceCode string, password string, n
 	spaceID := utils.NewID()
 	userMeID := utils.NewID()
 	userTaID := utils.NewID()
+	cfg := config.Get()
 	err = s.repo.CreateSpaceWithUsers(
 		repositories.SpaceRecord{
 			ID:           spaceID,
@@ -138,8 +200,8 @@ func (s *AccountService) EnsureDefaultSpace(spaceCode string, password string, n
 			Name:         name,
 		},
 		[]repositories.UserRecord{
-			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: "刘永伦"},
-			{ID: userTaID, SpaceID: spaceID, Username: "ta", DisplayName: "郭文盈"},
+			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: cfg.DefaultUserMeDisplayName},
+			{ID: userTaID, SpaceID: spaceID, Username: "ta", DisplayName: cfg.DefaultUserTaDisplayName},
 		},
 	)
 	return err == nil, err

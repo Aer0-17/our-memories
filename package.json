@@ -2,7 +2,7 @@
   "name": "our-memories",
   "version": "0.2.0",
   "description": "Online-first private couple memory map and anniversary wall",
-  "author": "我们的回忆",
+  "author": "回忆地图",
   "private": true,
   "workspaces": [
     "apps/*",

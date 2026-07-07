@@ -52,6 +52,12 @@ COPY --from=admin-builder /src/apps/admin/out ./public/admin
 ENV PORT=8080 \
   DATABASE_PATH=/app/data/ourMemories.db \
   PUBLIC_DIR=/app/public \
+  DEFAULT_SPACE_CODE=our-space-2026 \
+  DEFAULT_SPACE_NAME=回忆地图 \
+  DEFAULT_USER_ME_DISPLAY_NAME=我 \
+  DEFAULT_USER_TA_DISPLAY_NAME=TA \
+  DEFAULT_ANNIVERSARY_DATE= \
+  DEFAULT_ANNIVERSARY_LABEL= \
   AUTO_SEED=false
 
 USER app

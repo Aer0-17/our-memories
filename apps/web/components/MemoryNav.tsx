@@ -16,8 +16,9 @@ import {
   Star,
 } from "lucide-react";
 import { PageTransition } from "@/components/PageTransition";
+import { useAuth } from "@/lib/authContext";
 
-const githubUrl = "https://github.com/qq570850096/our-memories";
+const githubUrl = "https://github.com/Aer0-17/our-memories";
 
 export type MemoryNavKey = "map" | "memories" | "favorites" | "anniversaries" | "capsule" | "whispers" | "settings";
 
@@ -38,6 +39,11 @@ const navItems = [
 
 const mainNavKeys: MemoryNavKey[] = ["map", "memories", "anniversaries"];
 const moreNavKeys: MemoryNavKey[] = ["whispers", "favorites", "capsule", "settings"];
+
+export function SpaceDisplayName({ fallback = "回忆地图" }: Readonly<{ fallback?: string }>) {
+  const { session } = useAuth();
+  return <>{session?.space?.name || fallback}</>;
+}
 
 function MobileBottomNav({
   active,
@@ -134,13 +140,16 @@ function MobileBottomNav({
 }
 
 export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
+  const { session } = useAuth();
+  const spaceName = session?.space?.name || "回忆地图";
+
   return (
     <aside className="hidden min-h-screen w-[260px] shrink-0 border-r border-dim/78 bg-cream/78 px-5 py-8 shadow-[12px_0_34px_rgba(90,102,112,0.04)] backdrop-blur lg:block">
       <div className="text-center">
         <div className="mx-auto grid h-14 w-14 place-items-center">
           <Heart className="h-10 w-10 fill-sakura text-bloom" />
         </div>
-        <p className="mt-2 text-lg font-semibold text-ink">我们的回忆</p>
+        <p className="mt-2 text-lg font-semibold text-ink">{spaceName}</p>
         <p className="mt-1 text-xs text-ink/52">只属于两个人的回忆</p>
       </div>
 
@@ -192,7 +201,7 @@ export function MemorySidebar({ active }: Readonly<{ active: MemoryNavKey }>) {
             GitHub
           </a>
           <p className="mt-1.5 select-text text-[11px] leading-5 text-ink/55">
-            github.com/qq570850096/our-memories
+            github.com/Aer0-17/our-memories
           </p>
         </div>
       </div>
