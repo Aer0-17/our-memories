@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/db"
+	"our-memories-backend/events"
 	"our-memories-backend/repositories"
 	"our-memories-backend/services"
 	"our-memories-backend/storage"
@@ -152,6 +153,15 @@ func CreateAuxiliaryItem(c *gin.Context) {
 		return
 	}
 
+	if req.Kind == "future-checkin" {
+		_ = domainPublisher.Publish(c.Request.Context(), events.DomainEvent{
+			Type:     events.FutureCheckinCreated,
+			SpaceID:  spaceID,
+			ActorID:  c.GetString("userID"),
+			TargetID: itemID,
+		})
+	}
+
 	utils.Success(c, gin.H{"id": itemID})
 }
 
@@ -176,10 +186,28 @@ func UpdateAuxiliaryItem(c *gin.Context) {
 func DeleteAuxiliaryItem(c *gin.Context) {
 	id := c.Param("id")
 	spaceID := c.GetString("spaceID")
+	isFutureCheckin := false
+	if items, err := settingService().ListAuxiliaryItems(spaceID, "future-checkin"); err == nil {
+		for _, item := range items {
+			if item.ID == id {
+				isFutureCheckin = true
+				break
+			}
+		}
+	}
 
 	if err := settingService().DeleteAuxiliaryItem(spaceID, id); err != nil {
 		writeSettingServiceError(c, err, "Failed to delete item")
 		return
+	}
+
+	if isFutureCheckin {
+		_ = domainPublisher.Publish(c.Request.Context(), events.DomainEvent{
+			Type:     events.FutureCheckinDeleted,
+			SpaceID:  spaceID,
+			ActorID:  c.GetString("userID"),
+			TargetID: id,
+		})
 	}
 
 	utils.Success(c, gin.H{"ok": true})

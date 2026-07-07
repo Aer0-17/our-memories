@@ -6,6 +6,7 @@ import { apiBaseUrl, refreshAccessToken } from "@/lib/apiClient";
 import { useAuth } from "@/lib/authContext";
 import { readSession } from "@/lib/authStore";
 import { syncAppSettings } from "@/data/appSettings";
+import { futureCheckinsApiKey } from "@/lib/futureCheckins";
 
 export type RealtimeEvent = {
   type: string;
@@ -43,6 +44,10 @@ function shouldRefreshAnniversaries(event: RealtimeEvent) {
 
 function shouldRefreshSignals(event: RealtimeEvent) {
   return event.type.startsWith("signal.") || event.targetType === "signal";
+}
+
+function shouldRefreshFutureCheckins(event: RealtimeEvent) {
+  return event.type.startsWith("future_checkin.") || event.targetType === "future_checkin";
 }
 
 function shouldRefreshSettings(event: RealtimeEvent) {
@@ -132,6 +137,9 @@ export function useWebSocket() {
         }
         if (shouldRefreshSignals(event)) {
           void mutate("/signals");
+        }
+        if (shouldRefreshFutureCheckins(event)) {
+          void mutate(futureCheckinsApiKey);
         }
         if (shouldRefreshSettings(event)) {
           void syncAppSettings();

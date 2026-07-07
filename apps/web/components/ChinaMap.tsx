@@ -35,6 +35,7 @@ import {
 } from "@/data/appSettings";
 import { readSession } from "@/lib/authStore";
 import { fetchCitiesWeather, weatherFallbackTemp, type WeatherInfo } from "@/lib/weather";
+import { useApi } from "@/lib/swr";
 import { WeatherPixelIcon } from "@/components/WeatherPixelIcon";
 import {
   characterSprite,
@@ -43,13 +44,19 @@ import {
   type GeneratedSpriteAsset,
 } from "@/lib/generatedAssets";
 import {
+  createServerFutureCheckin,
   createFutureCheckin,
+  deleteServerFutureCheckin,
   forestSpiritVariantCount,
+  futureCheckinsApiKey,
   futureCheckinLabel,
-  futureCheckinsUpdatedEvent,
-  readFutureCheckins,
+  localFutureCheckinsToMigrate,
+  migrateLocalFutureCheckins,
+  serverFutureCheckinsToCheckins,
+  uniqueFutureCheckins,
   writeFutureCheckins,
   type FutureCheckin,
+  type FutureCheckinPayload,
 } from "@/lib/futureCheckins";
 
 interface ChinaMapProps {
@@ -432,10 +439,12 @@ function FutureCheckinMarker({
 function FutureCheckinPanel({
   checkins,
   onCheckinsChange,
+  onRefresh,
   trigger,
 }: Readonly<{
   checkins: FutureCheckin[];
   onCheckinsChange: (checkins: FutureCheckin[]) => void;
+  onRefresh: () => void;
   trigger: (props: { onOpen: () => void; count: number }) => ReactNode;
 }>) {
   const [open, setOpen] = useState(false);
@@ -444,6 +453,8 @@ function FutureCheckinPanel({
   const [selectedRegionId, setSelectedRegionId] = useState("");
   const [cityRegionFeatures, setCityRegionFeatures] = useState<CityRegionFeature[]>([]);
   const [regionsLoading, setRegionsLoading] = useState(false);
+  const [workingId, setWorkingId] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
   const cityOptions = useMemo(
     () => cities.filter((city) => city.provinceId === selectedProvinceId),
@@ -481,16 +492,16 @@ function FutureCheckinPanel({
     return () => controller.abort();
   }, [open, selectedProvinceId]);
 
-  const persistCheckins = (nextCheckins: FutureCheckin[]) => {
+  const persistLocalCheckins = (nextCheckins: FutureCheckin[]) => {
     writeFutureCheckins(nextCheckins);
     onCheckinsChange(nextCheckins);
   };
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const province = provinceById.get(selectedProvinceId);
     const city = cityById.get(activeCityId);
     const region = regionOptions.find((option) => option.id === activeRegionId);
-    if (!province || !city || !region) return;
+    if (!province || !city || !region || isAdding) return;
 
     const nextCheckin = createFutureCheckin({
       provinceId: province.id,
@@ -510,11 +521,45 @@ function FutureCheckinPanel({
         checkin.regionId !== nextCheckin.regionId,
     );
 
-    persistCheckins([nextCheckin, ...withoutDuplicate]);
+    const optimisticCheckins = [nextCheckin, ...withoutDuplicate];
+    persistLocalCheckins(optimisticCheckins);
+    setIsAdding(true);
+
+    try {
+      const serverCheckin = await createServerFutureCheckin(nextCheckin);
+      persistLocalCheckins([serverCheckin, ...withoutDuplicate]);
+      void Promise.all(
+        checkins
+          .filter(
+            (checkin) =>
+              checkin.provinceId === nextCheckin.provinceId &&
+              checkin.cityId === nextCheckin.cityId &&
+              checkin.regionId === nextCheckin.regionId,
+          )
+          .map((checkin) => deleteServerFutureCheckin(checkin.id).catch(() => null)),
+      );
+      onRefresh();
+    } catch {
+      persistLocalCheckins(checkins);
+    } finally {
+      setIsAdding(false);
+    }
   };
 
-  const handleRemove = (id: string) => {
-    persistCheckins(checkins.filter((checkin) => checkin.id !== id));
+  const handleRemove = async (id: string) => {
+    if (workingId) return;
+    const nextCheckins = checkins.filter((checkin) => checkin.id !== id);
+    persistLocalCheckins(nextCheckins);
+    setWorkingId(id);
+
+    try {
+      await deleteServerFutureCheckin(id);
+      onRefresh();
+    } catch {
+      persistLocalCheckins(checkins);
+    } finally {
+      setWorkingId("");
+    }
   };
 
   return (
@@ -590,10 +635,10 @@ function FutureCheckinPanel({
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-[8px] bg-sakura px-4 text-sm font-semibold text-bloom transition hover:bg-bloom hover:text-cream disabled:opacity-45"
             type="button"
             onClick={handleAdd}
-            disabled={!selectedProvinceId || !activeCityId || !activeRegionId}
+            disabled={isAdding || !selectedProvinceId || !activeCityId || !activeRegionId}
           >
             <PlusCircle className="h-4 w-4" />
-            添加打卡点
+            {isAdding ? "正在添加" : "添加打卡点"}
           </button>
 
           <div className="grid gap-2">
@@ -610,6 +655,7 @@ function FutureCheckinPanel({
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-[7px] text-ink/46 transition hover:bg-sakura/55 hover:text-bloom"
                     type="button"
                     onClick={() => handleRemove(checkin.id)}
+                    disabled={workingId === checkin.id}
                     aria-label={`删除未来打卡：${futureCheckinLabel(checkin)}`}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -740,6 +786,10 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
   const [showCharacters, setShowCharacters] = useState(true);
   const router = useRouter();
   const { data: memoryData } = useMemorySummary();
+  const {
+    data: futureCheckinData,
+    mutate: refreshFutureCheckins,
+  } = useApi<FutureCheckinPayload>(futureCheckinsApiKey);
   const memorySummary = useMemo(() => memoryData?.summary ?? {}, [memoryData?.summary]);
   const localMemories = useMemo<LocalMemoryStore>(() => summaryToMemoryStore(memorySummary), [memorySummary]);
 
@@ -752,17 +802,28 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
   }, []);
 
   useEffect(() => {
-    const syncFutureCheckins = () => setFutureCheckins(readFutureCheckins());
+    if (!futureCheckinData) return;
 
-    syncFutureCheckins();
-    window.addEventListener(futureCheckinsUpdatedEvent, syncFutureCheckins);
-    window.addEventListener("storage", syncFutureCheckins);
+    let cancelled = false;
+    const serverCheckins = serverFutureCheckinsToCheckins(futureCheckinData.items);
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      const localOnlyCheckins = localFutureCheckinsToMigrate(serverCheckins);
+      const mergedCheckins = uniqueFutureCheckins([...localOnlyCheckins, ...serverCheckins]);
+
+      void migrateLocalFutureCheckins(localOnlyCheckins).then((migrated) => {
+        if (migrated.length > 0 && !cancelled) void refreshFutureCheckins();
+      });
+
+      setFutureCheckins(mergedCheckins);
+      writeFutureCheckins(mergedCheckins);
+    }, 0);
 
     return () => {
-      window.removeEventListener(futureCheckinsUpdatedEvent, syncFutureCheckins);
-      window.removeEventListener("storage", syncFutureCheckins);
+      cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, []);
+  }, [futureCheckinData, refreshFutureCheckins]);
 
   useEffect(() => {
     const syncSettings = () => {
@@ -970,6 +1031,9 @@ export default function ChinaMap({ width = 1100, height = 860, className }: Chin
       <FutureCheckinPanel
         checkins={futureCheckins}
         onCheckinsChange={setFutureCheckins}
+        onRefresh={() => {
+          void refreshFutureCheckins();
+        }}
         trigger={({ count, onOpen }) => (
           <MapFloatingControls
             futureCheckinCount={count}

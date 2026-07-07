@@ -1,5 +1,9 @@
+import { apiFetch, apiJson } from "@/lib/apiClient";
+
 export const futureCheckinsStorageKey = "mapofus:future-checkins";
-export const futureCheckinsUpdatedEvent = "mapofus:future-checkins-updated";
+export const futureCheckinsApiKey = "/api/v1/auxiliary-items?kind=future-checkin";
+export const futureCheckinsMigrationKey = "mapofus:future-checkins:migrated-to-server-v1";
+export const futureCheckinKind = "future-checkin";
 
 export const forestSpiritVariantCount = 16;
 
@@ -18,6 +22,30 @@ export type FutureCheckin = {
 };
 
 export type FutureCheckinInput = Omit<FutureCheckin, "id" | "createdAt">;
+
+export type FutureCheckinPayload = {
+  items?: ServerFutureCheckinItem[];
+};
+
+type ServerFutureCheckinItem = {
+  id: string;
+  title?: string;
+  date?: string;
+  note?: string;
+  cityId?: string;
+  createdAt?: string;
+};
+
+type ServerFutureCheckinNote = {
+  provinceId?: string;
+  provinceName?: string;
+  cityName?: string;
+  regionId?: string;
+  regionName?: string;
+  lng?: number;
+  lat?: number;
+  mascotVariant?: number;
+};
 
 const cleanString = (value: unknown, maxLength: number) => {
   if (typeof value !== "string") return "";
@@ -73,11 +101,130 @@ export const readFutureCheckins = (): FutureCheckin[] => {
   }
 };
 
+const parseServerNote = (note: unknown): ServerFutureCheckinNote | null => {
+  if (typeof note !== "string" || !note.trim()) return null;
+
+  try {
+    const parsed = JSON.parse(note) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+    return parsed as ServerFutureCheckinNote;
+  } catch {
+    return null;
+  }
+};
+
+const labelParts = (title: string | undefined) =>
+  cleanString(title, 140)
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+export const serverFutureCheckinToCheckin = (item: ServerFutureCheckinItem): FutureCheckin | null => {
+  const note = parseServerNote(item.note);
+  const lng = cleanCoordinate(note?.lng);
+  const lat = cleanCoordinate(note?.lat);
+  if (!note || lng === null || lat === null) return null;
+
+  const cityId = cleanString(item.cityId, 40);
+  const labels = labelParts(item.title);
+  const provinceId = cleanString(note.provinceId, 40);
+  const regionId = cleanString(note.regionId, 80);
+  if (!provinceId || !cityId || !regionId) return null;
+
+  return normalizeCheckin({
+    id: item.id,
+    provinceId,
+    provinceName: cleanString(note.provinceName, 40) || labels[0] || provinceId,
+    cityId,
+    cityName: cleanString(note.cityName, 40) || labels[1] || cityId,
+    regionId,
+    regionName: cleanString(note.regionName, 60) || labels.slice(2).join(" ") || "全市",
+    lng,
+    lat,
+    mascotVariant: normalizeMascotVariant(note.mascotVariant),
+    createdAt: cleanString(item.createdAt, 40) || new Date().toISOString(),
+  });
+};
+
+export const serverFutureCheckinsToCheckins = (items: ServerFutureCheckinItem[] = []) =>
+  items.map(serverFutureCheckinToCheckin).filter(Boolean) as FutureCheckin[];
+
 export const writeFutureCheckins = (checkins: FutureCheckin[]) => {
   if (typeof window === "undefined") return;
   const normalized = checkins.map(normalizeCheckin).filter(Boolean) as FutureCheckin[];
   window.localStorage.setItem(futureCheckinsStorageKey, JSON.stringify(normalized));
-  window.dispatchEvent(new CustomEvent<FutureCheckin[]>(futureCheckinsUpdatedEvent, { detail: normalized }));
+};
+
+const futureCheckinRequestBody = (checkin: FutureCheckin) => ({
+  kind: futureCheckinKind,
+  title: futureCheckinLabel(checkin),
+  cityId: checkin.cityId,
+  note: JSON.stringify({
+    provinceId: checkin.provinceId,
+    provinceName: checkin.provinceName,
+    cityName: checkin.cityName,
+    regionId: checkin.regionId,
+    regionName: checkin.regionName,
+    lng: checkin.lng,
+    lat: checkin.lat,
+    mascotVariant: checkin.mascotVariant,
+  } satisfies ServerFutureCheckinNote),
+});
+
+export const createServerFutureCheckin = async (checkin: FutureCheckin) => {
+  const response = await apiJson<{ id: string }>("/api/v1/auxiliary-items", {
+    method: "POST",
+    body: JSON.stringify(futureCheckinRequestBody(checkin)),
+  });
+
+  return {
+    ...checkin,
+    id: response.id || checkin.id,
+  };
+};
+
+export const deleteServerFutureCheckin = async (id: string) => {
+  const response = await apiFetch(`/api/v1/auxiliary-items/${id}`, { method: "DELETE" });
+  if (!response.ok) throw new Error("Delete future check-in failed");
+};
+
+const futureCheckinFingerprint = (checkin: FutureCheckin) =>
+  `${checkin.provinceId}|${checkin.cityId}|${checkin.regionId}`;
+
+export const uniqueFutureCheckins = (checkins: FutureCheckin[]) => {
+  const seen = new Set<string>();
+  const unique: FutureCheckin[] = [];
+  for (const checkin of checkins) {
+    const fingerprint = futureCheckinFingerprint(checkin);
+    if (seen.has(fingerprint)) continue;
+    seen.add(fingerprint);
+    unique.push(checkin);
+  }
+  return unique;
+};
+
+export const localFutureCheckinsToMigrate = (serverCheckins: FutureCheckin[]) => {
+  if (typeof window === "undefined") return [];
+  if (window.localStorage.getItem(futureCheckinsMigrationKey) === "1") return [];
+
+  const localCheckins = readFutureCheckins();
+  if (localCheckins.length === 0) {
+    window.localStorage.setItem(futureCheckinsMigrationKey, "1");
+    return [];
+  }
+
+  const existing = new Set(serverCheckins.map(futureCheckinFingerprint));
+  return localCheckins.filter((checkin) => !existing.has(futureCheckinFingerprint(checkin)));
+};
+
+export const migrateLocalFutureCheckins = async (checkins: FutureCheckin[]) => {
+  if (typeof window === "undefined" || checkins.length === 0) return [];
+  const results = await Promise.all(checkins.map((checkin) => createServerFutureCheckin(checkin).catch(() => null)));
+  const migrated = results.filter(Boolean) as FutureCheckin[];
+  if (migrated.length === checkins.length) {
+    window.localStorage.setItem(futureCheckinsMigrationKey, "1");
+  }
+  return migrated;
 };
 
 export const createFutureCheckin = (input: FutureCheckinInput): FutureCheckin => ({
