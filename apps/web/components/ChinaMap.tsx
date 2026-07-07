@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -75,6 +75,13 @@ const maxZoom = 1.75;
 const minZoom = 1;
 const stableCoordinate = (value: number) => Number(value.toFixed(3));
 const spriteFrameDurationMs = 240;
+const subscribeToClientReady = () => () => {};
+const clientReadySnapshot = () => true;
+const serverReadySnapshot = () => false;
+
+function useClientReady() {
+  return useSyncExternalStore(subscribeToClientReady, clientReadySnapshot, serverReadySnapshot);
+}
 
 type CityRegionFeature = {
   properties?: {
@@ -370,21 +377,21 @@ function FutureSpiritImage({
   className?: string;
 }>) {
   const asset = futureSpiritSprite(variant);
-  const [src, setSrc] = useState(asset.src);
-
-  useEffect(() => {
-    setSrc(asset.src);
-  }, [asset.src]);
+  const [failedSrc, setFailedSrc] = useState("");
+  const src = failedSrc === asset.src && asset.fallbackSrc ? asset.fallbackSrc : asset.src;
 
   return (
-    <img
+    <Image
       className={`block object-contain ${className ?? ""}`}
       src={src}
       alt=""
+      width={asset.width}
+      height={asset.height}
       aria-hidden="true"
       draggable={false}
+      unoptimized
       onError={() => {
-        if (asset.fallbackSrc && src !== asset.fallbackSrc) setSrc(asset.fallbackSrc);
+        if (asset.fallbackSrc && src !== asset.fallbackSrc) setFailedSrc(asset.src);
       }}
     />
   );
@@ -632,13 +639,9 @@ function MapFloatingControls({
   onOpenFutureCheckins: () => void;
   onToggleCharacters: () => void;
 }>) {
-  const [mounted, setMounted] = useState(false);
+  const clientReady = useClientReady();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  if (!clientReady) return null;
 
   return createPortal(
     <div className="fixed right-4 top-[4.25rem] z-[70] flex flex-col gap-2">

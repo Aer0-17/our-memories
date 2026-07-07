@@ -105,11 +105,13 @@ function persistCache(cache: Cache, scope = sessionCacheScope()) {
 
 export function ApiCacheProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [cache] = useState<Map<string, State<unknown, unknown>>>(() => new Map());
-  const [, setCacheReady] = useState(false);
+  const [, forceCacheHydrationRender] = useState(0);
 
   useEffect(() => {
     replaceCache(cache, reviveCache());
-    setCacheReady(true);
+    const hydrationRenderTimer = window.setTimeout(() => {
+      forceCacheHydrationRender((version) => version + 1);
+    }, 0);
 
     const save = () => persistCache(cache);
     const handleSessionScopeUpdate = (event: Event) => {
@@ -129,6 +131,7 @@ export function ApiCacheProvider({ children }: Readonly<{ children: ReactNode }>
     window.addEventListener("pagehide", save);
     window.addEventListener(sessionScopeUpdatedEvent, handleSessionScopeUpdate);
     return () => {
+      window.clearTimeout(hydrationRenderTimer);
       save();
       window.removeEventListener("pagehide", save);
       window.removeEventListener(sessionScopeUpdatedEvent, handleSessionScopeUpdate);
