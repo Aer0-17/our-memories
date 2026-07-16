@@ -68,7 +68,7 @@ func Refresh(c *gin.Context) {
 		return
 	}
 
-	claims, err := utils.VerifyToken(refreshToken)
+	claims, err := utils.VerifyRefreshToken(refreshToken)
 	if err != nil {
 		utils.Error(c, 401, "Invalid refresh token")
 		return

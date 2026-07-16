@@ -36,4 +36,4 @@ USER app
 EXPOSE 8080
 VOLUME ["/app/data"]
 
-CMD ["./our-memories-api"]
+CMD ["sh", "-c", "umask 077 && exec ./our-memories-api"]

@@ -19,8 +19,11 @@ func Init() {
 	cfg := config.Get()
 
 	dir := filepath.Dir(cfg.DatabasePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		log.Fatal("创建数据库目录失败:", err)
+	}
+	if err := os.Chmod(dir, 0700); err != nil {
+		log.Printf("警告: 无法收紧数据库目录权限: %v", err)
 	}
 
 	var err error
@@ -31,6 +34,9 @@ func Init() {
 
 	if err := DB.Ping(); err != nil {
 		log.Fatal("连接数据库失败:", err)
+	}
+	if err := os.Chmod(cfg.DatabasePath, 0600); err != nil {
+		log.Printf("警告: 无法收紧数据库文件权限: %v", err)
 	}
 
 	initGorm(DB)

@@ -40,11 +40,10 @@ type AdminLoginResult struct {
 }
 
 type PublicRuntimeConfig struct {
-	SpaceCode        string             `json:"spaceCode"`
-	SpaceName        string             `json:"spaceName"`
-	AnniversaryDate  string             `json:"anniversaryDate,omitempty"`
-	AnniversaryLabel string             `json:"anniversaryLabel,omitempty"`
-	Users            []PublicUserConfig `json:"users"`
+	SpaceCode      string             `json:"spaceCode"`
+	SpaceName      string             `json:"spaceName"`
+	PasscodeLength int                `json:"passcodeLength"`
+	Users          []PublicUserConfig `json:"users"`
 }
 
 type PublicUserConfig struct {
@@ -118,16 +117,28 @@ func (s *AccountService) UpdatePassword(spaceID string, newPassword string) erro
 
 func (s *AccountService) PublicConfig() PublicRuntimeConfig {
 	cfg := config.Get()
+	result := PublicRuntimeConfig{
+		SpaceCode:      cfg.DefaultSpaceCode,
+		SpaceName:      "回忆地图",
+		PasscodeLength: cfg.LoginPasscodeLength,
+		Users: []PublicUserConfig{
+			{Username: "me", DisplayName: "我"},
+			{Username: "ta", DisplayName: "TA"},
+		},
+	}
+	if !cfg.ExposeLoginPersonalization {
+		return result
+	}
+
 	spaceNameFromEnv := envHasValue("DEFAULT_SPACE_NAME")
 	userNameFromEnv := map[string]bool{
 		"me": envHasValue("DEFAULT_USER_ME_DISPLAY_NAME"),
 		"ta": envHasValue("DEFAULT_USER_TA_DISPLAY_NAME"),
 	}
-	result := PublicRuntimeConfig{
-		SpaceCode:        cfg.DefaultSpaceCode,
-		SpaceName:        cfg.DefaultSpaceName,
-		AnniversaryDate:  cfg.DefaultAnniversaryDate,
-		AnniversaryLabel: cfg.DefaultAnniversaryLabel,
+	result = PublicRuntimeConfig{
+		SpaceCode:      cfg.DefaultSpaceCode,
+		SpaceName:      cfg.DefaultSpaceName,
+		PasscodeLength: cfg.LoginPasscodeLength,
 		Users: []PublicUserConfig{
 			{Username: "me", DisplayName: cfg.DefaultUserMeDisplayName},
 			{Username: "ta", DisplayName: cfg.DefaultUserTaDisplayName},

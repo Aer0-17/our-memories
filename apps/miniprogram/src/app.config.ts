@@ -3,6 +3,8 @@ export default defineAppConfig({
     "pages/index/index",
     "pages/memories/index",
     "pages/anniversaries/index",
+    "pages/whispers/index",
+    "pages/capsules/index",
     "pages/settings/index",
   ],
   window: {

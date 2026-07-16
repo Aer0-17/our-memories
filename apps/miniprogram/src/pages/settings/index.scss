@@ -49,3 +49,9 @@
   line-height: 20px;
   padding: 10px 12px;
 }
+
+.link-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

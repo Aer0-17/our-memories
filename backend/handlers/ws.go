@@ -28,9 +28,16 @@ func WebSocketHub() *events.ConnectionHub {
 }
 
 var wsUpgrader = websocket.Upgrader{
-	CheckOrigin: func(*http.Request) bool {
+	Subprotocols: []string{"our-memories"},
+	CheckOrigin:  websocketOriginAllowed,
+}
+
+func websocketOriginAllowed(request *http.Request) bool {
+	origin := strings.TrimSpace(request.Header.Get("Origin"))
+	if origin == "" {
 		return true
-	},
+	}
+	return middleware.IsSameRequestOrigin(request, origin) || middleware.IsAllowedOrigin(origin)
 }
 
 type websocketClientMessage struct {
@@ -71,7 +78,7 @@ func WebSocket(c *gin.Context) {
 }
 
 func claimsFromWebSocketRequest(c *gin.Context) (*utils.Claims, error) {
-	token := strings.TrimSpace(c.Query("token"))
+	token := websocketProtocolToken(c.GetHeader("Sec-WebSocket-Protocol"))
 	if token == "" {
 		authHeader := c.GetHeader("Authorization")
 		if strings.HasPrefix(authHeader, "Bearer ") {
@@ -81,7 +88,17 @@ func claimsFromWebSocketRequest(c *gin.Context) (*utils.Claims, error) {
 	if token == "" {
 		token, _ = c.Cookie(middleware.AccessTokenCookieName)
 	}
-	return utils.VerifyToken(token)
+	return utils.VerifyAccessToken(token)
+}
+
+func websocketProtocolToken(header string) string {
+	for _, protocol := range strings.Split(header, ",") {
+		protocol = strings.TrimSpace(protocol)
+		if strings.HasPrefix(protocol, "auth.") {
+			return strings.TrimPrefix(protocol, "auth.")
+		}
+	}
+	return ""
 }
 
 func writeWebSocketMessages(conn *websocket.Conn, send <-chan []byte) {

@@ -1,24 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Input, Text, View } from "@tarojs/components";
 import Taro, { usePullDownRefresh } from "@tarojs/taro";
-import { claimActivation, login } from "../../lib/api";
+import { getPublicConfig, login, type PublicConfig } from "../../lib/api";
 import "./index.scss";
 
-type Mode = "login" | "claim";
-
 export default function IndexPage() {
-  const [mode, setMode] = useState<Mode>("login");
-  const [spaceSlug, setSpaceSlug] = useState("");
-  const [username, setUsername] = useState("");
+  const [config, setConfig] = useState<PublicConfig | null>(null);
+  const [spaceCode, setSpaceCode] = useState("");
+  const [userId, setUserId] = useState("me");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
-  const [spaceName, setSpaceName] = useState("回忆地图");
-  const [firstName, setFirstName] = useState("me");
-  const [firstPassword, setFirstPassword] = useState("");
-  const [secondName, setSecondName] = useState("her");
-  const [secondPassword, setSecondPassword] = useState("");
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState(false);
+
+  useEffect(() => {
+    void getPublicConfig()
+      .then((value) => {
+        setConfig(value);
+        setSpaceCode(value.spaceCode);
+      })
+      .catch(() => setStatus("暂时无法连接服务，请检查小程序 API 域名配置。"));
+  }, []);
 
   usePullDownRefresh(() => {
     setStatus("");
@@ -27,38 +28,17 @@ export default function IndexPage() {
 
   const submitLogin = async () => {
     if (working) return;
+    if (!spaceCode.trim() || !password.trim()) {
+      setStatus("请填写空间码和密码。");
+      return;
+    }
     setWorking(true);
     setStatus("");
     try {
-      await login({ username, password, spaceSlug: spaceSlug || undefined });
+      await login({ spaceCode: spaceCode.trim(), userId, password });
       Taro.switchTab({ url: "/pages/memories/index" });
     } catch {
-      setStatus("登录失败，请检查空间 slug、账号和四位密码。");
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  const submitClaim = async () => {
-    if (working) return;
-    setWorking(true);
-    setStatus("");
-    try {
-      const result = await claimActivation({
-        code,
-        spaceName,
-        accounts: [
-          { username: firstName, password: firstPassword },
-          { username: secondName, password: secondPassword },
-        ],
-      });
-      setSpaceSlug(result.space.slug);
-      setUsername(firstName);
-      setPassword(firstPassword);
-      setMode("login");
-      setStatus(`开通成功，空间 slug：${result.space.slug}`);
-    } catch {
-      setStatus("开通失败，请确认开通码和两个四位密码。");
+      setStatus("登录失败，请检查空间码、账号和密码。");
     } finally {
       setWorking(false);
     }
@@ -68,35 +48,36 @@ export default function IndexPage() {
     <View className="page entry-page">
       <View className="entry-hero">
         <Text className="entry-eyebrow">private couple space</Text>
-        <Text className="entry-title">回忆地图</Text>
-        <Text className="entry-subtitle">用四位密码打开地图、照片和纪念日墙。</Text>
+        <Text className="entry-title">{config?.spaceName || "回忆地图"}</Text>
+        <Text className="entry-subtitle">打开你们的回忆、纪念日和私语。</Text>
       </View>
 
-      <View className="mode-switch">
-        <Button className={mode === "login" ? "mode active" : "mode"} onClick={() => setMode("login")}>登录</Button>
-        <Button className={mode === "claim" ? "mode active" : "mode"} onClick={() => setMode("claim")}>开通</Button>
+      <View className="account-switch" aria-label="选择账号">
+        {(config?.users.length ? config.users : [
+          { username: "me", displayName: "我" },
+          { username: "ta", displayName: "TA" },
+        ]).map((user) => (
+          <Button
+            className={userId === user.username ? "account active" : "account"}
+            key={user.username}
+            onClick={() => setUserId(user.username)}
+          >
+            {user.displayName}
+          </Button>
+        ))}
       </View>
 
-      {mode === "login" ? (
-        <View className="card form-card">
-          <Input className="field" value={spaceSlug} onInput={(event) => setSpaceSlug(event.detail.value)} placeholder="空间 slug，默认空间可留空" />
-          <Input className="field" value={username} onInput={(event) => setUsername(event.detail.value)} placeholder="账号名" />
-          <Input className="field" password value={password} onInput={(event) => setPassword(event.detail.value.replace(/\D/g, "").slice(0, 4))} placeholder="四位密码" />
-          <Button className="btn" loading={working} onClick={submitLogin}>打开回忆</Button>
+      <View className="card form-card">
+        <View className="field-group">
+          <Text className="field-label">空间码</Text>
+          <Input className="field" value={spaceCode} onInput={(event) => setSpaceCode(event.detail.value)} placeholder="例如 our-space-2026" />
         </View>
-      ) : (
-        <View className="card form-card">
-          <Input className="field" value={code} onInput={(event) => setCode(event.detail.value)} placeholder="一次性开通码" />
-          <Input className="field" value={spaceName} onInput={(event) => setSpaceName(event.detail.value)} placeholder="空间名称" />
-          <View className="account-grid">
-            <Input className="field" value={firstName} onInput={(event) => setFirstName(event.detail.value)} placeholder="账号 1" />
-            <Input className="field" password value={firstPassword} onInput={(event) => setFirstPassword(event.detail.value.replace(/\D/g, "").slice(0, 4))} placeholder="四位密码" />
-            <Input className="field" value={secondName} onInput={(event) => setSecondName(event.detail.value)} placeholder="账号 2" />
-            <Input className="field" password value={secondPassword} onInput={(event) => setSecondPassword(event.detail.value.replace(/\D/g, "").slice(0, 4))} placeholder="四位密码" />
-          </View>
-          <Button className="btn" loading={working} onClick={submitClaim}>创建我们的空间</Button>
+        <View className="field-group">
+          <Text className="field-label">密码</Text>
+          <Input className="field" password value={password} onInput={(event) => setPassword(event.detail.value)} placeholder="输入空间密码" />
         </View>
-      )}
+        <Button className="btn" loading={working} onClick={submitLogin}>打开回忆</Button>
+      </View>
 
       {status && <Text className="status">{status}</Text>}
     </View>

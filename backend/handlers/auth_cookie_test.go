@@ -54,6 +54,33 @@ func setupAuthCookieTestDB(t *testing.T) {
 	}
 }
 
+func TestGetPublicConfigHidesPersonalizationByDefault(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	t.Setenv("DEFAULT_SPACE_CODE", "space-one")
+	t.Setenv("DEFAULT_SPACE_NAME", "Private Space")
+	t.Setenv("DEFAULT_USER_ME_DISPLAY_NAME", "Private Me")
+	t.Setenv("DEFAULT_USER_TA_DISPLAY_NAME", "Private Ta")
+	t.Setenv("DEFAULT_ANNIVERSARY_DATE", "2026.07.07")
+	t.Setenv("DEFAULT_ANNIVERSARY_LABEL", "Private Anniversary")
+	setupAuthCookieTestDB(t)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/public/config", nil)
+	response := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(response)
+	c.Request = request
+	GetPublicConfig(c)
+
+	body := response.Body.String()
+	for _, privateValue := range []string{"Private Space", "Private Me", "Private Ta", "2026.07.07", "Private Anniversary"} {
+		if strings.Contains(body, privateValue) {
+			t.Fatalf("public config leaked private value %q: %s", privateValue, body)
+		}
+	}
+	if !strings.Contains(body, `"spaceName":"回忆地图"`) || !strings.Contains(body, `"displayName":"我"`) {
+		t.Fatalf("expected generic public config, got %s", body)
+	}
+}
+
 func TestGetPublicConfigUsesExplicitEnvDefaultsBeforeStoredNames(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("DEFAULT_SPACE_CODE", "space-one")
@@ -62,6 +89,8 @@ func TestGetPublicConfigUsesExplicitEnvDefaultsBeforeStoredNames(t *testing.T) {
 	t.Setenv("DEFAULT_USER_TA_DISPLAY_NAME", "Env Ta")
 	t.Setenv("DEFAULT_ANNIVERSARY_DATE", "2026.07.07")
 	t.Setenv("DEFAULT_ANNIVERSARY_LABEL", "Together")
+	t.Setenv("LOGIN_PASSCODE_LENGTH", "8")
+	t.Setenv("EXPOSE_LOGIN_PERSONALIZATION", "true")
 	setupAuthCookieTestDB(t)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/public/config", nil)
@@ -76,11 +105,10 @@ func TestGetPublicConfigUsesExplicitEnvDefaultsBeforeStoredNames(t *testing.T) {
 	}
 
 	var payload struct {
-		SpaceCode        string `json:"spaceCode"`
-		SpaceName        string `json:"spaceName"`
-		AnniversaryDate  string `json:"anniversaryDate"`
-		AnniversaryLabel string `json:"anniversaryLabel"`
-		Users            []struct {
+		SpaceCode      string `json:"spaceCode"`
+		SpaceName      string `json:"spaceName"`
+		PasscodeLength int    `json:"passcodeLength"`
+		Users          []struct {
 			Username    string `json:"username"`
 			DisplayName string `json:"displayName"`
 		} `json:"users"`
@@ -94,8 +122,8 @@ func TestGetPublicConfigUsesExplicitEnvDefaultsBeforeStoredNames(t *testing.T) {
 	if payload.SpaceCode != "space-one" || payload.SpaceName != "Env Space" {
 		t.Fatalf("expected env space name with stored space code, got %#v", payload)
 	}
-	if payload.AnniversaryDate != "2026.07.07" || payload.AnniversaryLabel != "Together" {
-		t.Fatalf("expected env anniversary defaults, got %#v", payload)
+	if payload.PasscodeLength != 8 {
+		t.Fatalf("expected configured passcode length, got %#v", payload)
 	}
 	gotUsers := map[string]string{}
 	for _, user := range payload.Users {

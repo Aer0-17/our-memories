@@ -20,7 +20,7 @@ func AdminAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := utils.VerifyToken(token)
+		claims, err := utils.VerifyAdminToken(token)
 		if err != nil {
 			utils.Error(c, 401, "Invalid or expired token")
 			c.Abort()

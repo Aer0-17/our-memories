@@ -1,0 +1,81 @@
+.whispers-page,
+.whisper-list,
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.title {
+  color: #273846;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.subtitle,
+.whisper-date,
+.message-meta,
+.muted {
+  color: rgba(90, 102, 112, 0.56);
+  font-size: 12px;
+}
+
+.whisper-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+}
+
+.whisper-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.whisper-title {
+  color: #5a6670;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-left: 3px solid #f5dce0;
+  padding-left: 12px;
+}
+
+.message-copy {
+  color: rgba(90, 102, 112, 0.82);
+  font-size: 14px;
+  line-height: 24px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.empty-title {
+  color: #5a6670;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.empty-copy {
+  color: rgba(90, 102, 112, 0.58);
+  font-size: 13px;
+  line-height: 22px;
+}

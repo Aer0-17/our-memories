@@ -26,7 +26,6 @@ import {
   type PublicRuntimeConfig,
 } from "@/lib/publicConfig";
 
-const passcodeLength = 4;
 const loginPhotoVersion = "placeholder-20260601";
 const loginPhotoPath = (fileName: string) => `/photos/login/${fileName}.jpg?v=${loginPhotoVersion}`;
 
@@ -169,6 +168,7 @@ export default function EntryExperience() {
   const [loginPhotoTexts, setLoginPhotoTexts] = useState<AppSettings["loginPhotoTexts"]>({});
   const [activeId, setActiveId] = useState<Stamp["id"]>("hangzhou");
   const [publicConfig, setPublicConfig] = useState<PublicRuntimeConfig>(defaultPublicConfig);
+  const passcodeLength = publicConfig.passcodeLength;
   const spaceCode = publicConfig.spaceCode;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUserId, setSelectedUserId] = useState<string>("");

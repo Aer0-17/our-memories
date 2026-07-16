@@ -20,11 +20,8 @@ button {
 
 .page {
   min-height: 100vh;
-  padding: 28px 18px 36px;
-  background:
-    radial-gradient(circle at 14% 10%, rgba(245, 220, 224, 0.7), transparent 26%),
-    radial-gradient(circle at 90% 24%, rgba(214, 232, 240, 0.64), transparent 28%),
-    #fafbf7;
+  padding: 24px 16px 32px;
+  background: #fafbf7;
 }
 
 .card {
@@ -51,7 +48,7 @@ button {
 }
 
 .field {
-  min-height: 42px;
+  min-height: 44px;
   width: 100%;
   border: 1px solid rgba(216, 221, 216, 0.86);
   border-radius: 8px;

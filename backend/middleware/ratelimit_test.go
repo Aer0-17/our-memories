@@ -27,6 +27,9 @@ func TestRateLimitBlocksRequestsAfterThreshold(t *testing.T) {
 	if response.Code != http.StatusTooManyRequests {
 		t.Fatalf("expected rate-limited request to return 429, got %d", response.Code)
 	}
+	if response.Header().Get("Retry-After") == "" {
+		t.Fatal("expected rate-limited response to include Retry-After")
+	}
 }
 
 func TestRateLimitDisabledWhenLimitIsZero(t *testing.T) {

@@ -109,8 +109,8 @@ export function useWebSocket() {
       }
       const token = readSession()?.accessToken;
       if (!token || closed) return;
-      const url = `${wsBaseUrl()}/api/v1/ws?token=${encodeURIComponent(token)}`;
-      socket = new WebSocket(url);
+      const url = `${wsBaseUrl()}/api/v1/ws`;
+      socket = new WebSocket(url, ["our-memories", `auth.${token}`]);
 
       socket.onopen = () => {
         activeSocket = socket;

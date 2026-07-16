@@ -8,6 +8,7 @@ services:
       PUBLIC_DIR: /app/public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a long random value before starting}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002,capacitor://localhost,http://localhost,https://localhost}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       DEFAULT_SPACE_CODE: ${DEFAULT_SPACE_CODE:-our-space-2026}
       DEFAULT_SPACE_NAME: ${DEFAULT_SPACE_NAME:-回忆地图}
       DEFAULT_PASSWORD: ${DEFAULT_PASSWORD:-}
@@ -15,6 +16,8 @@ services:
       DEFAULT_USER_TA_DISPLAY_NAME: ${DEFAULT_USER_TA_DISPLAY_NAME:-TA}
       DEFAULT_ANNIVERSARY_DATE: ${DEFAULT_ANNIVERSARY_DATE:-}
       DEFAULT_ANNIVERSARY_LABEL: ${DEFAULT_ANNIVERSARY_LABEL:-}
+      LOGIN_PASSCODE_LENGTH: ${LOGIN_PASSCODE_LENGTH:-4}
+      EXPOSE_LOGIN_PERSONALIZATION: ${EXPOSE_LOGIN_PERSONALIZATION:-false}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Admin User}
@@ -26,11 +29,19 @@ services:
       S3_BUCKET: ${S3_BUCKET:-our-memories}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
       S3_OBJECT_ACL: ${S3_OBJECT_ACL:-}
+      LOCAL_IMAGE_DIR: /app/data/images
     ports:
       - "8080:8080"
     volumes:
       - api-data:/app/data
     restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s

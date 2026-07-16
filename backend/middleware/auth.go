@@ -24,7 +24,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := utils.VerifyToken(token)
+		claims, err := utils.VerifyAccessToken(token)
 		if err != nil {
 			utils.Error(c, 401, "Invalid or expired token")
 			c.Abort()

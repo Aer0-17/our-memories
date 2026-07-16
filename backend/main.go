@@ -41,14 +41,17 @@ func main() {
 	jobs.StartScheduler(db.Gorm, dispatcher)
 
 	r := gin.Default()
-	if err := r.SetTrustedProxies(nil); err != nil {
+	if err := r.SetTrustedProxies(config.Get().TrustedProxies); err != nil {
 		log.Fatal("Failed to configure trusted proxies:", err)
 	}
 
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.CORSMiddleware())
 	r.Use(middleware.OriginGuard())
 	r.Use(middleware.BodySizeLimit(64 << 20)) // 64MB 上限：图片走前端直传 OSS，本服务只收 JSON（含备份导入）
-	authLimiter := middleware.RateLimit(5*time.Minute, 20)
+	apiLimiter := middleware.RateLimit(time.Minute, 300)
+	authBurstLimiter := middleware.RateLimit(15*time.Minute, 10)
+	authHourlyLimiter := middleware.RateLimit(time.Hour, 60)
 	refreshLimiter := middleware.RateLimit(time.Minute, 60)
 
 	r.GET("/health", func(c *gin.Context) {
@@ -57,15 +60,16 @@ func main() {
 	r.GET("/local-images/*key", serveLocalImage)
 
 	api := r.Group("/api/v1")
+	api.Use(apiLimiter)
 	{
-		api.POST("/auth/login", authLimiter, handlers.Login)
+		api.POST("/auth/login", authBurstLimiter, authHourlyLimiter, handlers.Login)
 		api.POST("/auth/refresh", refreshLimiter, handlers.Refresh)
 		api.POST("/auth/logout", handlers.Logout)
 		api.GET("/ws", handlers.WebSocket)
 		api.GET("/public/config", handlers.GetPublicConfig)
 
 		// 管理员路由
-		api.POST("/admin/login", authLimiter, handlers.AdminLogin)
+		api.POST("/admin/login", authBurstLimiter, authHourlyLimiter, handlers.AdminLogin)
 		api.POST("/admin/logout", handlers.AdminLogout)
 		admin := api.Group("/admin")
 		admin.Use(middleware.AdminAuthMiddleware())

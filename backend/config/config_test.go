@@ -84,8 +84,36 @@ func TestValidateRejectsWildcardAllowedOrigin(t *testing.T) {
 	}
 }
 
+func TestValidateRejectsUnrestrictedTrustedProxy(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.TrustedProxies = []string{"0.0.0.0/0"}
+
+	if err := Validate(cfg); err == nil {
+		t.Fatal("expected unrestricted trusted proxy to fail")
+	}
+}
+
+func TestValidateAllowsSpecificTrustedProxy(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.TrustedProxies = []string{"127.0.0.1", "172.18.0.0/16"}
+
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("expected restricted trusted proxies to pass, got %v", err)
+	}
+}
+
+func TestValidateRejectsInvalidLoginPasscodeLength(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.LoginPasscodeLength = 3
+
+	if err := Validate(cfg); err == nil {
+		t.Fatal("expected short login passcode length to fail")
+	}
+}
+
 func secureTestConfig() *Config {
 	return &Config{
-		JWTSecret: "0123456789abcdef0123456789abcdef",
+		JWTSecret:           "0123456789abcdef0123456789abcdef",
+		LoginPasscodeLength: 4,
 	}
 }

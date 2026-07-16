@@ -12,7 +12,6 @@ import {
   type PublicRuntimeConfig,
 } from "@/lib/publicConfig";
 
-const passcodeLength = 4;
 const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "delete"] as const;
 
 function PixelHeart() {
@@ -41,6 +40,7 @@ export default function MobileEntryExperience() {
   const router = useRouter();
   const { session } = useAuth();
   const [publicConfig, setPublicConfig] = useState<PublicRuntimeConfig>(defaultPublicConfig);
+  const passcodeLength = publicConfig.passcodeLength;
   const spaceCode = publicConfig.spaceCode;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUserId, setSelectedUserId] = useState("");

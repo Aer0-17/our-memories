@@ -8,14 +8,14 @@ export type PublicUserConfig = {
 export type PublicRuntimeConfig = {
   spaceCode: string;
   spaceName: string;
-  anniversaryDate?: string;
-  anniversaryLabel?: string;
+  passcodeLength: number;
   users: PublicUserConfig[];
 };
 
 export const defaultPublicConfig: PublicRuntimeConfig = {
   spaceCode: "our-space-2026",
   spaceName: "回忆地图",
+  passcodeLength: 4,
   users: [
     { username: "me", displayName: "我" },
     { username: "ta", displayName: "TA" },
@@ -34,8 +34,10 @@ export const normalizePublicConfig = (value: unknown): PublicRuntimeConfig => {
   return {
     spaceCode: cleanString(payload.spaceCode, defaultPublicConfig.spaceCode),
     spaceName: cleanString(payload.spaceName, defaultPublicConfig.spaceName),
-    anniversaryDate: typeof payload.anniversaryDate === "string" ? payload.anniversaryDate : undefined,
-    anniversaryLabel: typeof payload.anniversaryLabel === "string" ? payload.anniversaryLabel : undefined,
+    passcodeLength:
+      typeof payload.passcodeLength === "number" && payload.passcodeLength >= 4 && payload.passcodeLength <= 12
+        ? Math.trunc(payload.passcodeLength)
+        : defaultPublicConfig.passcodeLength,
     users: defaultPublicConfig.users.map((fallbackUser) => {
       const user = users.find((item) => item?.username === fallbackUser.username);
       return {

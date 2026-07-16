@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"strconv"
 	"sync"
 	"time"
 
@@ -47,6 +48,11 @@ func RateLimit(window time.Duration, maxRequests int) gin.HandlerFunc {
 		mu.Unlock()
 
 		if limited {
+			remaining := time.Until(bucket.reset)
+			if remaining < time.Second {
+				remaining = time.Second
+			}
+			c.Header("Retry-After", strconv.FormatInt(int64(remaining.Round(time.Second)/time.Second), 10))
 			utils.Error(c, 429, "Too many requests, please try again later")
 			c.Abort()
 			return
