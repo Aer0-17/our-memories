@@ -1,13 +1,18 @@
 services:
-  api:
+  our-memories:
     image: ${OUR_MEMORIES_IMAGE:-ghcr.io/aer0-17/our-memories:latest}
     pull_policy: always
+    container_name: our-memories
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
     environment:
-      PORT: 8080
+      PORT: "8080"
+      GIN_MODE: ${GIN_MODE:-release}
       DATABASE_PATH: /app/data/ourMemories.db
       PUBLIC_DIR: /app/public
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET to a long random value before starting}
-      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3002,capacitor://localhost,http://localhost,https://localhost}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set ALLOWED_ORIGINS in .env}
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       DEFAULT_SPACE_CODE: ${DEFAULT_SPACE_CODE:-our-space-2026}
       DEFAULT_SPACE_NAME: ${DEFAULT_SPACE_NAME:-回忆地图}
@@ -22,6 +27,11 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Admin User}
       AUTO_SEED: ${AUTO_SEED:-false}
+      PHOTO_SYNC_INTERVAL: ${PHOTO_SYNC_INTERVAL:-10m}
+      JPUSH_APP_KEY: ${JPUSH_APP_KEY:-}
+      JPUSH_MASTER_SECRET: ${JPUSH_MASTER_SECRET:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_URL: ${DEEPSEEK_API_URL:-https://api.deepseek.com/v1/chat/completions}
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
@@ -30,23 +40,23 @@ services:
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
       S3_OBJECT_ACL: ${S3_OBJECT_ACL:-}
       LOCAL_IMAGE_DIR: /app/data/images
-    ports:
-      - "8080:8080"
     volumes:
-      - api-data:/app/data
-    restart: unless-stopped
+      - ${DATA_DIR:-./data}:/app/data
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777
     cap_drop:
       - ALL
+    pids_limit: 256
     security_opt:
       - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-
-volumes:
-  api-data:
