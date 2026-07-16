@@ -416,6 +416,7 @@ func TestSettingServiceDefaultsAndAuxiliaryItems(t *testing.T) {
 }
 
 func TestAccountServiceLoginPasswordAndAdminRules(t *testing.T) {
+	t.Setenv("DEFAULT_SPACE_CODE", "space-one")
 	setupServiceTestDB(t)
 	service := NewAccountService(repositories.NewAccountRepository(db.Gorm))
 	if _, err := db.DB.Exec(`UPDATE spaces SET password_hash = ? WHERE id = 'space-1'`, utils.HashPassword("correct-password")); err != nil {
@@ -433,14 +434,23 @@ func TestAccountServiceLoginPasswordAndAdminRules(t *testing.T) {
 		t.Fatalf("unexpected login result: %#v", login)
 	}
 
-	if err := service.UpdatePassword("space-1", "short"); !errors.Is(err, ErrInvalidPasswordLength) {
+	if err := service.UpdatePassword("space-1", "correct-password", "1234567"); !errors.Is(err, ErrInvalidPasswordLength) {
 		t.Fatalf("expected password length error, got %v", err)
 	}
-	if err := service.UpdatePassword("space-1", "new-valid-password"); err != nil {
+	if err := service.UpdatePassword("space-1", "correct-password", "1234567a"); !errors.Is(err, ErrInvalidPasswordFormat) {
+		t.Fatalf("expected numeric password format error, got %v", err)
+	}
+	if err := service.UpdatePassword("space-1", "wrong-password", "87654321"); !errors.Is(err, ErrInvalidCurrentPassword) {
+		t.Fatalf("expected current password error, got %v", err)
+	}
+	if err := service.UpdatePassword("space-1", "correct-password", "87654321"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := service.Login(LoginRequest{SpaceCode: "space-one", Password: "new-valid-password", UserID: "me"}); err != nil {
+	if _, err := service.Login(LoginRequest{SpaceCode: "space-one", Password: "87654321", UserID: "me"}); err != nil {
 		t.Fatalf("expected login with updated password, got %v", err)
+	}
+	if config := service.PublicConfig(); config.PasscodeLength != 8 {
+		t.Fatalf("expected stored passcode length after password update, got %#v", config)
 	}
 
 	admin, err := service.CreateAdmin("admin", "admin-password", "Admin User")

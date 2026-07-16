@@ -6,6 +6,7 @@ type Space struct {
 	ID               string `gorm:"column:id;primaryKey;type:TEXT"`
 	SpaceCode        string `gorm:"column:space_code;type:TEXT;uniqueIndex"`
 	PasswordHash     string `gorm:"column:password_hash;type:TEXT"`
+	PasscodeLength   int    `gorm:"column:passcode_length;default:0"`
 	Name             string `gorm:"column:name;type:TEXT"`
 	Status           string `gorm:"column:status;type:TEXT;default:active"`
 	Tier             string `gorm:"column:tier;type:TEXT;default:free"`

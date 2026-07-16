@@ -19,6 +19,7 @@ export const apiBaseUrl = () => {
 type ApiOptions = RequestInit & {
   auth?: boolean;
   retry?: boolean;
+  clearSessionOnUnauthorized?: boolean;
 };
 
 export type ApiErrorCode =
@@ -132,7 +133,12 @@ export async function refreshAccessToken() {
 }
 
 export async function apiFetch(path: string, options: ApiOptions = {}) {
-  const { auth = true, retry = true, ...init } = options;
+  const {
+    auth = true,
+    retry = true,
+    clearSessionOnUnauthorized = true,
+    ...init
+  } = options;
   const normalizedPath = apiPath(path);
   const url = /^https?:\/\//.test(normalizedPath) ? normalizedPath : `${apiBaseUrl()}${normalizedPath}`;
   const response = await fetch(url, {
@@ -152,7 +158,7 @@ export async function apiFetch(path: string, options: ApiOptions = {}) {
     return apiFetch(path, { ...options, retry: false });
   }
 
-  if (response.status === 401) clearSession();
+  if (response.status === 401 && clearSessionOnUnauthorized) clearSession();
   return response;
 }
 
@@ -173,6 +179,15 @@ export async function login(spaceCode: string, password: string, userId = "me") 
   if (!session?.user || !session.space) return false;
   writeSession(session);
   return true;
+}
+
+export async function updateSpacePassword(currentPassword: string, newPassword: string) {
+  return apiJson<{ ok: boolean }>("/auth/password", {
+    method: "PUT",
+    retry: false,
+    clearSessionOnUnauthorized: false,
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
 }
 
 export async function logout() {

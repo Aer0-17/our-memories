@@ -157,6 +157,49 @@ func TestLoginSetsHttpOnlyAuthCookies(t *testing.T) {
 	assertAuthCookie(t, response.Result().Cookies(), middleware.RefreshTokenCookieName)
 }
 
+func TestUpdatePasswordRequiresCurrentPasswordAndStoresLength(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	t.Setenv("DEFAULT_SPACE_CODE", "space-one")
+	setupAuthCookieTestDB(t)
+
+	wrongRequest := httptest.NewRequest(
+		http.MethodPut,
+		"/api/v1/auth/password",
+		strings.NewReader(`{"currentPassword":"wrong-password","newPassword":"87654321"}`),
+	)
+	wrongRequest.Header.Set("Content-Type", "application/json")
+	wrongResponse := httptest.NewRecorder()
+	wrongContext, _ := gin.CreateTestContext(wrongResponse)
+	wrongContext.Request = wrongRequest
+	wrongContext.Set("spaceID", "space-1")
+
+	UpdatePassword(wrongContext)
+
+	if wrongResponse.Code != http.StatusUnauthorized {
+		t.Fatalf("expected wrong current password to fail, got %d: %s", wrongResponse.Code, wrongResponse.Body.String())
+	}
+
+	successRequest := httptest.NewRequest(
+		http.MethodPut,
+		"/api/v1/auth/password",
+		strings.NewReader(`{"currentPassword":"correct-password","newPassword":"87654321"}`),
+	)
+	successRequest.Header.Set("Content-Type", "application/json")
+	successResponse := httptest.NewRecorder()
+	successContext, _ := gin.CreateTestContext(successResponse)
+	successContext.Request = successRequest
+	successContext.Set("spaceID", "space-1")
+
+	UpdatePassword(successContext)
+
+	if successResponse.Code != http.StatusOK {
+		t.Fatalf("expected password update to pass, got %d: %s", successResponse.Code, successResponse.Body.String())
+	}
+	if config := accountService().PublicConfig(); config.PasscodeLength != 8 {
+		t.Fatalf("expected public config to use stored password length, got %#v", config)
+	}
+}
+
 func TestRefreshUsesRefreshCookie(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	t.Setenv("JWT_SECRET", "test-secret-with-enough-length")

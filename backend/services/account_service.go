@@ -13,6 +13,8 @@ import (
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrInvalidPasswordLength = errors.New("invalid password length")
+var ErrInvalidPasswordFormat = errors.New("invalid password format")
+var ErrInvalidCurrentPassword = errors.New("invalid current password")
 var ErrSpaceNotFound = errors.New("space not found")
 var ErrAdminAlreadyExists = errors.New("admin already exists")
 
@@ -108,11 +110,21 @@ func (s *AccountService) Me(userID string, spaceID string) (models.User, models.
 	return user, space, nil
 }
 
-func (s *AccountService) UpdatePassword(spaceID string, newPassword string) error {
-	if len(newPassword) < 8 || len(newPassword) > 128 {
+func (s *AccountService) UpdatePassword(spaceID string, currentPassword string, newPassword string) error {
+	if len(newPassword) < 8 || len(newPassword) > 12 {
 		return ErrInvalidPasswordLength
 	}
-	return s.repo.UpdateSpacePassword(spaceID, utils.HashPassword(newPassword))
+	if strings.Trim(newPassword, "0123456789") != "" {
+		return ErrInvalidPasswordFormat
+	}
+	space, err := s.repo.SpaceByID(spaceID)
+	if err != nil {
+		return err
+	}
+	if !utils.VerifyPassword(space.PasswordHash, currentPassword) {
+		return ErrInvalidCurrentPassword
+	}
+	return s.repo.UpdateSpacePassword(spaceID, utils.HashPassword(newPassword), len(newPassword))
 }
 
 func (s *AccountService) PublicConfig() PublicRuntimeConfig {
@@ -125,6 +137,13 @@ func (s *AccountService) PublicConfig() PublicRuntimeConfig {
 			{Username: "me", DisplayName: "我"},
 			{Username: "ta", DisplayName: "TA"},
 		},
+	}
+	space, err := s.repo.SpaceByCode(cfg.DefaultSpaceCode)
+	if err == nil {
+		result.SpaceCode = space.SpaceCode
+		if space.PasscodeLength >= 4 && space.PasscodeLength <= 12 {
+			result.PasscodeLength = space.PasscodeLength
+		}
 	}
 	if !cfg.ExposeLoginPersonalization {
 		return result
@@ -145,7 +164,7 @@ func (s *AccountService) PublicConfig() PublicRuntimeConfig {
 		},
 	}
 
-	space, err := s.repo.SpaceByCode(cfg.DefaultSpaceCode)
+	space, err = s.repo.SpaceByCode(cfg.DefaultSpaceCode)
 	if err != nil {
 		return result
 	}
@@ -205,10 +224,11 @@ func (s *AccountService) EnsureDefaultSpace(spaceCode string, password string, n
 	cfg := config.Get()
 	err = s.repo.CreateSpaceWithUsers(
 		repositories.SpaceRecord{
-			ID:           spaceID,
-			SpaceCode:    spaceCode,
-			PasswordHash: utils.HashPassword(password),
-			Name:         name,
+			ID:             spaceID,
+			SpaceCode:      spaceCode,
+			PasswordHash:   utils.HashPassword(password),
+			PasscodeLength: len(password),
+			Name:           name,
 		},
 		[]repositories.UserRecord{
 			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: cfg.DefaultUserMeDisplayName},

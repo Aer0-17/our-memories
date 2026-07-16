@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Link from "next/link";
 import {
   CloudSun,
   Download,
   ImageIcon,
+  LockKeyhole,
   MapPin,
   RefreshCw,
   Save,
@@ -16,6 +17,7 @@ import {
 import { MemoryPageShell } from "@/components/MemoryNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -32,7 +34,7 @@ import {
 } from "@/data/appSettings";
 import { cities } from "@/data/cities";
 import { provinces } from "@/data/provinces";
-import { apiJson } from "@/lib/apiClient";
+import { ApiError, apiJson, updateSpacePassword } from "@/lib/apiClient";
 import { authSessionUpdatedEvent, readSession, sessionKey, type StoredSession } from "@/lib/authStore";
 
 type BackupPayload = {
@@ -198,6 +200,10 @@ export default function SettingsPage() {
   const [avatarReference, setAvatarReference] = useState("");
   const [avatarReferenceName, setAvatarReferenceName] = useState("");
   const [generatingAvatar, setGeneratingAvatar] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
   const restoreInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -330,6 +336,56 @@ export default function SettingsPage() {
     toast("备份已导出", "success");
   };
 
+  const handlePasswordChange = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!session) {
+      toast("登录状态已失效，请重新登录", "warning");
+      return;
+    }
+    if (!currentPassword) {
+      toast("请输入当前空间密码", "warning");
+      return;
+    }
+    if (!/^\d{8,12}$/.test(newPassword)) {
+      toast("新密码需要设置为 8–12 位数字", "warning");
+      return;
+    }
+    if (newPassword === currentPassword) {
+      toast("新密码不能与当前密码相同", "warning");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast("两次输入的新密码不一致", "warning");
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      await updateSpacePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      toast("空间密码已修改，之后登录请使用新密码", "success", 4000);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 401) {
+          toast("当前空间密码不正确", "error");
+        } else if (error.status === 429) {
+          toast("尝试次数过多，请稍后再试", "warning");
+        } else if (error.status === 400) {
+          toast("新密码需要设置为 8–12 位数字", "error");
+        } else {
+          toast("空间密码修改失败，请稍后再试", "error");
+        }
+      } else {
+        toast("空间密码修改失败，请检查网络连接", "error");
+      }
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   const handleRestoreFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -412,19 +468,89 @@ export default function SettingsPage() {
             profile={profile}
             onChange={setProfile}
           />
-          <Card padding="md">
-            <CardHeader title="数据" subtitle="本机备份与恢复" />
-            <div className="mt-5 grid gap-2">
-              <Button variant="secondary" className="w-full justify-start" onClick={handleBackup}>
-                <Download className="h-4 w-4" />
-                备份
-              </Button>
-              <Button variant="secondary" className="w-full justify-start" onClick={() => restoreInputRef.current?.click()}>
-                <Upload className="h-4 w-4" />
-                恢复
-              </Button>
-            </div>
-          </Card>
+          <div className="grid min-w-0 gap-4">
+            <Card padding="md">
+              <CardHeader title="数据" subtitle="本机备份与恢复" />
+              <div className="mt-5 grid gap-2">
+                <Button variant="secondary" className="w-full justify-start" onClick={handleBackup}>
+                  <Download className="h-4 w-4" />
+                  备份
+                </Button>
+                <Button variant="secondary" className="w-full justify-start" onClick={() => restoreInputRef.current?.click()}>
+                  <Upload className="h-4 w-4" />
+                  恢复
+                </Button>
+              </div>
+            </Card>
+
+            <Card padding="md">
+              <CardHeader
+                title={
+                  <span className="inline-flex items-center gap-2">
+                    <LockKeyhole className="h-4 w-4 text-bloom" />
+                    空间安全
+                  </span>
+                }
+                subtitle="修改两个人共用的登录密码"
+              />
+              <form className="mt-5 grid gap-4" onSubmit={handlePasswordChange}>
+                <label className="grid gap-2 text-sm font-semibold text-ink/72">
+                  当前密码
+                  <Input
+                    className="min-h-12"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="current-password"
+                    value={currentPassword}
+                    maxLength={12}
+                    placeholder="输入当前密码"
+                    onChange={(event) => setCurrentPassword(event.target.value.replace(/\D/g, ""))}
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-ink/72">
+                  新密码
+                  <Input
+                    className="min-h-12"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    value={newPassword}
+                    minLength={8}
+                    maxLength={12}
+                    placeholder="8–12 位数字"
+                    aria-describedby="space-password-hint"
+                    onChange={(event) => setNewPassword(event.target.value.replace(/\D/g, ""))}
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-semibold text-ink/72">
+                  确认新密码
+                  <Input
+                    className="min-h-12"
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    minLength={8}
+                    maxLength={12}
+                    placeholder="再次输入新密码"
+                    onChange={(event) => setConfirmPassword(event.target.value.replace(/\D/g, ""))}
+                  />
+                </label>
+                <p id="space-password-hint" className="text-xs leading-5 text-ink/60">
+                  修改后，之后重新登录的设备都需要使用新密码；当前已登录设备不会退出。
+                </p>
+                <Button
+                  className="min-h-12 w-full"
+                  variant="secondary"
+                  type="submit"
+                  disabled={changingPassword}
+                >
+                  {changingPassword ? <RefreshCw className="h-4 w-4 animate-spin" /> : <LockKeyhole className="h-4 w-4" />}
+                  {changingPassword ? "修改中" : "修改空间密码"}
+                </Button>
+              </form>
+            </Card>
+          </div>
         </div>
 
         <Card padding="md">

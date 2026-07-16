@@ -4,6 +4,7 @@ type Space struct {
 	ID               string `json:"id"`
 	SpaceCode        string `json:"spaceCode"`
 	PasswordHash     string `json:"-"`
+	PasscodeLength   int    `json:"passcodeLength"`
 	Name             string `json:"name"`
 	Status           string `json:"status"` // 'active' | 'suspended' | 'deleted'
 	Tier             string `json:"tier"`   // 'free' | 'lifetime'

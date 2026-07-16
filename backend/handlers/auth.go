@@ -156,14 +156,15 @@ func UpdatePassword(c *gin.Context) {
 	spaceID := c.GetString("spaceID")
 
 	var req struct {
-		NewPassword string `json:"newPassword" binding:"required"`
+		CurrentPassword string `json:"currentPassword" binding:"required"`
+		NewPassword     string `json:"newPassword" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.Error(c, 400, "Invalid request")
 		return
 	}
 
-	if err := accountService().UpdatePassword(spaceID, req.NewPassword); err != nil {
+	if err := accountService().UpdatePassword(spaceID, req.CurrentPassword, req.NewPassword); err != nil {
 		writeAccountServiceError(c, err, "Failed to update password")
 		return
 	}
@@ -193,7 +194,11 @@ func writeAccountServiceError(c *gin.Context, err error, fallback string) {
 	case errors.Is(err, services.ErrSpaceNotFound):
 		utils.Error(c, 404, "Space not found")
 	case errors.Is(err, services.ErrInvalidPasswordLength):
-		utils.Error(c, 400, "Password length must be 8-128")
+		utils.Error(c, 400, "Password length must be 8-12")
+	case errors.Is(err, services.ErrInvalidPasswordFormat):
+		utils.Error(c, 400, "Password must contain digits only")
+	case errors.Is(err, services.ErrInvalidCurrentPassword):
+		utils.Error(c, 401, "Current password is incorrect")
 	default:
 		utils.Error(c, 500, fallback)
 	}

@@ -27,10 +27,11 @@ func Seed() {
 	userTaID := utils.NewID()
 	err = repo.CreateSpaceWithUsers(
 		repositories.SpaceRecord{
-			ID:           spaceID,
-			SpaceCode:    cfg.DefaultSpaceCode,
-			PasswordHash: passwordHash,
-			Name:         cfg.DefaultSpaceName,
+			ID:             spaceID,
+			SpaceCode:      cfg.DefaultSpaceCode,
+			PasswordHash:   passwordHash,
+			PasscodeLength: len(cfg.DefaultPassword),
+			Name:           cfg.DefaultSpaceName,
 		},
 		[]repositories.UserRecord{
 			{ID: userMeID, SpaceID: spaceID, Username: "me", DisplayName: cfg.DefaultUserMeDisplayName},

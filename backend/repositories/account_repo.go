@@ -15,6 +15,7 @@ type SpaceRecord struct {
 	ID               string `gorm:"column:id;primaryKey"`
 	SpaceCode        string `gorm:"column:space_code"`
 	PasswordHash     string `gorm:"column:password_hash"`
+	PasscodeLength   int    `gorm:"column:passcode_length"`
 	Name             string `gorm:"column:name"`
 	Status           string `gorm:"column:status"`
 	Tier             string `gorm:"column:tier"`
@@ -171,10 +172,14 @@ func (r *AccountRepository) UpsertAdminByUsername(admin AdminRecord) error {
 	}).Omit("created_at").Create(&admin).Error
 }
 
-func (r *AccountRepository) UpdateSpacePassword(spaceID string, passwordHash string) error {
+func (r *AccountRepository) UpdateSpacePassword(spaceID string, passwordHash string, passcodeLength int) error {
 	result := r.db.Model(&SpaceRecord{}).
 		Where("id = ?", spaceID).
-		Updates(map[string]any{"password_hash": passwordHash, "updated_at": gorm.Expr("CURRENT_TIMESTAMP")})
+		Updates(map[string]any{
+			"password_hash":   passwordHash,
+			"passcode_length": passcodeLength,
+			"updated_at":      gorm.Expr("CURRENT_TIMESTAMP"),
+		})
 	if result.Error != nil {
 		return result.Error
 	}
@@ -215,6 +220,7 @@ func spaceModel(record SpaceRecord) models.Space {
 		ID:               record.ID,
 		SpaceCode:        record.SpaceCode,
 		PasswordHash:     record.PasswordHash,
+		PasscodeLength:   record.PasscodeLength,
 		Name:             record.Name,
 		Status:           record.Status,
 		Tier:             record.Tier,
