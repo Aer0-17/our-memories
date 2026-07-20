@@ -153,6 +153,22 @@ func TestLoginSetsHttpOnlyAuthCookies(t *testing.T) {
 	if response.Code != http.StatusOK {
 		t.Fatalf("expected login to pass, got %d: %s", response.Code, response.Body.String())
 	}
+	var payload struct {
+		Users []struct {
+			Username    string `json:"username"`
+			DisplayName string `json:"displayName"`
+		} `json:"users"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	gotUsers := map[string]string{}
+	for _, user := range payload.Users {
+		gotUsers[user.Username] = user.DisplayName
+	}
+	if gotUsers["me"] != "Me" || gotUsers["ta"] != "Her" {
+		t.Fatalf("expected authenticated login to return member names, got %#v", gotUsers)
+	}
 	assertAuthCookie(t, response.Result().Cookies(), middleware.AccessTokenCookieName)
 	assertAuthCookie(t, response.Result().Cookies(), middleware.RefreshTokenCookieName)
 }

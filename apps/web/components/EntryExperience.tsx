@@ -22,8 +22,10 @@ import { useAuth } from "@/lib/authContext";
 import {
   defaultPublicConfig,
   fetchPublicConfig,
-  publicUserLabel,
+  normalizeAuthenticatedUsers,
+  userLabel,
   type PublicRuntimeConfig,
+  type PublicUserConfig,
 } from "@/lib/publicConfig";
 
 const loginPhotoVersion = "placeholder-20260601";
@@ -172,6 +174,7 @@ export default function EntryExperience() {
   const spaceCode = publicConfig.spaceCode;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [verifiedUsers, setVerifiedUsers] = useState<PublicUserConfig[] | null>(null);
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "open">("idle");
   const pointerX = useMotionValue(0);
@@ -239,6 +242,8 @@ export default function EntryExperience() {
       }).catch(() => null);
 
       if (res?.ok) {
+        const payload = (await res.json().catch(() => null)) as { users?: unknown } | null;
+        setVerifiedUsers(normalizeAuthenticatedUsers(payload?.users, publicConfig.users));
         setStep(2);
         setStatus("idle");
       } else {
@@ -353,7 +358,7 @@ export default function EntryExperience() {
                   anniversary code
                 </span>
                 <span className={status === "wrong" ? "text-xs font-semibold text-rose" : "text-xs font-semibold text-clay/62"}>
-                  {status === "open" ? "已解锁" : status === "checking" ? "验证中" : status === "wrong" ? "再想想" : step === 1 ? "4 digits" : "选择身份"}
+                  {status === "open" ? "已解锁" : status === "checking" ? "验证中" : status === "wrong" ? "再想想" : step === 1 ? `${passcodeLength} digits` : "选择身份"}
                 </span>
               </div>
 
@@ -376,7 +381,7 @@ export default function EntryExperience() {
                         onClick={() => setSelectedUserId(userId)}
                         disabled={status === "checking" || status === "open"}
                       >
-                        {publicUserLabel(publicConfig, userId)}
+                        {userLabel(verifiedUsers ?? publicConfig.users, userId)}
                       </button>
                     ))}
                   </>

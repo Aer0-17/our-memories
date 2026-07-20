@@ -8,8 +8,10 @@ import { useAuth } from "@/lib/authContext";
 import {
   defaultPublicConfig,
   fetchPublicConfig,
-  publicUserLabel,
+  normalizeAuthenticatedUsers,
+  userLabel,
   type PublicRuntimeConfig,
+  type PublicUserConfig,
 } from "@/lib/publicConfig";
 
 const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "delete"] as const;
@@ -44,6 +46,7 @@ export default function MobileEntryExperience() {
   const spaceCode = publicConfig.spaceCode;
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [verifiedUsers, setVerifiedUsers] = useState<PublicUserConfig[] | null>(null);
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<"idle" | "checking" | "wrong" | "open">("idle");
 
@@ -68,6 +71,8 @@ export default function MobileEntryExperience() {
         body: JSON.stringify({ spaceCode, password: nextCode, userId: "me" }),
       }).catch(() => null);
       if (res?.ok) {
+        const payload = (await res.json().catch(() => null)) as { users?: unknown } | null;
+        setVerifiedUsers(normalizeAuthenticatedUsers(payload?.users, publicConfig.users));
         setStep(2);
         setStatus("idle");
         return;
@@ -156,7 +161,7 @@ export default function MobileEntryExperience() {
               <div className="mb-3 flex items-center justify-between gap-3">
                 <span className="text-xs font-semibold text-clay">anniversary code</span>
                 <span className={status === "wrong" ? "text-xs font-semibold text-rose" : "text-xs font-semibold text-clay/62"}>
-                  {status === "open" ? "已解锁" : status === "checking" ? "验证中" : status === "wrong" ? "再想想" : step === 1 ? "4 digits" : "选择身份"}
+                  {status === "open" ? "已解锁" : status === "checking" ? "验证中" : status === "wrong" ? "再想想" : step === 1 ? `${passcodeLength} digits` : "选择身份"}
                 </span>
               </div>
 
@@ -176,7 +181,7 @@ export default function MobileEntryExperience() {
                       onClick={() => setSelectedUserId(userId)}
                       disabled={status === "checking" || status === "open"}
                     >
-                      {publicUserLabel(publicConfig, userId)}
+                      {userLabel(verifiedUsers ?? publicConfig.users, userId)}
                     </button>
                   ))
                 )}

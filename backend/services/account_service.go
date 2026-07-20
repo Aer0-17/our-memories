@@ -29,6 +29,12 @@ type LoginResult struct {
 	RefreshToken string
 	User         models.User
 	Space        models.Space
+	Members      []LoginMember
+}
+
+type LoginMember struct {
+	Username    string `json:"username"`
+	DisplayName string `json:"displayName"`
 }
 
 type AdminLoginRequest struct {
@@ -87,11 +93,21 @@ func (s *AccountService) Login(req LoginRequest) (LoginResult, error) {
 		return LoginResult{}, err
 	}
 
+	users, err := s.repo.UsersBySpace(space.ID)
+	if err != nil {
+		return LoginResult{}, err
+	}
+	members := make([]LoginMember, 0, len(users))
+	for _, member := range users {
+		members = append(members, LoginMember{Username: member.Username, DisplayName: member.DisplayName})
+	}
+
 	return LoginResult{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 		User:         user,
 		Space:        space,
+		Members:      members,
 	}, nil
 }
 

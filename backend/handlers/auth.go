@@ -46,6 +46,7 @@ func Login(c *gin.Context) {
 			"name":      result.Space.Name,
 			"spaceCode": result.Space.SpaceCode,
 		},
+		"users": result.Members,
 	})
 }
 

@@ -56,6 +56,27 @@ export const fetchPublicConfig = async () => {
   return normalizePublicConfig(data);
 };
 
+export const normalizeAuthenticatedUsers = (
+  value: unknown,
+  fallback: PublicUserConfig[] = defaultPublicConfig.users,
+): PublicUserConfig[] => {
+  const users = Array.isArray(value) ? value : [];
+  return fallback.map((fallbackUser) => {
+    const user = users.find(
+      (item): item is Partial<PublicUserConfig> =>
+        typeof item === "object" && item !== null && !Array.isArray(item) && item.username === fallbackUser.username,
+    );
+    return {
+      username: fallbackUser.username,
+      displayName: cleanString(user?.displayName, fallbackUser.displayName),
+    };
+  });
+};
+
+export const userLabel = (users: PublicUserConfig[], username: "me" | "ta") => {
+  return users.find((user) => user.username === username)?.displayName ?? username;
+};
+
 export const publicUserLabel = (config: PublicRuntimeConfig, username: "me" | "ta") => {
-  return config.users.find((user) => user.username === username)?.displayName ?? username;
+  return userLabel(config.users, username);
 };
