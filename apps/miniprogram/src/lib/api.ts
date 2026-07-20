@@ -72,6 +72,37 @@ export type TimeCapsule = {
   photos?: Array<{ id: string; url: string; key?: string }>;
 };
 
+export type MemoryPhotoPayload = {
+  url: string;
+  key: string;
+  mimeType: string;
+  mediaType?: "image";
+  width?: number;
+  height?: number;
+};
+
+export type MemoryInput = {
+  cityId: string;
+  city: string;
+  cityEn: string;
+  title: string;
+  date: string;
+  text: string;
+  mood: string;
+  tags: string[];
+  visibility: "both" | "me" | "her";
+  placeName: string;
+  photos: MemoryPhotoPayload[];
+};
+
+export type MemoryPatch = Omit<MemoryInput, "cityId" | "city" | "cityEn">;
+
+export type MemoryMutationResponse = {
+  id?: string;
+  ok?: boolean;
+  memories: LocalMemoryStore;
+};
+
 export function readSession() {
   return Taro.getStorageSync<Session | "">(sessionKey) || null;
 }
@@ -178,6 +209,104 @@ export async function logout() {
 
 export function getMemories() {
   return request<{ memories: LocalMemoryStore }>("/memories");
+}
+
+export function createMemory(input: MemoryInput) {
+  return request<MemoryMutationResponse>("/memories", { method: "POST", data: input });
+}
+
+export function updateMemory(memoryId: string, input: MemoryPatch) {
+  return request<MemoryMutationResponse>(`/memories/${encodeURIComponent(memoryId)}`, {
+    method: "PATCH",
+    data: input,
+  });
+}
+
+export function deleteMemory(memoryId: string) {
+  return request<MemoryMutationResponse>(`/memories/${encodeURIComponent(memoryId)}`, {
+    method: "DELETE",
+  });
+}
+
+function imageMimeType(filePath: string) {
+  const normalized = filePath.toLowerCase().split("?")[0];
+  if (normalized.endsWith(".png")) return "image/png";
+  if (normalized.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
+function readFileAsBase64(filePath: string) {
+  return new Promise<string>((resolve, reject) => {
+    Taro.getFileSystemManager().readFile({
+      filePath,
+      encoding: "base64",
+      success: (result) => {
+        if (typeof result.data === "string" && result.data) {
+          resolve(result.data);
+          return;
+        }
+        reject(new Error("Unable to read selected image"));
+      },
+      fail: reject,
+    });
+  });
+}
+
+export async function uploadMemoryImage(input: {
+  filePath: string;
+  width?: number;
+  height?: number;
+}): Promise<MemoryPhotoPayload> {
+  let compressedPath = input.filePath;
+  let width = input.width;
+  let height = input.height;
+  try {
+    const maxEdge = 1600;
+    const scale = width && height ? Math.min(1, maxEdge / Math.max(width, height)) : 1;
+    const compressedWidth = width ? Math.max(1, Math.round(width * scale)) : undefined;
+    const compressedHeight = height ? Math.max(1, Math.round(height * scale)) : undefined;
+    const compressed = await Taro.compressImage({
+      src: input.filePath,
+      quality: 76,
+      compressedWidth,
+      compressedHeight,
+    });
+    if (compressed.tempFilePath) compressedPath = compressed.tempFilePath;
+    width = compressedWidth || width;
+    height = compressedHeight || height;
+  } catch {
+    // Some formats and already-compressed files cannot be compressed again.
+  }
+
+  const mimeType = imageMimeType(compressedPath);
+  const data = await readFileAsBase64(compressedPath);
+  const uploaded = await request<{ url: string; key: string }>("/upload", {
+    method: "POST",
+    data: {
+      folder: "memories",
+      dataUrl: `data:${mimeType};base64,${data}`,
+    },
+  });
+
+  return {
+    url: uploaded.url,
+    key: uploaded.key,
+    mimeType,
+    mediaType: "image",
+    width,
+    height,
+  };
+}
+
+export async function deleteUploadedImages(keys: string[]) {
+  await Promise.all(
+    keys
+      .filter(Boolean)
+      .map((key) =>
+        request<{ ok: true }>(`/upload?key=${encodeURIComponent(key)}`, { method: "DELETE" })
+          .catch(() => undefined),
+      ),
+  );
 }
 
 export async function getAnniversaryCards() {

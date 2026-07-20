@@ -254,6 +254,19 @@ button::after {
   line-height: 24px;
 }
 
+.state-panel__action {
+  min-width: 128px;
+  min-height: 44px;
+  margin-top: $space-3;
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-4;
+}
+
 .skeleton-stack {
   display: flex;
   flex-direction: column;

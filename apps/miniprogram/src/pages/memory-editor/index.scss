@@ -1,0 +1,264 @@
+@use "../../styles/tokens" as *;
+
+.memory-editor-page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  padding-bottom: 0;
+}
+
+.editor-intro {
+  padding-bottom: $space-3;
+}
+
+.memory-form,
+.editor-section,
+.editor-section-copy,
+.editor-field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-form {
+  gap: $space-4;
+}
+
+.editor-section {
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.editor-section-heading,
+.editor-label-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.editor-section-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.editor-section-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.editor-section-note,
+.editor-help,
+.editor-counter,
+.editor-section-count {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.editor-section-count {
+  flex-shrink: 0;
+  padding-top: $space-1;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.photo-draft,
+.photo-add {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 88px;
+  overflow: hidden;
+  border-radius: $radius-md;
+}
+
+.photo-draft {
+  background: var(--color-surface-soft);
+}
+
+.photo-draft-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-remove {
+  position: absolute;
+  top: $space-1;
+  right: $space-1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  font-size: $text-lg;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0;
+}
+
+.photo-add {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border: 1px dashed var(--color-line);
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  padding: $space-2;
+}
+
+.photo-add-mark {
+  color: var(--color-accent);
+  font-size: $text-xl;
+  line-height: 32px;
+}
+
+.photo-add-copy {
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.editor-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $space-4;
+}
+
+.editor-field-group {
+  gap: $space-2;
+}
+
+.editor-label {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.editor-label-row .editor-label {
+  flex: 1;
+}
+
+.editor-picker {
+  color: var(--color-ink);
+}
+
+.memory-editor-page .field[disabled] {
+  background: var(--color-surface-soft);
+  color: var(--color-muted);
+}
+
+.editor-textarea {
+  display: block;
+  min-height: 144px;
+  height: 144px;
+  line-height: 24px;
+  padding: $space-3;
+}
+
+.choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.choice-chip {
+  min-width: 64px;
+  min-height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.choice-chip.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+}
+
+.visibility-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-2;
+}
+
+.visibility-option {
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: $space-1;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  padding: $space-3;
+  text-align: left;
+}
+
+.visibility-option.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+}
+
+.visibility-title {
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.visibility-copy {
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.editor-submit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  padding: $space-3 0 calc(#{$space-4} + env(safe-area-inset-bottom));
+}
+
+.editor-progress {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  line-height: 20px;
+  text-align: center;
+}
+
+.editor-submit {
+  width: 100%;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .editor-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

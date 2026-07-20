@@ -16,12 +16,27 @@ export function LoadingState({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export function EmptyState({ title, copy }: { title: string; copy: string }) {
+export function EmptyState({
+  title,
+  copy,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  copy: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
   return (
     <View className="state-panel">
       <Text className="state-panel__mark">♡</Text>
       <Text className="state-panel__title">{title}</Text>
       <Text className="state-panel__copy">{copy}</Text>
+      {actionLabel && onAction && (
+        <Button className="state-panel__action" onClick={onAction}>
+          {actionLabel}
+        </Button>
+      )}
     </View>
   );
 }

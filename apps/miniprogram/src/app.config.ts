@@ -2,6 +2,7 @@ export default defineAppConfig({
   pages: [
     "pages/index/index",
     "pages/memories/index",
+    "pages/memory-editor/index",
     "pages/anniversaries/index",
     "pages/whispers/index",
     "pages/capsules/index",
