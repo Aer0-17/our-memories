@@ -1,10 +1,11 @@
 import Taro from "@tarojs/taro";
 import type { AnniversaryCard, LocalMemoryStore } from "@map-of-us/shared";
+export { resolveAssetUrl } from "./assetUrl";
 
 declare const process: { env: { TARO_APP_API_BASE_URL?: string } };
 
 const sessionKey = "our-memories:session";
-const apiBaseUrl = process.env.TARO_APP_API_BASE_URL || "http://localhost:8080/api/v1";
+export const apiBaseUrl = process.env.TARO_APP_API_BASE_URL || "http://localhost:8080/api/v1";
 
 type ApiOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -23,6 +24,15 @@ export type Session = {
   refreshToken: string;
   user: { id: string; username: string; displayName: string };
   space: { id: string; name: string; spaceCode: string };
+};
+
+export type LoginMember = {
+  username: string;
+  displayName: string;
+};
+
+type LoginPayload = Session & {
+  users?: LoginMember[];
 };
 
 export type PublicConfig = {
@@ -126,8 +136,37 @@ export function getPublicConfig() {
   return request<PublicConfig>("/public/config", {}, false);
 }
 
+function sessionFromLogin(payload: LoginPayload): Session {
+  return {
+    accessToken: payload.accessToken,
+    refreshToken: payload.refreshToken,
+    user: payload.user,
+    space: payload.space,
+  };
+}
+
+export async function verifyPassword(input: { spaceCode: string; password: string }) {
+  const payload = await request<LoginPayload>("/auth/login", {
+    method: "POST",
+    data: { ...input, userId: "me" },
+  }, false);
+  const users = Array.isArray(payload.users)
+    ? payload.users.filter(
+        (user) =>
+          user &&
+          typeof user.username === "string" &&
+          user.username.trim() &&
+          typeof user.displayName === "string" &&
+          user.displayName.trim(),
+      )
+    : [];
+  if (users.length === 0) throw new Error("Authenticated member list is unavailable");
+  return { users };
+}
+
 export async function login(input: { spaceCode: string; userId: string; password: string }) {
-  const session = await request<Session>("/auth/login", { method: "POST", data: input }, false);
+  const payload = await request<LoginPayload>("/auth/login", { method: "POST", data: input }, false);
+  const session = sessionFromLogin(payload);
   writeSession(session);
   return session;
 }

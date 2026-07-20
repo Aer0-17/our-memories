@@ -21,6 +21,7 @@
 **/.next/
 **/out/
 **/.swc/
+**/project.private.config.json
 
 # production
 /dist

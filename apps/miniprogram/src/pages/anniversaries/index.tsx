@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { Image, Text, View } from "@tarojs/components";
 import Taro, { usePullDownRefresh } from "@tarojs/taro";
 import { anniversaryDisplayState, type AnniversaryCard } from "@map-of-us/shared";
-import { getAnniversaryCards, readSession } from "../../lib/api";
+import { AppHeader } from "../../components/AppHeader";
+import { EmptyState, ErrorBanner, LoadingState } from "../../components/PageStates";
+import { apiBaseUrl, getAnniversaryCards, readSession, resolveAssetUrl } from "../../lib/api";
+import coupleStanding from "../../assets/illustrations/couple-standing.png";
 import "./index.scss";
 
 export default function AnniversariesPage() {
@@ -21,7 +24,7 @@ export default function AnniversariesPage() {
       const data = await getAnniversaryCards();
       setCards(data.cards);
     } catch {
-      setStatus("纪念日墙读取失败，请稍后再试。");
+      setStatus("纪念日暂时没有同步成功，请稍后再试。");
     } finally {
       setLoading(false);
     }
@@ -37,47 +40,62 @@ export default function AnniversariesPage() {
 
   return (
     <View className="page anniversary-page">
-      <View className="page-head">
-        <Text className="title">纪念日墙</Text>
-        <Text className="subtitle">{loading ? "同步中..." : "每张卡片都在替我们数日子。"}</Text>
+      <AppHeader title="纪念日" />
+
+      <View className="screen-intro">
+        <Text className="screen-title">值得反复庆祝</Text>
+        <Text className="screen-subtitle">记住重要的日子，也记住一路走来的时间。</Text>
       </View>
-      {status && <Text className="status">{status}</Text>}
-      {cards.length === 0 ? (
-        <View className="empty card">
-          <Text className="empty-title">还没有纪念日</Text>
-          <Text className="empty-copy">先在 Web 里添加照片纪念卡，小程序会同步展示。</Text>
-        </View>
+
+      {status && <ErrorBanner copy={status} onRetry={loadCards} />}
+      {loading && cards.length === 0 ? (
+        <LoadingState />
+      ) : cards.length === 0 && !status ? (
+        <EmptyState title="还没有纪念日" copy="在网页端添加一张纪念卡，它会和照片一起出现在这里。" />
       ) : (
         <View className="anniversary-list">
           {cards.map((card) => {
             const state = anniversaryDisplayState(card);
             return (
-              <View className="anniversary-card card" key={card.id}>
+              <View className={card.pinned ? "anniversary-card card pinned-card" : "anniversary-card card"} key={card.id}>
                 {card.image ? (
-                  <Image className="anniversary-cover" src={card.image} mode="aspectFill" />
+                  <Image
+                    className="anniversary-cover"
+                    src={resolveAssetUrl(card.image, apiBaseUrl)}
+                    mode="aspectFill"
+                    lazyLoad
+                  />
                 ) : (
-                  <View className="anniversary-cover placeholder">
-                    <Text>纪念日</Text>
+                  <View className="anniversary-cover anniversary-placeholder">
+                    <Image className="anniversary-couple" src={coupleStanding} mode="aspectFit" />
                   </View>
                 )}
                 <View className="anniversary-body">
-                  <View className="anniversary-row">
-                    <Text className="anniversary-title">{card.title}</Text>
-                    {card.pinned && <Text className="pin">置顶</Text>}
+                  <View className="anniversary-heading">
+                    <View className="anniversary-copy">
+                      <Text className="anniversary-title">{card.title}</Text>
+                      <Text className="anniversary-date">{card.date.split(".").join(" / ")}</Text>
+                    </View>
+                    {card.pinned && <Text className="pin">特别的一天</Text>}
                   </View>
-                  <Text className="anniversary-date">{card.date}</Text>
+
                   {state.valid && (
-                    <View className="metric-grid">
-                      <View className="metric pink">
-                        <Text className="metric-label">距今</Text>
-                        <Text className="metric-value">{state.sinceLabel}</Text>
+                    <View className="metric-row">
+                      <View className="metric">
+                        <Text className="metric-label">一起走过</Text>
+                        <View className="metric-number-row">
+                          <Text className="metric-value">{Math.abs(state.daysSince)}</Text>
+                          <Text className="metric-unit">天</Text>
+                        </View>
                       </View>
-                      <View className="metric blue">
-                        <Text className="metric-label">下一次</Text>
-                        <Text className="metric-value">{state.label}</Text>
+                      <View className="metric-divider" />
+                      <View className="metric">
+                        <Text className="metric-label">下一次纪念日</Text>
+                        <Text className="metric-next">{state.label}</Text>
                       </View>
                     </View>
                   )}
+
                   {card.note && <Text className="anniversary-note">{card.note}</Text>}
                 </View>
               </View>

@@ -1,141 +1,153 @@
-.anniversary-page {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+@use "../../styles/tokens" as *;
 
-.page-head {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.title {
-  color: #273846;
-  font-size: 30px;
-  font-weight: 800;
-}
-
-.subtitle {
-  color: rgba(90, 102, 112, 0.54);
-  font-size: 13px;
-}
-
+.anniversary-page,
 .anniversary-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: $space-4;
 }
 
 .anniversary-card {
   overflow: hidden;
 }
 
-.anniversary-cover {
-  width: 100%;
-  height: 190px;
-  background: #d6e8f0;
+.pinned-card {
+  border-color: var(--color-accent-soft);
 }
 
-.anniversary-cover.placeholder {
+.anniversary-cover {
+  display: block;
+  width: 100%;
+  height: 200px;
+  background: var(--color-surface-soft);
+}
+
+.anniversary-placeholder {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  color: rgba(90, 102, 112, 0.38);
-  font-weight: 800;
+  background: var(--color-green-soft);
+}
+
+.anniversary-couple {
+  width: 144px;
+  height: 184px;
 }
 
 .anniversary-body {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: $space-4;
+  padding: $space-4;
 }
 
-.anniversary-row {
+.anniversary-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: $space-3;
+}
+
+.anniversary-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
 }
 
 .anniversary-title {
-  color: #5a6670;
-  font-size: 19px;
-  font-weight: 800;
-}
-
-.pin {
-  border: 1px solid rgba(245, 220, 224, 0.9);
-  border-radius: 999px;
-  color: #b85d70;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 3px 8px;
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+  word-break: break-word;
 }
 
 .anniversary-date {
-  color: rgba(90, 102, 112, 0.5);
-  font-size: 13px;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
 }
 
-.metric-grid {
+.pin {
+  flex-shrink: 0;
+  border-radius: $radius-sm;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: $space-1 $space-2;
+}
+
+.metric-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: $space-4;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  padding: $space-4 0;
 }
 
 .metric {
-  border-radius: 8px;
-  padding: 10px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: $space-2;
 }
 
-.metric.pink {
-  border: 1px solid rgba(245, 220, 224, 0.86);
-  background: rgba(245, 220, 224, 0.3);
-}
-
-.metric.blue {
-  border: 1px solid rgba(214, 232, 240, 0.9);
-  background: rgba(214, 232, 240, 0.34);
+.metric-divider {
+  width: 1px;
+  height: 100%;
+  background: var(--color-line);
 }
 
 .metric-label {
-  color: rgba(90, 102, 112, 0.46);
-  font-size: 11px;
-  font-weight: 700;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.metric-number-row {
+  display: flex;
+  align-items: baseline;
+  gap: $space-1;
 }
 
 .metric-value {
-  display: block;
-  margin-top: 5px;
-  color: #5a6670;
-  font-size: 15px;
-  font-weight: 800;
+  color: var(--color-accent);
+  font-size: $text-2xl;
+  font-weight: 700;
+  line-height: 36px;
+}
+
+.metric-unit {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 20px;
+}
+
+.metric-next {
+  color: var(--color-green);
+  font-size: $text-md;
+  font-weight: 600;
+  line-height: 24px;
+  word-break: break-word;
 }
 
 .anniversary-note {
-  color: rgba(90, 102, 112, 0.7);
-  font-size: 13px;
-  line-height: 22px;
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 36px 18px;
-  text-align: center;
-}
-
-.empty-title {
-  color: #5a6670;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.empty-copy {
-  color: rgba(90, 102, 112, 0.58);
-  font-size: 13px;
-  line-height: 22px;
+@media (min-width: $breakpoint-tablet) {
+  .anniversary-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }

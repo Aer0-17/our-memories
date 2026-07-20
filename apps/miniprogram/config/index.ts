@@ -9,6 +9,7 @@ export default defineConfig(async () => {
     date: "2026-06-09",
     designWidth: 375,
     deviceRatio: {
+      375: 2,
       640: 2.34 / 2,
       750: 1,
       828: 1.81 / 2,

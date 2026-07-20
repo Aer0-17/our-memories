@@ -1,57 +1,227 @@
+@use "../../styles/tokens" as *;
+
 .settings-page {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: $space-5;
 }
 
-.page-head {
+.profile-hero {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: $space-4;
+  border-radius: $radius-md;
+  background: var(--color-surface-warm);
+  padding: $space-5 $space-4;
 }
 
-.title {
-  color: #273846;
-  font-size: 30px;
-  font-weight: 800;
+.profile-avatar {
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
 }
 
-.subtitle {
-  color: rgba(90, 102, 112, 0.54);
-  font-size: 13px;
-}
-
-.settings-card {
+.profile-copy {
   display: flex;
+  min-width: 0;
+  flex: 1;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px;
+  gap: $space-1;
 }
 
-.label {
-  color: rgba(90, 102, 112, 0.48);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.value {
-  color: #5a6670;
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.status {
-  border: 1px solid rgba(216, 221, 216, 0.76);
-  border-radius: 8px;
-  background: rgba(250, 251, 247, 0.72);
-  color: rgba(90, 102, 112, 0.7);
-  font-size: 12px;
+.profile-kicker {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 600;
   line-height: 20px;
-  padding: 10px 12px;
 }
 
-.link-grid {
+.profile-name {
+  color: var(--color-ink);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+  word-break: break-word;
+}
+
+.profile-space {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+  word-break: break-word;
+}
+
+.settings-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $space-3;
+}
+
+.settings-section-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.info-list,
+.action-list {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-4;
+  min-height: 52px;
+  border-bottom: 1px solid var(--color-line);
+  padding: $space-4;
+}
+
+.info-row:last-child,
+.settings-action:last-child {
+  border-bottom: 0;
+}
+
+.info-label {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 20px;
+}
+
+.info-value {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: right;
+  word-break: break-word;
+}
+
+.info-value.code {
+  color: var(--color-green);
+}
+
+.settings-action {
+  display: grid;
+  grid-template-columns: 44px 1fr 24px;
+  align-items: center;
+  gap: $space-3;
+  min-height: 72px;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  line-height: 20px;
+  padding: $space-3 $space-4;
+  text-align: left;
+}
+
+.action-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: $radius-md;
+}
+
+.action-icon-blue {
+  background: var(--color-blue-soft);
+}
+
+.action-icon-gold {
+  background: var(--color-gold-soft);
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.action-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.action-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.action-subtitle {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.action-arrow {
+  color: var(--color-muted);
+  font-size: $text-xl;
+  line-height: 32px;
+  text-align: right;
+}
+
+.logout-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  min-height: 48px;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 48px;
+}
+
+.logout-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.signed-out-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-7 $space-5;
+  text-align: center;
+}
+
+.signed-out-avatar {
+  width: 120px;
+  height: 120px;
+  margin-bottom: $space-2;
+  opacity: 0.72;
+}
+
+.signed-out-title {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.signed-out-copy {
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.signed-out-button {
+  width: 100%;
+  margin-top: $space-3;
 }

@@ -1,0 +1,18 @@
+{
+  "appid": "wx8d2e2cce9f4211d3",
+  "compileType": "miniprogram",
+  "libVersion": "3.8.8",
+  "packOptions": {
+    "ignore": []
+  },
+  "projectname": "our-memories-miniprogram",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "minifyWXSS": true,
+    "urlCheck": true
+  },
+  "miniprogramRoot": "dist/"
+}

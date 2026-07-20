@@ -1,26 +1,14 @@
+@use "../../styles/tokens" as *;
+
 .capsules-page,
 .capsule-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: $space-4;
 }
 
-.page-head {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.title {
-  color: #273846;
-  font-size: 28px;
-  font-weight: 800;
-}
-
-.subtitle,
-.capsule-date {
-  color: rgba(90, 102, 112, 0.56);
-  font-size: 12px;
+.capsule-intro {
+  padding-bottom: $space-4;
 }
 
 .capsule-card {
@@ -28,70 +16,129 @@
 }
 
 .capsule-cover {
+  display: block;
   width: 100%;
-  height: 176px;
-  background: #d6e8f0;
+  height: 200px;
+  background: var(--color-gold-soft);
+}
+
+.capsule-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+}
+
+.capsule-placeholder.opened {
+  background: var(--color-green-soft);
+}
+
+.capsule-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.countdown {
+  display: flex;
+  align-items: baseline;
+  gap: $space-2;
+}
+
+.countdown-value {
+  color: var(--color-gold);
+  font-size: $text-display;
+  font-weight: 700;
+  line-height: 44px;
+}
+
+.countdown-label,
+.capsule-placeholder-title {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 24px;
 }
 
 .capsule-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: $space-3;
+  padding: $space-4;
 }
 
-.capsule-head {
+.capsule-heading {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: $space-3;
+}
+
+.capsule-title-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.capsule-date {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
 }
 
 .capsule-title {
-  color: #5a6670;
-  font-size: 18px;
-  font-weight: 800;
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+  word-break: break-word;
 }
 
-.state {
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 6px 8px;
+.capsule-state {
+  flex-shrink: 0;
+  border-radius: $radius-sm;
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: $space-1 $space-2;
 }
 
-.state.opened {
-  background: rgba(214, 232, 240, 0.54);
-  color: #56809a;
+.capsule-state.opened {
+  background: var(--color-green-soft);
+  color: var(--color-green);
 }
 
-.state.locked {
-  background: rgba(245, 220, 224, 0.68);
-  color: #b85d70;
+.capsule-state.locked {
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
 }
 
-.capsule-copy {
-  color: rgba(90, 102, 112, 0.78);
-  font-size: 14px;
+.capsule-mode {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.capsule-content {
+  border-top: 1px solid var(--color-line);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
   line-height: 24px;
+  padding-top: $space-3;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 32px 16px;
-  text-align: center;
+.capsule-content.locked-copy {
+  color: var(--color-muted);
 }
 
-.empty-title {
-  color: #5a6670;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.empty-copy {
-  color: rgba(90, 102, 112, 0.58);
-  font-size: 13px;
-  line-height: 22px;
+@media (min-width: $breakpoint-tablet) {
+  .capsule-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
 }

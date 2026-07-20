@@ -1,81 +1,120 @@
+@use "../../styles/tokens" as *;
+
 .whispers-page,
 .whisper-list,
 .message-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
 }
 
-.page-head {
+.whispers-page,
+.whisper-list {
+  gap: $space-4;
+}
+
+.whisper-intro {
+  padding-bottom: $space-4;
+}
+
+.whisper-thread {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $space-5;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  padding: $space-4;
 }
 
-.title {
-  color: #273846;
-  font-size: 28px;
-  font-weight: 800;
-}
-
-.subtitle,
-.whisper-date,
-.message-meta,
-.muted {
-  color: rgba(90, 102, 112, 0.56);
-  font-size: 12px;
-}
-
-.whisper-card {
+.whisper-heading {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 16px;
-}
-
-.whisper-head {
-  display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: $space-3;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: $space-3;
+}
+
+.whisper-title-row {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: $space-2;
+}
+
+.whisper-dot {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: $radius-sm;
+  background: var(--color-blue);
 }
 
 .whisper-title {
-  color: #5a6670;
-  font-size: 18px;
-  font-weight: 800;
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 600;
+  line-height: 24px;
+  word-break: break-word;
 }
 
-.message {
+.whisper-date,
+.message-meta,
+.thread-empty {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.whisper-date {
+  flex-shrink: 0;
+}
+
+.message-list {
+  gap: $space-4;
+}
+
+.message-row {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  border-left: 3px solid #f5dce0;
-  padding-left: 12px;
+  align-items: flex-start;
+  gap: $space-1;
+}
+
+.message-row.mine {
+  align-items: flex-end;
+}
+
+.message-author {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.message-bubble {
+  display: flex;
+  max-width: 84%;
+  flex-direction: column;
+  gap: $space-2;
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  padding: $space-3;
+}
+
+.message-row.mine .message-bubble {
+  background: var(--color-accent-soft);
 }
 
 .message-copy {
-  color: rgba(90, 102, 112, 0.82);
-  font-size: 14px;
+  color: var(--color-ink);
+  font-size: $text-sm;
   line-height: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.empty {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 32px 16px;
+.thread-empty {
+  padding: $space-3 0;
   text-align: center;
-}
-
-.empty-title {
-  color: #5a6670;
-  font-size: 18px;
-  font-weight: 800;
-}
-
-.empty-copy {
-  color: rgba(90, 102, 112, 0.58);
-  font-size: 13px;
-  line-height: 22px;
 }
