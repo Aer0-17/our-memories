@@ -85,6 +85,7 @@ func Migrate() {
 	ensureColumn("spaces", "tier", "TEXT DEFAULT 'free'")
 	ensureColumn("spaces", "purchased_at", "DATETIME")
 	ensureColumn("spaces", "storage_used_bytes", "INTEGER DEFAULT 0")
+	ensureColumn("spaces", "passcode_length", "INTEGER DEFAULT 0")
 
 	// 创建索引
 	createIndex("idx_users_space_role", "users", "space_id, role")

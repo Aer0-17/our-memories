@@ -49,12 +49,46 @@ func TestMigrateAutoMigrateCreatesCoreSchema(t *testing.T) {
 	assertColumnExists(t, "time_capsules", "open_mode")
 	assertColumnExists(t, "time_capsules", "opened_by_user_ids")
 	assertColumnExists(t, "time_capsules", "revealed_at")
+	assertColumnExists(t, "spaces", "passcode_length")
 	assertColumnExists(t, "anniversary_cards", "voice_url")
 	assertColumnExists(t, "anniversary_cards", "bgm_url")
 	assertColumnExists(t, "anniversary_cards", "bgm_preset")
 	assertIndexExists(t, "idx_memories_space_date_order")
 	assertIndexExists(t, "idx_notifications_user_read")
 	assertIndexExists(t, "idx_relationship_signals_space_expires")
+}
+
+func TestMigrateAddsPasscodeLengthToExistingSpacesTable(t *testing.T) {
+	testDB, err := sql.Open("sqlite", "file:migrate-existing-spaces?mode=memory&cache=shared&_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = testDB.Close()
+	})
+
+	if _, err := testDB.Exec(`
+		CREATE TABLE spaces (
+			id TEXT PRIMARY KEY,
+			space_code TEXT,
+			password_hash TEXT,
+			name TEXT,
+			created_at DATETIME,
+			updated_at DATETIME
+		)
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	DB = testDB
+	Gorm, err = gorm.Open(sqlitegorm.Dialector{Conn: testDB}, &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	Migrate()
+
+	assertColumnExists(t, "spaces", "passcode_length")
 }
 
 func tableExists(t *testing.T, tableName string) bool {
