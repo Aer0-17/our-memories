@@ -3,6 +3,7 @@ export default defineAppConfig({
     "pages/index/index",
     "pages/memories/index",
     "pages/memory-editor/index",
+    "pages/memory-detail/index",
     "pages/anniversaries/index",
     "pages/anniversary-editor/index",
     "pages/anniversary-replay/index",
@@ -18,7 +19,7 @@ export default defineAppConfig({
   },
   permission: {
     "scope.record": {
-      desc: "用于录制私语、胶囊和纪念日语音",
+      desc: "用于录制私语、回忆、胶囊和纪念日语音",
     },
   },
   tabBar: {

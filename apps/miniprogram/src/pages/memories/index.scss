@@ -156,6 +156,28 @@
   color: var(--color-accent-deep);
 }
 
+.memory-detail-action {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border: 1px solid var(--color-blue-soft);
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-4;
+}
+
+.memory-detail-action-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .memory-actions {
   display: flex;
   justify-content: flex-end;

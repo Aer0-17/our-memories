@@ -11,6 +11,7 @@ import {
   readSession,
   resolveAssetUrl,
 } from "../../lib/api";
+import imagesIcon from "../../assets/lucide/images.svg";
 import "./index.scss";
 
 function displayDate(value: string) {
@@ -62,6 +63,10 @@ export default function MemoriesPage() {
   const openEditor = (memoryId?: string) => {
     const query = memoryId ? `?id=${encodeURIComponent(memoryId)}` : "";
     Taro.navigateTo({ url: `/pages/memory-editor/index${query}` });
+  };
+
+  const openDetail = (memoryId: string) => {
+    Taro.navigateTo({ url: `/pages/memory-detail/index?id=${encodeURIComponent(memoryId)}` });
   };
 
   const removeMemory = async (memory: Memory) => {
@@ -152,6 +157,10 @@ export default function MemoriesPage() {
                       ))}
                     </View>
                   )}
+                  <Button className="memory-detail-action" onClick={() => openDetail(memory.id)}>
+                    <Image className="memory-detail-action-icon" src={imagesIcon} mode="aspectFit" />
+                    <Text>查看完整回忆</Text>
+                  </Button>
                   {canManage && (
                     <View className="memory-actions">
                       <Button className="memory-action" onClick={() => openEditor(memory.id)}>

@@ -1,0 +1,223 @@
+@use "../../styles/tokens" as *;
+
+.memory-detail-page,
+.memory-detail-content,
+.memory-detail-story,
+.memory-detail-voice,
+.memory-detail-gallery-section,
+.memory-supplement-view,
+.memory-supplement-editor,
+.memory-supplement-heading-copy,
+.memory-supplement-existing-voice {
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-detail-page {
+  gap: $space-4;
+}
+
+.memory-detail-content {
+  gap: $space-5;
+  padding-bottom: $space-5;
+}
+
+.memory-detail-hero {
+  display: block;
+  width: 100%;
+  height: 280px;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+}
+
+.memory-detail-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+  background: var(--color-blue-soft);
+}
+
+.memory-detail-placeholder-icon {
+  width: 40px;
+  height: 40px;
+  opacity: 0.52;
+}
+
+.memory-detail-placeholder-place {
+  color: var(--color-blue);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.memory-detail-story {
+  gap: $space-3;
+}
+
+.memory-detail-date {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.memory-detail-title {
+  color: var(--color-ink);
+  font-size: $text-2xl;
+  font-weight: 700;
+  line-height: 36px;
+  word-break: break-word;
+}
+
+.memory-detail-place {
+  color: var(--color-green);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 24px;
+  word-break: break-word;
+}
+
+.memory-detail-text,
+.memory-supplement-copy {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.memory-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  padding-top: $space-1;
+}
+
+.memory-detail-tag {
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: $space-1 $space-2;
+}
+
+.memory-detail-tag.mood {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+}
+
+.memory-detail-voice,
+.memory-detail-gallery-section {
+  gap: $space-3;
+}
+
+.memory-detail-section-label {
+  color: var(--color-blue);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.memory-detail-section-heading,
+.memory-supplement-voice-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.memory-detail-section-title {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.memory-detail-section-count,
+.memory-supplement-subtitle {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.memory-detail-section-count {
+  flex-shrink: 0;
+  padding-top: $space-1;
+}
+
+.memory-detail-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.memory-detail-gallery-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+}
+
+.memory-supplement-view {
+  gap: $space-2;
+  border-left: 4px solid var(--color-green);
+  background: var(--color-green-soft);
+  padding: $space-3 $space-4;
+}
+
+.memory-supplement-editor {
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.memory-supplement-heading-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.memory-supplement-textarea {
+  display: block;
+  min-height: 128px;
+  height: 128px;
+  line-height: 24px;
+  padding: $space-3;
+}
+
+.memory-supplement-existing-voice {
+  gap: $space-1;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: $space-3;
+}
+
+.memory-supplement-voice-heading {
+  align-items: center;
+}
+
+.memory-supplement-remove-voice {
+  min-width: 56px;
+  min-height: 44px;
+  border-radius: $radius-md;
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.memory-supplement-save,
+.memory-detail-edit {
+  width: 100%;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .memory-detail-gallery {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

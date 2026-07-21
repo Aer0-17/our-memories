@@ -302,6 +302,16 @@ export function updateMemory(memoryId: string, input: MemoryPatch) {
   });
 }
 
+export function updateMemorySupplement(
+  memoryId: string,
+  input: { partnerNote: string; partnerVoiceUrl: string },
+) {
+  return request<MemoryMutationResponse>(`/memories/${encodeURIComponent(memoryId)}`, {
+    method: "PATCH",
+    data: input,
+  });
+}
+
 export function deleteMemory(memoryId: string) {
   return request<MemoryMutationResponse>(`/memories/${encodeURIComponent(memoryId)}`, {
     method: "DELETE",
@@ -396,7 +406,7 @@ export async function deleteUploadedMedia(keys: string[]) {
 
 export async function uploadVoiceAudio(
   draft: VoiceDraft,
-  folder: "whispers" | "time-capsules" | "anniversaries",
+  folder: "whispers" | "time-capsules" | "anniversaries" | "memories",
 ) {
   if (draft.fileSize > 12 * 1024 * 1024) {
     throw new Error("语音太大，请控制在 60 秒内。");
