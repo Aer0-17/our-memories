@@ -1,0 +1,214 @@
+@use "../../styles/tokens" as *;
+
+.anniversary-editor-page,
+.anniversary-form,
+.anniversary-editor-section,
+.anniversary-editor-heading-copy,
+.anniversary-editor-field-group,
+.anniversary-toggle-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.anniversary-editor-page {
+  gap: $space-4;
+  padding-bottom: 0;
+}
+
+.anniversary-editor-intro {
+  padding-bottom: $space-3;
+}
+
+.anniversary-form {
+  gap: $space-4;
+}
+
+.anniversary-editor-section {
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.anniversary-editor-heading,
+.anniversary-editor-label-row,
+.anniversary-toggle-row,
+.anniversary-existing-voice-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.anniversary-editor-heading-copy,
+.anniversary-toggle-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.anniversary-editor-section-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.anniversary-editor-section-note,
+.anniversary-editor-counter,
+.anniversary-editor-count,
+.anniversary-toggle-note {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.anniversary-editor-count {
+  flex-shrink: 0;
+  padding-top: $space-1;
+}
+
+.anniversary-editor-field-group {
+  gap: $space-2;
+}
+
+.anniversary-editor-label,
+.anniversary-toggle-title {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.anniversary-editor-label-row .anniversary-editor-label {
+  flex: 1;
+}
+
+.anniversary-date-picker {
+  color: var(--color-ink);
+}
+
+.anniversary-editor-textarea {
+  display: block;
+  min-height: 144px;
+  height: 144px;
+  line-height: 24px;
+  padding: $space-3;
+}
+
+.anniversary-existing-voice {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: $space-4;
+}
+
+.anniversary-existing-voice-heading {
+  align-items: baseline;
+}
+
+.anniversary-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.anniversary-photo-draft,
+.anniversary-photo-add {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 88px;
+  overflow: hidden;
+  border-radius: $radius-md;
+}
+
+.anniversary-photo-draft {
+  background: var(--color-surface-soft);
+}
+
+.anniversary-photo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.anniversary-photo-remove {
+  position: absolute;
+  top: $space-1;
+  right: $space-1;
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  font-size: $text-lg;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0;
+}
+
+.anniversary-photo-add {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border: 1px dashed var(--color-line);
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  padding: $space-2;
+}
+
+.anniversary-photo-add-mark {
+  color: var(--color-accent);
+  font-size: $text-xl;
+  line-height: 32px;
+}
+
+.anniversary-photo-add-copy {
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.anniversary-toggle-row {
+  min-height: 56px;
+  align-items: center;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.anniversary-toggle-row:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.anniversary-editor-submit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  padding: $space-3 0 calc(#{$space-4} + env(safe-area-inset-bottom));
+}
+
+.anniversary-editor-progress {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  line-height: 20px;
+  text-align: center;
+}
+
+.anniversary-editor-submit {
+  width: 100%;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .anniversary-photo-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

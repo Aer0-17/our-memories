@@ -4,6 +4,7 @@ export default defineAppConfig({
     "pages/memories/index",
     "pages/memory-editor/index",
     "pages/anniversaries/index",
+    "pages/anniversary-editor/index",
     "pages/whispers/index",
     "pages/capsules/index",
     "pages/capsule-editor/index",
@@ -16,7 +17,7 @@ export default defineAppConfig({
   },
   permission: {
     "scope.record": {
-      desc: "用于录制只给 TA 听的私语",
+      desc: "用于录制私语、胶囊和纪念日语音",
     },
   },
   tabBar: {

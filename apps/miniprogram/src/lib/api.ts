@@ -1,5 +1,5 @@
 import Taro from "@tarojs/taro";
-import type { AnniversaryCard, LocalMemoryStore } from "@map-of-us/shared";
+import type { LocalMemoryStore } from "@map-of-us/shared";
 import type { VoiceDraft } from "./voice";
 export { resolveAssetUrl } from "./assetUrl";
 
@@ -95,6 +95,43 @@ export type TimeCapsuleInput = {
   content: string;
   voiceUrl?: string;
   openMode: "single" | "together";
+  photos: MemoryPhotoPayload[];
+};
+
+export type AnniversaryPhoto = {
+  id: string;
+  url: string;
+  key?: string;
+  mimeType?: string;
+  sortOrder?: number;
+};
+
+export type AnniversaryCard = {
+  id: string;
+  title: string;
+  date: string;
+  note: string;
+  voiceUrl?: string;
+  bgmUrl?: string;
+  bgmPreset?: string;
+  repeatYearly: boolean;
+  pinned: boolean;
+  sortOrder?: number;
+  createdById?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  photos?: AnniversaryPhoto[];
+};
+
+export type AnniversaryCardInput = {
+  title: string;
+  date: string;
+  note: string;
+  voiceUrl?: string;
+  bgmUrl?: string;
+  bgmPreset?: string;
+  repeatYearly: boolean;
+  pinned: boolean;
   photos: MemoryPhotoPayload[];
 };
 
@@ -273,7 +310,7 @@ export async function uploadMemoryImage(input: {
   filePath: string;
   width?: number;
   height?: number;
-  folder?: "memories" | "time-capsules";
+  folder?: "memories" | "time-capsules" | "anniversaries";
 }): Promise<MemoryPhotoPayload> {
   let compressedPath = input.filePath;
   let width = input.width;
@@ -333,7 +370,7 @@ export async function deleteUploadedMedia(keys: string[]) {
 
 export async function uploadVoiceAudio(
   draft: VoiceDraft,
-  folder: "whispers" | "time-capsules",
+  folder: "whispers" | "time-capsules" | "anniversaries",
 ) {
   if (draft.fileSize > 12 * 1024 * 1024) {
     throw new Error("语音太大，请控制在 60 秒内。");
@@ -352,6 +389,23 @@ export async function uploadVoiceAudio(
 export async function getAnniversaryCards() {
   const data = await request<{ anniversaryCards: AnniversaryCard[] }>("/anniversary-cards");
   return { cards: data.anniversaryCards };
+}
+
+export function createAnniversaryCard(input: AnniversaryCardInput) {
+  return request<{ id: string }>("/anniversary-cards", { method: "POST", data: input });
+}
+
+export function updateAnniversaryCard(cardId: string, input: AnniversaryCardInput) {
+  return request<{ ok: true }>(`/anniversary-cards/${encodeURIComponent(cardId)}`, {
+    method: "PATCH",
+    data: input,
+  });
+}
+
+export function deleteAnniversaryCard(cardId: string) {
+  return request<{ ok: true }>(`/anniversary-cards/${encodeURIComponent(cardId)}`, {
+    method: "DELETE",
+  });
 }
 
 export function getWhispers() {

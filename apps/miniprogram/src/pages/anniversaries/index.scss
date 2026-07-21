@@ -7,6 +7,10 @@
   gap: $space-4;
 }
 
+.anniversary-page {
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+
 .anniversary-card {
   overflow: hidden;
 }
@@ -145,9 +149,84 @@
   word-break: break-word;
 }
 
+.anniversary-voice {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.anniversary-voice-label {
+  color: var(--color-blue);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.anniversary-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  margin-top: $space-1;
+  padding-top: $space-3;
+}
+
+.anniversary-action {
+  min-width: 64px;
+  min-height: 44px;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.anniversary-action.danger {
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
+}
+
+.anniversary-create-fab {
+  position: fixed;
+  z-index: 10;
+  right: $space-4;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  display: flex;
+  min-width: 96px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  box-shadow: $shadow-button;
+  color: var(--color-white);
+  padding: 0 $space-4;
+}
+
+.anniversary-create-fab-plus {
+  font-size: $text-lg;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.anniversary-create-fab-label {
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
 @media (min-width: $breakpoint-tablet) {
   .anniversary-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .anniversary-create-fab {
+    right: calc((100vw - #{$page-max}) / 2 + #{$space-5});
   }
 }
