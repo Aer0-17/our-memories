@@ -318,6 +318,20 @@ export function getWhispers() {
   return request<{ whispers: Whisper[] }>("/whispers");
 }
 
+export function createWhisper(input: { title: string; content?: string }) {
+  return request<{ id: string }>("/whispers", {
+    method: "POST",
+    data: input,
+  });
+}
+
+export function replyWhisper(whisperId: string, input: { content: string }) {
+  return request<{ id: string }>(`/whispers/${encodeURIComponent(whisperId)}/reply`, {
+    method: "POST",
+    data: input,
+  });
+}
+
 export function getTimeCapsules() {
   return request<{ timeCapsules: TimeCapsule[] }>("/time-capsules");
 }

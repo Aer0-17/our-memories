@@ -36,7 +36,7 @@ func CreateWhisper(c *gin.Context) {
 
 	whisperID, err := whisperService().Create(spaceID, userID, req)
 	if err != nil {
-		utils.Error(c, 500, "Failed to create whisper")
+		writeWhisperServiceError(c, err, "Failed to create whisper")
 		return
 	}
 
@@ -90,6 +90,12 @@ func writeWhisperServiceError(c *gin.Context, err error, fallback string) {
 		utils.Error(c, 403, "Only the creator can modify this whisper")
 	case errors.Is(err, services.ErrInvalidContent):
 		utils.Error(c, 400, "Content or voice is required")
+	case errors.Is(err, services.ErrInvalidWhisperTitle):
+		utils.Error(c, 400, "Title is required and must not exceed 120 characters")
+	case errors.Is(err, services.ErrWhisperContentTooLong):
+		utils.Error(c, 400, "Content must not exceed 2000 characters")
+	case errors.Is(err, services.ErrWhisperVoiceURLTooLong):
+		utils.Error(c, 400, "Voice URL is too long")
 	default:
 		utils.Error(c, 500, fallback)
 	}

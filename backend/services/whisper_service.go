@@ -2,13 +2,25 @@ package services
 
 import (
 	"context"
+	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"our-memories-backend/events"
 	"our-memories-backend/models"
 	"our-memories-backend/repositories"
 	"our-memories-backend/utils"
 )
+
+const (
+	maxWhisperTitleLength   = 120
+	maxWhisperContentLength = 2000
+	maxWhisperVoiceURLBytes = 4096
+)
+
+var ErrInvalidWhisperTitle = errors.New("invalid whisper title")
+var ErrWhisperContentTooLong = errors.New("whisper content too long")
+var ErrWhisperVoiceURLTooLong = errors.New("whisper voice URL too long")
 
 type CreateWhisperRequest struct {
 	Title    string `json:"title" binding:"required"`
@@ -42,22 +54,35 @@ func (s *WhisperService) List(spaceID string) ([]models.Whisper, error) {
 }
 
 func (s *WhisperService) Create(spaceID string, userID string, req CreateWhisperRequest) (string, error) {
+	title := strings.TrimSpace(req.Title)
+	content := strings.TrimSpace(req.Content)
+	voiceURL := strings.TrimSpace(req.VoiceURL)
+	if title == "" || utf8.RuneCountInString(title) > maxWhisperTitleLength {
+		return "", ErrInvalidWhisperTitle
+	}
+	if utf8.RuneCountInString(content) > maxWhisperContentLength {
+		return "", ErrWhisperContentTooLong
+	}
+	if len(voiceURL) > maxWhisperVoiceURLBytes {
+		return "", ErrWhisperVoiceURLTooLong
+	}
+
 	whisperID := utils.NewID()
 	var firstReply *repositories.WhisperReplyRecord
-	if strings.TrimSpace(req.Content) != "" || strings.TrimSpace(req.VoiceURL) != "" {
+	if content != "" || voiceURL != "" {
 		firstReply = &repositories.WhisperReplyRecord{
 			ID:        utils.NewID(),
 			WhisperID: whisperID,
 			UserID:    userID,
-			Content:   req.Content,
-			VoiceURL:  req.VoiceURL,
+			Content:   content,
+			VoiceURL:  voiceURL,
 		}
 	}
 
 	if err := s.repo.Create(repositories.WhisperRecord{
 		ID:          whisperID,
 		SpaceID:     spaceID,
-		Title:       req.Title,
+		Title:       title,
 		CreatedByID: userID,
 	}, firstReply); err != nil {
 		return "", err
@@ -67,16 +92,24 @@ func (s *WhisperService) Create(spaceID string, userID string, req CreateWhisper
 }
 
 func (s *WhisperService) Reply(spaceID string, userID string, whisperID string, req ReplyWhisperRequest) (string, error) {
-	if strings.TrimSpace(req.Content) == "" && strings.TrimSpace(req.VoiceURL) == "" {
+	content := strings.TrimSpace(req.Content)
+	voiceURL := strings.TrimSpace(req.VoiceURL)
+	if content == "" && voiceURL == "" {
 		return "", ErrInvalidContent
+	}
+	if utf8.RuneCountInString(content) > maxWhisperContentLength {
+		return "", ErrWhisperContentTooLong
+	}
+	if len(voiceURL) > maxWhisperVoiceURLBytes {
+		return "", ErrWhisperVoiceURLTooLong
 	}
 	replyID := utils.NewID()
 	err := s.repo.AddReply(spaceID, repositories.WhisperReplyRecord{
 		ID:        replyID,
 		WhisperID: whisperID,
 		UserID:    userID,
-		Content:   req.Content,
-		VoiceURL:  req.VoiceURL,
+		Content:   content,
+		VoiceURL:  voiceURL,
 	})
 	if err == nil {
 		s.publish(events.WhisperReplied, spaceID, userID, whisperID)

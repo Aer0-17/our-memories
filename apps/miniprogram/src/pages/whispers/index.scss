@@ -2,27 +2,140 @@
 
 .whispers-page,
 .whisper-list,
-.message-list {
+.message-list,
+.whisper-compose,
+.compose-field-group,
+.reply-panel {
   display: flex;
   flex-direction: column;
 }
 
-.whispers-page,
+.whispers-page {
+  gap: $space-4;
+  padding-bottom: calc(104px + env(safe-area-inset-bottom));
+}
+
 .whisper-list {
   gap: $space-4;
 }
 
 .whisper-intro {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-4;
   padding-bottom: $space-4;
+}
+
+.whisper-intro-copy,
+.compose-heading-copy,
+.whisper-title-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.whisper-intro-copy {
+  gap: $space-2;
+}
+
+.whisper-count {
+  display: flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: $space-1;
+  padding-bottom: $space-1;
+}
+
+.whisper-count-value {
+  color: var(--color-blue);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.whisper-count-label,
+.compose-note,
+.compose-counter,
+.whisper-thread-meta,
+.whisper-message-count,
+.message-author,
+.message-time,
+.thread-empty,
+.voice-note {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.whisper-compose {
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.compose-heading-copy,
+.whisper-title-copy {
+  gap: $space-1;
+}
+
+.compose-title {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.compose-field-group,
+.reply-panel {
+  gap: $space-2;
+}
+
+.compose-label-row,
+.compose-actions,
+.reply-actions,
+.message-author-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2;
+}
+
+.compose-label {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.whisper-textarea,
+.reply-textarea {
+  display: block;
+  height: 120px;
+  min-height: 120px;
+  line-height: 24px;
+  padding: $space-3;
+}
+
+.compose-actions {
+  padding-top: $space-1;
+}
+
+.compose-cancel,
+.compose-submit {
+  flex: 1;
+}
+
+.whisper-action-error {
+  color: var(--color-danger);
+  font-size: $text-xs;
+  line-height: 20px;
 }
 
 .whisper-thread {
   display: flex;
   flex-direction: column;
-  gap: $space-5;
-  border: 1px solid var(--color-line);
-  border-radius: $radius-md;
-  background: var(--color-surface);
+  gap: $space-4;
   padding: $space-4;
 }
 
@@ -38,7 +151,6 @@
 .whisper-title-row {
   display: flex;
   min-width: 0;
-  flex: 1;
   align-items: center;
   gap: $space-2;
 }
@@ -54,20 +166,12 @@
 .whisper-title {
   color: var(--color-ink);
   font-size: $text-md;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 24px;
   word-break: break-word;
 }
 
-.whisper-date,
-.message-meta,
-.thread-empty {
-  color: var(--color-muted);
-  font-size: $text-xs;
-  line-height: 20px;
-}
-
-.whisper-date {
+.whisper-message-count {
   flex-shrink: 0;
 }
 
@@ -86,17 +190,24 @@
   align-items: flex-end;
 }
 
+.message-author-line {
+  max-width: 84%;
+}
+
+.message-row.mine .message-author-line {
+  flex-direction: row-reverse;
+}
+
 .message-author {
-  color: var(--color-muted);
-  font-size: $text-xs;
-  line-height: 20px;
+  color: var(--color-ink-soft);
+  font-weight: 600;
 }
 
 .message-bubble {
   display: flex;
   max-width: 84%;
   flex-direction: column;
-  gap: $space-2;
+  gap: $space-1;
   border-radius: $radius-md;
   background: var(--color-blue-soft);
   padding: $space-3;
@@ -114,7 +225,91 @@
   word-break: break-word;
 }
 
+.voice-note {
+  color: var(--color-blue);
+}
+
 .thread-empty {
   padding: $space-3 0;
   text-align: center;
+}
+
+.reply-panel {
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.reply-actions {
+  justify-content: flex-end;
+}
+
+.reply-cancel,
+.reply-submit,
+.thread-reply {
+  min-height: 44px;
+  border-radius: $radius-md;
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.reply-cancel {
+  min-width: 72px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+}
+
+.reply-submit {
+  min-width: 104px;
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+
+.reply-submit[disabled] {
+  opacity: 0.44;
+}
+
+.thread-reply {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+}
+
+.whisper-create-fab {
+  position: fixed;
+  z-index: 10;
+  right: $space-4;
+  bottom: calc(#{$space-5} + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  min-width: 104px;
+  height: 48px;
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  box-shadow: $shadow-button;
+  color: var(--color-white);
+  padding: 0 $space-4;
+}
+
+.whisper-create-fab-plus {
+  font-size: $text-lg;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.whisper-create-fab-label {
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .whisper-create-fab {
+    right: calc((100vw - #{$page-max}) / 2 + #{$space-5});
+  }
 }

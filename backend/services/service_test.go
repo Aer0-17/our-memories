@@ -229,6 +229,52 @@ func TestMemoryServiceDeleteRestoresAndDefersPhotoCleanup(t *testing.T) {
 	}
 }
 
+func TestWhisperServiceCreateReplyAndValidation(t *testing.T) {
+	setupServiceTestDB(t)
+	recorder := &recordedEvents{}
+	service := NewWhisperService(repositories.NewWhisperRepository(db.Gorm), recorder)
+
+	whisperID, err := service.Create("space-1", "user-1", CreateWhisperRequest{
+		Title:   "  今晚想说的话  ",
+		Content: "  早点回家  ",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.Reply("space-1", "user-2", whisperID, ReplyWhisperRequest{
+		Content: "  好，等我  ",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := service.List("space-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "今晚想说的话" || len(items[0].Messages) != 2 {
+		t.Fatalf("expected one trimmed whisper with two messages, got %#v", items)
+	}
+	if items[0].Messages[0].Content != "早点回家" || items[0].Messages[1].Content != "好，等我" {
+		t.Fatalf("expected trimmed message content, got %#v", items[0].Messages)
+	}
+	if len(recorder.items) != 2 || recorder.items[0].Type != events.WhisperCreated || recorder.items[1].Type != events.WhisperReplied {
+		t.Fatalf("expected whisper create and reply events, got %#v", recorder.items)
+	}
+
+	if _, err := service.Create("space-1", "user-1", CreateWhisperRequest{Title: "   "}); !errors.Is(err, ErrInvalidWhisperTitle) {
+		t.Fatalf("expected blank title to be rejected, got %v", err)
+	}
+	if _, err := service.Create("space-1", "user-1", CreateWhisperRequest{
+		Title:   "太长的内容",
+		Content: strings.Repeat("想", maxWhisperContentLength+1),
+	}); !errors.Is(err, ErrWhisperContentTooLong) {
+		t.Fatalf("expected oversized content to be rejected, got %v", err)
+	}
+	if _, err := service.Reply("space-1", "user-2", whisperID, ReplyWhisperRequest{}); !errors.Is(err, ErrInvalidContent) {
+		t.Fatalf("expected empty reply to be rejected, got %v", err)
+	}
+}
+
 func TestAnniversaryServicePermissionsPhotoCleanupAndEvents(t *testing.T) {
 	setupServiceTestDB(t)
 	recorder := &recordedEvents{}
