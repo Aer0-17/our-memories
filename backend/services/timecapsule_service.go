@@ -3,7 +3,9 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"our-memories-backend/cache"
 	"our-memories-backend/events"
@@ -12,8 +14,23 @@ import (
 	"our-memories-backend/utils"
 )
 
-var ErrTimeCapsuleLimit = errors.New("time capsule unopened limit reached")
-var ErrTimeCapsuleLocked = errors.New("time capsule locked")
+const (
+	maxTimeCapsuleTitleLength   = 120
+	maxTimeCapsuleContentLength = 10000
+	maxTimeCapsuleVoiceURLBytes = 4096
+	maxTimeCapsulePhotos        = 6
+)
+
+var (
+	ErrTimeCapsuleLimit           = errors.New("time capsule unopened limit reached")
+	ErrTimeCapsuleLocked          = errors.New("time capsule locked")
+	ErrTimeCapsuleImmutable       = errors.New("time capsule can no longer be modified")
+	ErrInvalidTimeCapsuleTitle    = errors.New("invalid time capsule title")
+	ErrInvalidTimeCapsuleContent  = errors.New("invalid time capsule content")
+	ErrInvalidTimeCapsuleOpenDate = errors.New("invalid time capsule open date")
+	ErrTimeCapsuleVoiceURLTooLong = errors.New("time capsule voice URL too long")
+	ErrTooManyTimeCapsulePhotos   = errors.New("too many time capsule photos")
+)
 
 type CreateTimeCapsuleRequest struct {
 	Title    string       `json:"title" binding:"required"`
@@ -90,6 +107,18 @@ func (s *TimeCapsuleService) List(spaceID string, userID string) ([]models.TimeC
 }
 
 func (s *TimeCapsuleService) Create(spaceID string, userID string, req CreateTimeCapsuleRequest) (string, error) {
+	normalized, err := normalizeTimeCapsuleInput(
+		req.Title,
+		req.OpenDate,
+		req.Content,
+		req.VoiceURL,
+		req.OpenMode,
+		req.Photos,
+	)
+	if err != nil {
+		return "", err
+	}
+
 	count, err := s.repo.UnopenedCount(spaceID)
 	if err != nil {
 		return "", err
@@ -97,7 +126,7 @@ func (s *TimeCapsuleService) Create(spaceID string, userID string, req CreateTim
 	if count >= 3 {
 		return "", ErrTimeCapsuleLimit
 	}
-	if err := s.upload(spaceID, "time-capsules", req.Photos); err != nil {
+	if err := s.upload(spaceID, "time-capsules", normalized.Photos); err != nil {
 		return "", err
 	}
 
@@ -105,13 +134,13 @@ func (s *TimeCapsuleService) Create(spaceID string, userID string, req CreateTim
 	if err := s.repo.Create(repositories.TimeCapsuleRecord{
 		ID:          capsuleID,
 		SpaceID:     spaceID,
-		Title:       req.Title,
-		OpenDate:    req.OpenDate,
-		Content:     req.Content,
-		VoiceURL:    req.VoiceURL,
-		OpenMode:    normalizeTimeCapsuleOpenMode(req.OpenMode),
+		Title:       normalized.Title,
+		OpenDate:    normalized.OpenDate,
+		Content:     normalized.Content,
+		VoiceURL:    normalized.VoiceURL,
+		OpenMode:    normalized.OpenMode,
 		CreatedByID: userID,
-	}, timeCapsulePhotoRecords(capsuleID, req.Photos)); err != nil {
+	}, timeCapsulePhotoRecords(capsuleID, normalized.Photos)); err != nil {
 		return "", err
 	}
 
@@ -121,12 +150,31 @@ func (s *TimeCapsuleService) Create(spaceID string, userID string, req CreateTim
 }
 
 func (s *TimeCapsuleService) Update(spaceID string, userID string, capsuleID string, req UpdateTimeCapsuleRequest) error {
-	createdByID, err := s.repo.CreatedByID(capsuleID, spaceID)
+	capsule, err := s.repo.ByID(capsuleID, spaceID)
 	if err != nil {
 		return err
 	}
-	if createdByID != userID {
+	if capsule.CreatedByID != userID {
 		return ErrForbidden
+	}
+	if capsule.IsOpened || !isFutureTimeCapsuleDate(capsule.OpenDate, time.Now()) {
+		return ErrTimeCapsuleImmutable
+	}
+
+	photosForValidation := []PhotoInput{}
+	if req.Photos != nil {
+		photosForValidation = *req.Photos
+	}
+	normalized, err := normalizeTimeCapsuleInput(
+		req.Title,
+		req.OpenDate,
+		req.Content,
+		req.VoiceURL,
+		req.OpenMode,
+		photosForValidation,
+	)
+	if err != nil {
+		return err
 	}
 
 	var oldPhotos []StoredPhoto
@@ -136,27 +184,27 @@ func (s *TimeCapsuleService) Update(spaceID string, userID string, capsuleID str
 		if err != nil {
 			return err
 		}
-		if err := s.upload(spaceID, "time-capsules", *req.Photos); err != nil {
+		if err := s.upload(spaceID, "time-capsules", normalized.Photos); err != nil {
 			return err
 		}
 	}
 
 	photos := []repositories.TimeCapsulePhotoRecord{}
 	if replacePhotos {
-		photos = timeCapsulePhotoRecords(capsuleID, *req.Photos)
+		photos = timeCapsulePhotoRecords(capsuleID, normalized.Photos)
 	}
 	if err := s.repo.Update(capsuleID, spaceID, map[string]any{
-		"title":     req.Title,
-		"open_date": req.OpenDate,
-		"content":   req.Content,
-		"voice_url": req.VoiceURL,
-		"open_mode": normalizeTimeCapsuleOpenMode(req.OpenMode),
+		"title":     normalized.Title,
+		"open_date": normalized.OpenDate,
+		"content":   normalized.Content,
+		"voice_url": normalized.VoiceURL,
+		"open_mode": normalized.OpenMode,
 	}, photos, replacePhotos); err != nil {
 		return err
 	}
 
 	if replacePhotos {
-		if err := s.deleteRemovedPhotos(spaceID, oldPhotos, *req.Photos); err != nil {
+		if err := s.deleteRemovedPhotos(spaceID, oldPhotos, normalized.Photos); err != nil {
 			cache.ClearTimeCapsuleSpace(spaceID)
 			return err
 		}
@@ -165,6 +213,61 @@ func (s *TimeCapsuleService) Update(spaceID string, userID string, capsuleID str
 	s.publish(events.TimeCapsuleUpdated, spaceID, userID, capsuleID)
 	cache.ClearTimeCapsuleSpace(spaceID)
 	return nil
+}
+
+type normalizedTimeCapsuleInput struct {
+	Title    string
+	OpenDate string
+	Content  string
+	VoiceURL string
+	OpenMode string
+	Photos   []PhotoInput
+}
+
+func normalizeTimeCapsuleInput(
+	title string,
+	openDate string,
+	content string,
+	voiceURL string,
+	openMode string,
+	photos []PhotoInput,
+) (normalizedTimeCapsuleInput, error) {
+	normalized := normalizedTimeCapsuleInput{
+		Title:    strings.TrimSpace(title),
+		OpenDate: strings.TrimSpace(openDate),
+		Content:  strings.TrimSpace(content),
+		VoiceURL: strings.TrimSpace(voiceURL),
+		OpenMode: normalizeTimeCapsuleOpenMode(openMode),
+		Photos:   photos,
+	}
+
+	if normalized.Title == "" || utf8.RuneCountInString(normalized.Title) > maxTimeCapsuleTitleLength {
+		return normalizedTimeCapsuleInput{}, ErrInvalidTimeCapsuleTitle
+	}
+	if normalized.Content == "" || utf8.RuneCountInString(normalized.Content) > maxTimeCapsuleContentLength {
+		return normalizedTimeCapsuleInput{}, ErrInvalidTimeCapsuleContent
+	}
+	if !isFutureTimeCapsuleDate(normalized.OpenDate, time.Now()) {
+		return normalizedTimeCapsuleInput{}, ErrInvalidTimeCapsuleOpenDate
+	}
+	if len(normalized.VoiceURL) > maxTimeCapsuleVoiceURLBytes {
+		return normalizedTimeCapsuleInput{}, ErrTimeCapsuleVoiceURLTooLong
+	}
+	if len(normalized.Photos) > maxTimeCapsulePhotos {
+		return normalizedTimeCapsuleInput{}, ErrTooManyTimeCapsulePhotos
+	}
+
+	return normalized, nil
+}
+
+func isFutureTimeCapsuleDate(openDate string, now time.Time) bool {
+	date, err := time.Parse("2006-01-02", openDate)
+	if err != nil {
+		return false
+	}
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	openDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, now.Location())
+	return openDay.After(today)
 }
 
 func (s *TimeCapsuleService) Open(spaceID string, userID string, capsuleID string) error {
@@ -190,12 +293,15 @@ func (s *TimeCapsuleService) Open(spaceID string, userID string, capsuleID strin
 }
 
 func (s *TimeCapsuleService) Delete(spaceID string, userID string, capsuleID string) error {
-	createdByID, err := s.repo.CreatedByID(capsuleID, spaceID)
+	capsule, err := s.repo.ByID(capsuleID, spaceID)
 	if err != nil {
 		return err
 	}
-	if createdByID != userID {
+	if capsule.CreatedByID != userID {
 		return ErrForbidden
+	}
+	if capsule.IsOpened || !isFutureTimeCapsuleDate(capsule.OpenDate, time.Now()) {
+		return ErrTimeCapsuleImmutable
 	}
 
 	photos, err := s.collectPhotos(capsuleID)

@@ -6,6 +6,7 @@ export default defineAppConfig({
     "pages/anniversaries/index",
     "pages/whispers/index",
     "pages/capsules/index",
+    "pages/capsule-editor/index",
     "pages/settings/index",
   ],
   window: {

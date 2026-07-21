@@ -57,28 +57,42 @@ func (r *WhisperRepository) List(spaceID string) ([]models.Whisper, error) {
 		Error; err != nil {
 		return nil, err
 	}
+	var users []UserRecord
+	if err := r.db.
+		Select("id", "display_name").
+		Where("space_id = ?", spaceID).
+		Find(&users).
+		Error; err != nil {
+		return nil, err
+	}
+	displayNames := make(map[string]string, len(users))
+	for _, user := range users {
+		displayNames[user.ID] = user.DisplayName
+	}
 
 	whispers := make([]models.Whisper, 0, len(records))
 	for _, record := range records {
 		messages := make([]models.WhisperReply, 0, len(record.Replies))
 		for _, reply := range record.Replies {
 			messages = append(messages, models.WhisperReply{
-				ID:        reply.ID,
-				WhisperID: reply.WhisperID,
-				UserID:    reply.UserID,
-				Content:   reply.Content,
-				VoiceURL:  reply.VoiceURL,
-				CreatedAt: reply.CreatedAt,
+				ID:                reply.ID,
+				WhisperID:         reply.WhisperID,
+				UserID:            reply.UserID,
+				AuthorDisplayName: displayNames[reply.UserID],
+				Content:           reply.Content,
+				VoiceURL:          reply.VoiceURL,
+				CreatedAt:         reply.CreatedAt,
 			})
 		}
 		whispers = append(whispers, models.Whisper{
-			ID:          record.ID,
-			SpaceID:     record.SpaceID,
-			Title:       record.Title,
-			CreatedByID: record.CreatedByID,
-			CreatedAt:   record.CreatedAt,
-			UpdatedAt:   record.UpdatedAt,
-			Messages:    messages,
+			ID:                 record.ID,
+			SpaceID:            record.SpaceID,
+			Title:              record.Title,
+			CreatedByID:        record.CreatedByID,
+			CreatorDisplayName: displayNames[record.CreatedByID],
+			CreatedAt:          record.CreatedAt,
+			UpdatedAt:          record.UpdatedAt,
+			Messages:           messages,
 		})
 	}
 	return whispers, nil

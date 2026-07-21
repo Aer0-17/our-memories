@@ -46,6 +46,8 @@ export type WhisperReply = {
   id: string;
   whisperId: string;
   userId: string;
+  authorDisplayName?: string;
+  isMine?: boolean;
   content: string;
   voiceUrl?: string;
   createdAt: string;
@@ -55,6 +57,8 @@ export type Whisper = {
   id: string;
   title: string;
   createdById: string;
+  creatorDisplayName?: string;
+  creatorIsMine?: boolean;
   createdAt: string;
   updatedAt: string;
   messages?: WhisperReply[];
@@ -65,11 +69,14 @@ export type TimeCapsule = {
   title: string;
   openDate: string;
   content: string;
-  openMode: string;
+  voiceUrl?: string;
+  openMode: "single" | "together";
+  openedByUserIds?: string[];
   isOpened: boolean;
   revealedAt?: string;
+  createdById: string;
   createdAt: string;
-  photos?: Array<{ id: string; url: string; key?: string }>;
+  photos?: Array<{ id: string; url: string; key?: string; mimeType?: string }>;
 };
 
 export type MemoryPhotoPayload = {
@@ -79,6 +86,15 @@ export type MemoryPhotoPayload = {
   mediaType?: "image";
   width?: number;
   height?: number;
+};
+
+export type TimeCapsuleInput = {
+  title: string;
+  openDate: string;
+  content: string;
+  voiceUrl?: string;
+  openMode: "single" | "together";
+  photos: MemoryPhotoPayload[];
 };
 
 export type MemoryInput = {
@@ -256,6 +272,7 @@ export async function uploadMemoryImage(input: {
   filePath: string;
   width?: number;
   height?: number;
+  folder?: "memories" | "time-capsules";
 }): Promise<MemoryPhotoPayload> {
   let compressedPath = input.filePath;
   let width = input.width;
@@ -283,7 +300,7 @@ export async function uploadMemoryImage(input: {
   const uploaded = await request<{ url: string; key: string }>("/upload", {
     method: "POST",
     data: {
-      folder: "memories",
+      folder: input.folder || "memories",
       dataUrl: `data:${mimeType};base64,${data}`,
     },
   });
@@ -334,4 +351,27 @@ export function replyWhisper(whisperId: string, input: { content: string }) {
 
 export function getTimeCapsules() {
   return request<{ timeCapsules: TimeCapsule[] }>("/time-capsules");
+}
+
+export function createTimeCapsule(input: TimeCapsuleInput) {
+  return request<{ id: string }>("/time-capsules", { method: "POST", data: input });
+}
+
+export function updateTimeCapsule(capsuleId: string, input: TimeCapsuleInput) {
+  return request<{ ok: true }>(`/time-capsules/${encodeURIComponent(capsuleId)}`, {
+    method: "PATCH",
+    data: input,
+  });
+}
+
+export function openTimeCapsule(capsuleId: string) {
+  return request<{ ok: true }>(`/time-capsules/${encodeURIComponent(capsuleId)}/open`, {
+    method: "POST",
+  });
+}
+
+export function deleteTimeCapsule(capsuleId: string) {
+  return request<{ ok: true }>(`/time-capsules/${encodeURIComponent(capsuleId)}`, {
+    method: "DELETE",
+  });
 }

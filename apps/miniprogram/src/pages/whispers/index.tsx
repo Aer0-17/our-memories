@@ -1,15 +1,13 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { Button, Input, Text, Textarea, View } from "@tarojs/components";
 import Taro, { useDidShow, usePullDownRefresh } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { EmptyState, ErrorBanner, LoadingState } from "../../components/PageStates";
 import {
   createWhisper,
-  getPublicConfig,
   getWhispers,
   readSession,
   replyWhisper,
-  type PublicConfig,
   type Whisper,
 } from "../../lib/api";
 import "./index.scss";
@@ -22,17 +20,8 @@ function displayTime(value: string) {
   return value.replace("T", " ").replace(/\.\d+Z?$/, "").slice(0, 16);
 }
 
-function memberNames(config: PublicConfig | null) {
-  const session = readSession();
-  const mine = session?.user.displayName?.trim() || "我";
-  const users = Array.isArray(config?.users) ? config.users : [];
-  const other = users.find((user) => user.username !== session?.user.username)?.displayName?.trim() || "对方";
-  return { mine, other };
-}
-
 export default function WhispersPage() {
   const [items, setItems] = useState<Whisper[]>([]);
-  const [config, setConfig] = useState<PublicConfig | null>(null);
   const [syncError, setSyncError] = useState("");
   const [actionError, setActionError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,8 +33,6 @@ export default function WhispersPage() {
   const [replyContent, setReplyContent] = useState("");
   const [replyingId, setReplyingId] = useState("");
 
-  const names = useMemo(() => memberNames(config), [config]);
-
   const load = useCallback(async (background = false) => {
     if (!readSession()) {
       Taro.switchTab({ url: "/pages/index/index" });
@@ -54,12 +41,8 @@ export default function WhispersPage() {
     if (!background) setLoading(true);
     setSyncError("");
     try {
-      const [data, publicConfig] = await Promise.all([
-        getWhispers(),
-        getPublicConfig().catch(() => null),
-      ]);
+      const data = await getWhispers();
       setItems(Array.isArray(data.whispers) ? data.whispers : []);
-      if (publicConfig) setConfig(publicConfig);
     } catch {
       setSyncError("私语暂时没有同步成功，请稍后再试。");
     } finally {
@@ -157,6 +140,8 @@ export default function WhispersPage() {
   };
 
   const canCreate = Boolean(title.trim()) && !creating && !replyingId;
+  const session = readSession();
+  const currentDisplayName = session?.user.displayName?.trim() || "我";
 
   return (
     <View className="page whispers-page">
@@ -246,7 +231,10 @@ export default function WhispersPage() {
       ) : items.length > 0 ? (
         <View className="whisper-list">
           {items.map((item) => {
-            const creator = item.createdById === readSession()?.user.id ? names.mine : names.other;
+            const creatorIsMine = typeof item.creatorIsMine === "boolean"
+              ? item.creatorIsMine
+              : item.createdById === session?.user.id;
+            const creator = item.creatorDisplayName || (creatorIsMine ? currentDisplayName : "对方");
             const messages = item.messages || [];
             const replying = replyOpen === item.id;
             return (
@@ -264,11 +252,14 @@ export default function WhispersPage() {
 
                 <View className="message-list">
                   {messages.map((message) => {
-                    const mine = message.userId === readSession()?.user.id;
+                    const mine = typeof message.isMine === "boolean"
+                      ? message.isMine
+                      : message.userId === session?.user.id;
+                    const author = message.authorDisplayName || (mine ? currentDisplayName : "对方");
                     return (
                       <View className={mine ? "message-row mine" : "message-row"} key={message.id}>
                         <View className="message-author-line">
-                          <Text className="message-author">{mine ? names.mine : names.other}</Text>
+                          <Text className="message-author">{author}</Text>
                           <Text className="message-time">{displayTime(message.createdAt)}</Text>
                         </View>
                         <View className="message-bubble">
@@ -288,7 +279,7 @@ export default function WhispersPage() {
                 {replying ? (
                   <View className="reply-panel">
                     <View className="compose-label-row">
-                      <Text className="compose-label">回复 {names.other}</Text>
+                      <Text className="compose-label">回复对方</Text>
                       <Text className="compose-counter">{replyContent.length} / {MESSAGE_LIMIT}</Text>
                     </View>
                     <Textarea

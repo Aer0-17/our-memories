@@ -111,22 +111,26 @@ type AnniversaryCard struct {
 }
 
 type Whisper struct {
-	ID          string         `json:"id"`
-	SpaceID     string         `json:"spaceId"`
-	Title       string         `json:"title"`
-	CreatedByID string         `json:"createdById"`
-	CreatedAt   string         `json:"createdAt"`
-	UpdatedAt   string         `json:"updatedAt"`
-	Messages    []WhisperReply `json:"messages,omitempty"`
+	ID                 string         `json:"id"`
+	SpaceID            string         `json:"spaceId"`
+	Title              string         `json:"title"`
+	CreatedByID        string         `json:"createdById"`
+	CreatorDisplayName string         `json:"creatorDisplayName,omitempty"`
+	CreatorIsMine      bool           `json:"creatorIsMine"`
+	CreatedAt          string         `json:"createdAt"`
+	UpdatedAt          string         `json:"updatedAt"`
+	Messages           []WhisperReply `json:"messages,omitempty"`
 }
 
 type WhisperReply struct {
-	ID        string `json:"id"`
-	WhisperID string `json:"whisperId"`
-	UserID    string `json:"userId"`
-	Content   string `json:"content"`
-	VoiceURL  string `json:"voiceUrl,omitempty"`
-	CreatedAt string `json:"createdAt"`
+	ID                string `json:"id"`
+	WhisperID         string `json:"whisperId"`
+	UserID            string `json:"userId"`
+	AuthorDisplayName string `json:"authorDisplayName,omitempty"`
+	IsMine            bool   `json:"isMine"`
+	Content           string `json:"content"`
+	VoiceURL          string `json:"voiceUrl,omitempty"`
+	CreatedAt         string `json:"createdAt"`
 }
 
 type TimeCapsule struct {

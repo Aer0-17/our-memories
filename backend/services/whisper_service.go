@@ -49,8 +49,18 @@ func NewWhisperService(repo *repositories.WhisperRepository, publisher ...events
 	}
 }
 
-func (s *WhisperService) List(spaceID string) ([]models.Whisper, error) {
-	return s.repo.List(spaceID)
+func (s *WhisperService) List(spaceID string, userID string) ([]models.Whisper, error) {
+	whispers, err := s.repo.List(spaceID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range whispers {
+		whispers[i].CreatorIsMine = whispers[i].CreatedByID == userID
+		for messageIndex := range whispers[i].Messages {
+			whispers[i].Messages[messageIndex].IsMine = whispers[i].Messages[messageIndex].UserID == userID
+		}
+	}
+	return whispers, nil
 }
 
 func (s *WhisperService) Create(spaceID string, userID string, req CreateWhisperRequest) (string, error) {

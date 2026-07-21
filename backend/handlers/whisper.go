@@ -13,8 +13,9 @@ import (
 // GetWhispers 获取所有悄悄话及其回复
 func GetWhispers(c *gin.Context) {
 	spaceID := c.GetString("spaceID")
+	userID := c.GetString("userID")
 
-	whispers, err := whisperService().List(spaceID)
+	whispers, err := whisperService().List(spaceID, userID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to fetch whispers")
 		return

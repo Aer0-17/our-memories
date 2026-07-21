@@ -1,14 +1,55 @@
 @use "../../styles/tokens" as *;
 
 .capsules-page,
-.capsule-list {
+.capsule-list,
+.capsule-intro-copy,
+.capsule-reveal {
   display: flex;
   flex-direction: column;
+}
+
+.capsules-page {
   gap: $space-4;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
 }
 
 .capsule-intro {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-4;
   padding-bottom: $space-4;
+}
+
+.capsule-intro-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-2;
+}
+
+.capsule-count {
+  display: flex;
+  flex-shrink: 0;
+  align-items: baseline;
+  gap: $space-1;
+  padding-bottom: $space-1;
+}
+
+.capsule-count-value {
+  color: var(--color-gold);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.capsule-count-label {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.capsule-list {
+  gap: $space-5;
 }
 
 .capsule-card {
@@ -28,10 +69,16 @@
   align-items: center;
   justify-content: center;
   gap: $space-3;
+  padding: $space-4;
+  text-align: center;
 }
 
 .capsule-placeholder.opened {
   background: var(--color-green-soft);
+}
+
+.capsule-placeholder.due {
+  background: var(--color-accent-soft);
 }
 
 .capsule-icon {
@@ -115,30 +162,155 @@
   color: var(--color-gold);
 }
 
-.capsule-mode {
+.capsule-state.due {
+  background: var(--color-accent-soft);
   color: var(--color-accent-deep);
+}
+
+.capsule-mode {
+  color: var(--color-gold);
   font-size: $text-xs;
   font-weight: 600;
   line-height: 20px;
 }
 
-.capsule-content {
+.capsule-reveal {
+  gap: $space-3;
   border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.capsule-content {
   color: var(--color-ink-soft);
   font-size: $text-sm;
   line-height: 24px;
-  padding-top: $space-3;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .capsule-content.locked-copy {
+  border-top: 1px solid var(--color-line);
   color: var(--color-muted);
+  padding-top: $space-3;
+}
+
+.capsule-voice-note {
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
+  font-size: $text-xs;
+  line-height: 20px;
+  padding: $space-3;
+}
+
+.capsule-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.capsule-gallery-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+}
+
+.capsule-open-panel {
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.capsule-open-button {
+  width: 100%;
+  background: var(--color-gold);
+  box-shadow: $shadow-gold-button;
+}
+
+.capsule-waiting-copy {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+  padding: $space-2 $space-4;
+  text-align: center;
+}
+
+.capsule-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  margin-top: $space-1;
+  padding-top: $space-3;
+}
+
+.capsule-action {
+  min-width: 64px;
+  min-height: 44px;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.capsule-action.danger {
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
+}
+
+.capsule-create-fab {
+  position: fixed;
+  z-index: 10;
+  right: $space-4;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  display: flex;
+  min-width: 104px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-gold);
+  box-shadow: $shadow-gold-button;
+  color: var(--color-white);
+  padding: 0 $space-4;
+}
+
+.capsule-create-fab[disabled] {
+  box-shadow: none;
+  opacity: 0.52;
+}
+
+.capsule-create-fab-plus {
+  font-size: $text-lg;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.capsule-create-fab-label {
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
 }
 
 @media (min-width: $breakpoint-tablet) {
   .capsule-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
+  }
+
+  .capsule-create-fab {
+    right: calc((100vw - #{$page-max}) / 2 + #{$space-5});
   }
 }

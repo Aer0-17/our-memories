@@ -247,7 +247,7 @@ func TestWhisperServiceCreateReplyAndValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	items, err := service.List("space-1")
+	items, err := service.List("space-1", "user-1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,6 +256,21 @@ func TestWhisperServiceCreateReplyAndValidation(t *testing.T) {
 	}
 	if items[0].Messages[0].Content != "早点回家" || items[0].Messages[1].Content != "好，等我" {
 		t.Fatalf("expected trimmed message content, got %#v", items[0].Messages)
+	}
+	if !items[0].CreatorIsMine || items[0].CreatorDisplayName != "Me" {
+		t.Fatalf("expected creator metadata for first identity, got %#v", items[0])
+	}
+	if !items[0].Messages[0].IsMine || items[0].Messages[0].AuthorDisplayName != "Me" ||
+		items[0].Messages[1].IsMine || items[0].Messages[1].AuthorDisplayName != "Her" {
+		t.Fatalf("expected sender metadata for first identity, got %#v", items[0].Messages)
+	}
+
+	partnerItems, err := service.List("space-1", "user-2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if partnerItems[0].CreatorIsMine || partnerItems[0].Messages[0].IsMine || !partnerItems[0].Messages[1].IsMine {
+		t.Fatalf("expected sender metadata to follow the second viewer, got %#v", partnerItems[0])
 	}
 	if len(recorder.items) != 2 || recorder.items[0].Type != events.WhisperCreated || recorder.items[1].Type != events.WhisperReplied {
 		t.Fatalf("expected whisper create and reply events, got %#v", recorder.items)
@@ -658,6 +673,96 @@ func TestTimeCapsuleServiceLimitAndOpenRules(t *testing.T) {
 	}
 	if secondOpened != 1 || revealedAt == "" {
 		t.Fatalf("expected second ready to reveal, opened=%d revealedAt=%q", secondOpened, revealedAt)
+	}
+}
+
+func TestTimeCapsuleServiceCreateUpdateValidation(t *testing.T) {
+	setupServiceTestDB(t)
+	uploadCalls := 0
+	service := NewTimeCapsuleService(
+		repositories.NewTimeCapsuleRepository(db.Gorm),
+		func(string, string, []PhotoInput) error {
+			uploadCalls++
+			return nil
+		},
+		func(string, []StoredPhoto) error { return nil },
+	)
+
+	future := time.Now().AddDate(0, 0, 3).Format("2006-01-02")
+	today := time.Now().Format("2006-01-02")
+	invalidRequests := []struct {
+		name string
+		req  CreateTimeCapsuleRequest
+		err  error
+	}{
+		{name: "blank title", req: CreateTimeCapsuleRequest{Title: "   ", OpenDate: future, Content: "letter"}, err: ErrInvalidTimeCapsuleTitle},
+		{name: "blank content", req: CreateTimeCapsuleRequest{Title: "letter", OpenDate: future, Content: "   "}, err: ErrInvalidTimeCapsuleContent},
+		{name: "non-future date", req: CreateTimeCapsuleRequest{Title: "letter", OpenDate: today, Content: "wait"}, err: ErrInvalidTimeCapsuleOpenDate},
+		{name: "invalid date", req: CreateTimeCapsuleRequest{Title: "letter", OpenDate: "2026-02-31", Content: "wait"}, err: ErrInvalidTimeCapsuleOpenDate},
+		{name: "too many photos", req: CreateTimeCapsuleRequest{Title: "letter", OpenDate: future, Content: "wait", Photos: make([]PhotoInput, maxTimeCapsulePhotos+1)}, err: ErrTooManyTimeCapsulePhotos},
+	}
+	for _, test := range invalidRequests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := service.Create("space-1", "user-1", test.req); !errors.Is(err, test.err) {
+				t.Fatalf("expected %v, got %v", test.err, err)
+			}
+		})
+	}
+	if uploadCalls != 0 {
+		t.Fatalf("expected invalid requests to be rejected before upload, got %d calls", uploadCalls)
+	}
+
+	capsuleID, err := service.Create("space-1", "user-1", CreateTimeCapsuleRequest{
+		Title:    "  写给明天  ",
+		OpenDate: future,
+		Content:  "  记得今天  ",
+		OpenMode: "together",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if uploadCalls != 1 {
+		t.Fatalf("expected valid create to upload once, got %d calls", uploadCalls)
+	}
+
+	if err := service.Update("space-1", "user-1", capsuleID, UpdateTimeCapsuleRequest{
+		Title:    "  新标题  ",
+		OpenDate: future,
+		Content:  "  新内容  ",
+		OpenMode: "single",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var title, content, openMode string
+	if err := db.DB.QueryRow(
+		`SELECT title, content, open_mode FROM time_capsules WHERE id = ?`,
+		capsuleID,
+	).Scan(&title, &content, &openMode); err != nil {
+		t.Fatal(err)
+	}
+	if title != "新标题" || content != "新内容" || openMode != "single" {
+		t.Fatalf("expected normalized update, got title=%q content=%q openMode=%q", title, content, openMode)
+	}
+	if err := service.Update("space-1", "user-1", capsuleID, UpdateTimeCapsuleRequest{
+		Title:    "新标题",
+		OpenDate: today,
+		Content:  "新内容",
+	}); !errors.Is(err, ErrInvalidTimeCapsuleOpenDate) {
+		t.Fatalf("expected invalid update date to be rejected, got %v", err)
+	}
+
+	if _, err := db.DB.Exec(`UPDATE time_capsules SET open_date = ? WHERE id = ?`, today, capsuleID); err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Update("space-1", "user-1", capsuleID, UpdateTimeCapsuleRequest{
+		Title:    "不能再修改",
+		OpenDate: future,
+		Content:  "已经到期",
+	}); !errors.Is(err, ErrTimeCapsuleImmutable) {
+		t.Fatalf("expected due capsule update to be rejected, got %v", err)
+	}
+	if err := service.Delete("space-1", "user-1", capsuleID); !errors.Is(err, ErrTimeCapsuleImmutable) {
+		t.Fatalf("expected due capsule deletion to be rejected, got %v", err)
 	}
 }
 

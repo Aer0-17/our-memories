@@ -122,6 +122,18 @@ func writeTimeCapsuleServiceError(c *gin.Context, err error, fallback string) {
 		utils.Error(c, 400, "最多只能有3个未开启的时光胶囊")
 	case errors.Is(err, services.ErrTimeCapsuleLocked):
 		utils.Error(c, 403, "时光胶囊还未到开启日期")
+	case errors.Is(err, services.ErrTimeCapsuleImmutable):
+		utils.Error(c, 403, "Only future unopened capsules can be modified")
+	case errors.Is(err, services.ErrInvalidTimeCapsuleTitle):
+		utils.Error(c, 400, "Title is required and must not exceed 120 characters")
+	case errors.Is(err, services.ErrInvalidTimeCapsuleContent):
+		utils.Error(c, 400, "Content is required and must not exceed 10000 characters")
+	case errors.Is(err, services.ErrInvalidTimeCapsuleOpenDate):
+		utils.Error(c, 400, "Open date must be a valid future date")
+	case errors.Is(err, services.ErrTimeCapsuleVoiceURLTooLong):
+		utils.Error(c, 400, "Voice URL is too long")
+	case errors.Is(err, services.ErrTooManyTimeCapsulePhotos):
+		utils.Error(c, 400, "A time capsule can contain at most 6 photos")
 	default:
 		utils.Error(c, 500, fallback)
 	}

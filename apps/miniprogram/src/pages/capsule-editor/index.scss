@@ -1,0 +1,224 @@
+@use "../../styles/tokens" as *;
+
+.capsule-editor-page,
+.capsule-form,
+.capsule-editor-section,
+.capsule-editor-heading-copy,
+.capsule-editor-field-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.capsule-editor-page {
+  gap: $space-4;
+  padding-bottom: 0;
+}
+
+.capsule-editor-intro {
+  padding-bottom: $space-3;
+}
+
+.capsule-form,
+.capsule-editor-section {
+  gap: $space-4;
+}
+
+.capsule-editor-section {
+  padding: $space-4;
+}
+
+.capsule-editor-heading,
+.capsule-editor-label-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.capsule-editor-heading-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.capsule-editor-section-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.capsule-editor-section-note,
+.capsule-editor-counter,
+.capsule-editor-count {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.capsule-editor-count {
+  flex-shrink: 0;
+  padding-top: $space-1;
+}
+
+.capsule-editor-field-group {
+  gap: $space-2;
+}
+
+.capsule-editor-label {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.capsule-editor-label-row .capsule-editor-label {
+  flex: 1;
+}
+
+.capsule-date-picker {
+  color: var(--color-ink);
+}
+
+.capsule-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-2;
+}
+
+.capsule-mode-option {
+  display: flex;
+  min-height: 88px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: $space-1;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  padding: $space-3;
+  text-align: left;
+}
+
+.capsule-mode-option.active {
+  border-color: var(--color-gold);
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
+.capsule-mode-title {
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.capsule-mode-copy {
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.capsule-editor-textarea {
+  display: block;
+  min-height: 192px;
+  height: 192px;
+  line-height: 24px;
+  padding: $space-3;
+}
+
+.capsule-photo-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.capsule-photo-draft,
+.capsule-photo-add {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 88px;
+  overflow: hidden;
+  border-radius: $radius-md;
+}
+
+.capsule-photo-draft {
+  background: var(--color-surface-soft);
+}
+
+.capsule-photo-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.capsule-photo-remove {
+  position: absolute;
+  top: $space-1;
+  right: $space-1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  font-size: $text-md;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0;
+}
+
+.capsule-photo-add {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border: 1px dashed var(--color-line);
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  padding: $space-2;
+}
+
+.capsule-photo-add-mark {
+  color: var(--color-gold);
+  font-size: $text-xl;
+  line-height: 32px;
+}
+
+.capsule-photo-add-copy {
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.capsule-editor-submit-bar {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-canvas);
+  padding: $space-3 0 calc(#{$space-4} + env(safe-area-inset-bottom));
+}
+
+.capsule-editor-progress {
+  color: var(--color-gold);
+  font-size: $text-xs;
+  line-height: 20px;
+  text-align: center;
+}
+
+.capsule-editor-submit {
+  width: 100%;
+  background: var(--color-gold);
+  box-shadow: $shadow-gold-button;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .capsule-photo-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
