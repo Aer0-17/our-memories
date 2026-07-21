@@ -3,13 +3,18 @@ import { Button, Input, Text, Textarea, View } from "@tarojs/components";
 import Taro, { useDidShow, usePullDownRefresh } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { EmptyState, ErrorBanner, LoadingState } from "../../components/PageStates";
+import { VoicePlayer } from "../../components/VoicePlayer";
+import { VoiceRecorder } from "../../components/VoiceRecorder";
 import {
   createWhisper,
+  deleteUploadedMedia,
   getWhispers,
   readSession,
   replyWhisper,
+  uploadWhisperAudio,
   type Whisper,
 } from "../../lib/api";
+import type { VoiceDraft } from "../../lib/voice";
 import "./index.scss";
 
 const TITLE_LIMIT = 60;
@@ -28,10 +33,13 @@ export default function WhispersPage() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [voiceDraft, setVoiceDraft] = useState<VoiceDraft | null>(null);
   const [creating, setCreating] = useState(false);
   const [replyOpen, setReplyOpen] = useState("");
   const [replyContent, setReplyContent] = useState("");
+  const [replyVoiceDraft, setReplyVoiceDraft] = useState<VoiceDraft | null>(null);
   const [replyingId, setReplyingId] = useState("");
+  const [voiceRecording, setVoiceRecording] = useState(false);
 
   const load = useCallback(async (background = false) => {
     if (!readSession()) {
@@ -59,18 +67,20 @@ export default function WhispersPage() {
   });
 
   const openComposer = () => {
-    if (creating || replyingId) return;
+    if (creating || replyingId || voiceRecording) return;
     setReplyOpen("");
     setReplyContent("");
+    setReplyVoiceDraft(null);
     setActionError("");
     setComposeOpen(true);
   };
 
   const closeComposer = () => {
-    if (creating) return;
+    if (creating || voiceRecording) return;
     setComposeOpen(false);
     setTitle("");
     setContent("");
+    setVoiceDraft(null);
     setActionError("");
   };
 
@@ -81,18 +91,27 @@ export default function WhispersPage() {
       setActionError("先给这封私语写一个标题。");
       return;
     }
-    if (creating || replyingId) return;
+    if (creating || replyingId || voiceRecording) return;
 
     setCreating(true);
     setActionError("");
+    let uploadedKey = "";
     try {
-      await createWhisper({ title: nextTitle, content: nextContent });
+      const uploaded = voiceDraft ? await uploadWhisperAudio(voiceDraft) : null;
+      uploadedKey = uploaded?.key || "";
+      await createWhisper({
+        title: nextTitle,
+        content: nextContent,
+        voiceUrl: uploaded?.url,
+      });
       setComposeOpen(false);
       setTitle("");
       setContent("");
+      setVoiceDraft(null);
       Taro.showToast({ title: "私语已送达", icon: "success" });
       await load(true);
     } catch {
+      if (uploadedKey) await deleteUploadedMedia([uploadedKey]);
       setActionError("发送失败，请检查网络后重试。");
     } finally {
       setCreating(false);
@@ -100,46 +119,57 @@ export default function WhispersPage() {
   };
 
   const openReply = (whisperId: string) => {
-    if (creating || replyingId) return;
+    if (creating || replyingId || voiceRecording) return;
     setComposeOpen(false);
     setTitle("");
     setContent("");
+    setVoiceDraft(null);
     setActionError("");
     setReplyOpen(whisperId);
     setReplyContent("");
+    setReplyVoiceDraft(null);
   };
 
   const closeReply = () => {
-    if (replyingId) return;
+    if (replyingId || voiceRecording) return;
     setReplyOpen("");
     setReplyContent("");
+    setReplyVoiceDraft(null);
     setActionError("");
   };
 
   const submitReply = async (whisperId: string) => {
     const nextContent = replyContent.trim();
-    if (!nextContent) {
-      setActionError("写下一句话再发送。");
+    if (!nextContent && !replyVoiceDraft) {
+      setActionError("写下一句话或录一段语音再发送。");
       return;
     }
-    if (creating || replyingId) return;
+    if (creating || replyingId || voiceRecording) return;
 
     setReplyingId(whisperId);
     setActionError("");
+    let uploadedKey = "";
     try {
-      await replyWhisper(whisperId, { content: nextContent });
+      const uploaded = replyVoiceDraft ? await uploadWhisperAudio(replyVoiceDraft) : null;
+      uploadedKey = uploaded?.key || "";
+      await replyWhisper(whisperId, {
+        content: nextContent,
+        voiceUrl: uploaded?.url,
+      });
       setReplyOpen("");
       setReplyContent("");
+      setReplyVoiceDraft(null);
       Taro.showToast({ title: "回复已送达", icon: "success" });
       await load(true);
     } catch {
+      if (uploadedKey) await deleteUploadedMedia([uploadedKey]);
       setActionError("回复失败，请检查网络后重试。");
     } finally {
       setReplyingId("");
     }
   };
 
-  const canCreate = Boolean(title.trim()) && !creating && !replyingId;
+  const canCreate = Boolean(title.trim()) && !creating && !replyingId && !voiceRecording;
   const session = readSession();
   const currentDisplayName = session?.user.displayName?.trim() || "我";
 
@@ -201,10 +231,19 @@ export default function WhispersPage() {
             />
           </View>
 
+          <VoiceRecorder
+            draft={voiceDraft}
+            disabled={creating}
+            onChange={setVoiceDraft}
+            onClear={() => setVoiceDraft(null)}
+            onRecordingChange={setVoiceRecording}
+            onError={setActionError}
+          />
+
           {actionError && <Text className="whisper-action-error">{actionError}</Text>}
 
           <View className="compose-actions">
-            <Button className="btn btn-secondary compose-cancel" disabled={creating} onClick={closeComposer}>
+            <Button className="btn btn-secondary compose-cancel" disabled={creating || voiceRecording} onClick={closeComposer}>
               取消
             </Button>
             <Button
@@ -263,12 +302,9 @@ export default function WhispersPage() {
                           <Text className="message-time">{displayTime(message.createdAt)}</Text>
                         </View>
                         <View className="message-bubble">
-                          <Text className="message-copy">
-                            {message.content || "发来了一段语音留言，请在网页端收听。"}
-                          </Text>
-                          {message.content && message.voiceUrl && (
-                            <Text className="voice-note">还附带了一段语音</Text>
-                          )}
+                          {message.content && <Text className="message-copy">{message.content}</Text>}
+                          {message.voiceUrl && <VoicePlayer src={message.voiceUrl} label="私语语音" compact onError={setActionError} />}
+                          {!message.content && !message.voiceUrl && <Text className="message-copy">这条私语暂时无法显示。</Text>}
                         </View>
                       </View>
                     );
@@ -290,14 +326,22 @@ export default function WhispersPage() {
                       onInput={(event) => setReplyContent(event.detail.value)}
                       placeholder="写下你的回复…"
                     />
+                    <VoiceRecorder
+                      draft={replyVoiceDraft}
+                      disabled={Boolean(replyingId)}
+                      onChange={setReplyVoiceDraft}
+                      onClear={() => setReplyVoiceDraft(null)}
+                      onRecordingChange={setVoiceRecording}
+                      onError={setActionError}
+                    />
                     {actionError && <Text className="whisper-action-error">{actionError}</Text>}
                     <View className="reply-actions">
-                      <Button className="reply-cancel" disabled={Boolean(replyingId)} onClick={closeReply}>
+                      <Button className="reply-cancel" disabled={Boolean(replyingId) || voiceRecording} onClick={closeReply}>
                         取消
                       </Button>
                       <Button
                         className="reply-submit"
-                        disabled={!replyContent.trim() || Boolean(replyingId)}
+                        disabled={(!replyContent.trim() && !replyVoiceDraft) || Boolean(replyingId) || voiceRecording}
                         loading={replyingId === item.id}
                         onClick={() => void submitReply(item.id)}
                       >
@@ -317,7 +361,7 @@ export default function WhispersPage() {
       ) : null}
 
       {items.length > 0 && !composeOpen && (
-        <Button className="whisper-create-fab" aria-label="写一封新私语" onClick={openComposer}>
+        <Button className="whisper-create-fab" aria-label="写一封新私语" disabled={voiceRecording} onClick={openComposer}>
           <Text className="whisper-create-fab-plus">＋</Text>
           <Text className="whisper-create-fab-label">写私语</Text>
         </Button>

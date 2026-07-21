@@ -1,5 +1,6 @@
 import Taro from "@tarojs/taro";
 import type { AnniversaryCard, LocalMemoryStore } from "@map-of-us/shared";
+import type { VoiceDraft } from "./voice";
 export { resolveAssetUrl } from "./assetUrl";
 
 declare const process: { env: { TARO_APP_API_BASE_URL?: string } };
@@ -316,6 +317,10 @@ export async function uploadMemoryImage(input: {
 }
 
 export async function deleteUploadedImages(keys: string[]) {
+  return deleteUploadedMedia(keys);
+}
+
+export async function deleteUploadedMedia(keys: string[]) {
   await Promise.all(
     keys
       .filter(Boolean)
@@ -324,6 +329,21 @@ export async function deleteUploadedImages(keys: string[]) {
           .catch(() => undefined),
       ),
   );
+}
+
+export async function uploadWhisperAudio(draft: VoiceDraft) {
+  if (draft.fileSize > 12 * 1024 * 1024) {
+    throw new Error("语音太大，请控制在 60 秒内。");
+  }
+  const data = await readFileAsBase64(draft.filePath);
+  const uploaded = await request<{ url: string; key: string }>("/upload", {
+    method: "POST",
+    data: {
+      folder: "whispers",
+      dataUrl: `data:audio/mpeg;base64,${data}`,
+    },
+  });
+  return { ...uploaded, durationMs: draft.durationMs, mimeType: "audio/mpeg" };
 }
 
 export async function getAnniversaryCards() {
@@ -335,14 +355,14 @@ export function getWhispers() {
   return request<{ whispers: Whisper[] }>("/whispers");
 }
 
-export function createWhisper(input: { title: string; content?: string }) {
+export function createWhisper(input: { title: string; content?: string; voiceUrl?: string }) {
   return request<{ id: string }>("/whispers", {
     method: "POST",
     data: input,
   });
 }
 
-export function replyWhisper(whisperId: string, input: { content: string }) {
+export function replyWhisper(whisperId: string, input: { content: string; voiceUrl?: string }) {
   return request<{ id: string }>(`/whispers/${encodeURIComponent(whisperId)}/reply`, {
     method: "POST",
     data: input,

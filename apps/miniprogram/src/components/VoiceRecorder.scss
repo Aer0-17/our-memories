@@ -1,0 +1,88 @@
+@use "../styles/tokens" as *;
+
+.voice-recorder {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.voice-recorder-heading,
+.voice-recorder-preview {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.voice-recorder-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.voice-recorder-label {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.voice-recorder-status {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.voice-recorder-status.recording {
+  color: var(--color-danger);
+}
+
+.voice-recorder-button,
+.voice-recorder-delete {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.voice-recorder-button {
+  background: var(--color-blue);
+}
+
+.voice-recorder-button.recording {
+  background: var(--color-danger);
+}
+
+.voice-recorder-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.voice-recorder-preview {
+  min-width: 0;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  padding: $space-2 $space-3;
+}
+
+.voice-recorder-preview .voice-player {
+  min-width: 0;
+  flex: 1;
+}
+
+.voice-recorder-delete {
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.voice-recorder-delete-icon {
+  width: 20px;
+  height: 20px;
+}

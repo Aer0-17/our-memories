@@ -1,0 +1,85 @@
+@use "../styles/tokens" as *;
+
+.voice-player {
+  display: flex;
+  width: 100%;
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  padding: $space-3;
+}
+
+.voice-player.compact {
+  padding: $space-2 0 0;
+  background: var(--color-transparent);
+}
+
+.voice-player-main {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  gap: $space-3;
+}
+
+.voice-player-button-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.voice-player-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-blue);
+}
+
+.voice-player-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.voice-player-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.voice-player-label,
+.voice-player-time {
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.voice-player-time {
+  min-width: 36px;
+  color: var(--color-muted);
+  text-align: right;
+}
+
+.voice-wave {
+  display: flex;
+  height: 24px;
+  align-items: center;
+  gap: $space-1;
+}
+
+.voice-wave-bar {
+  width: 4px;
+  border-radius: 2px;
+  background: var(--color-line);
+}
+
+.voice-wave-bar.active {
+  background: var(--color-blue);
+}

@@ -14,6 +14,11 @@ export default defineAppConfig({
     navigationStyle: "custom",
     backgroundColor: "#F6F5F1",
   },
+  permission: {
+    "scope.record": {
+      desc: "用于录制只给 TA 听的私语",
+    },
+  },
   tabBar: {
     color: "#8B8F8C",
     selectedColor: "#C75C5C",
