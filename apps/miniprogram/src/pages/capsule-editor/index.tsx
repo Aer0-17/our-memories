@@ -3,19 +3,23 @@ import { Button, Image, Input, Picker, Text, Textarea, View } from "@tarojs/comp
 import Taro, { useRouter } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { ErrorBanner, LoadingState } from "../../components/PageStates";
+import { VoicePlayer } from "../../components/VoicePlayer";
+import { VoiceRecorder } from "../../components/VoiceRecorder";
 import {
   apiBaseUrl,
   createTimeCapsule,
-  deleteUploadedImages,
+  deleteUploadedMedia,
   getTimeCapsules,
   readSession,
   resolveAssetUrl,
   updateTimeCapsule,
   uploadMemoryImage,
+  uploadVoiceAudio,
   type MemoryPhotoPayload,
   type TimeCapsule,
   type TimeCapsuleInput,
 } from "../../lib/api";
+import type { VoiceDraft } from "../../lib/voice";
 import "./index.scss";
 
 const MAX_PHOTOS = 6;
@@ -73,6 +77,8 @@ export default function CapsuleEditorPage() {
   const [openDate, setOpenDate] = useState(() => localDateValue(1));
   const [openMode, setOpenMode] = useState<"single" | "together">("single");
   const [voiceUrl, setVoiceUrl] = useState("");
+  const [voiceDraft, setVoiceDraft] = useState<VoiceDraft | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
 
   useEffect(() => {
     const session = readSession();
@@ -116,10 +122,11 @@ export default function CapsuleEditorPage() {
       content.trim() &&
       isFutureDate(openDate) &&
       !working &&
+      !voiceRecording &&
       !loading &&
       !unavailable,
     ),
-    [content, loading, openDate, title, unavailable, working],
+    [content, loading, openDate, title, unavailable, voiceRecording, working],
   );
 
   const pickPhotos = async () => {
@@ -179,7 +186,7 @@ export default function CapsuleEditorPage() {
       setStatus("开启日期需要晚于今天。");
       return;
     }
-    if (!canSave) return;
+    if (!canSave || voiceRecording) return;
 
     const uploadedById = new Map<string, MemoryPhotoPayload>();
     const uploadedKeys: string[] = [];
@@ -206,12 +213,19 @@ export default function CapsuleEditorPage() {
         const uploaded = uploadedById.get(photo.id);
         return uploaded ? [uploaded] : [];
       });
+      let uploadedVoiceUrl = "";
+      if (voiceDraft) {
+        setProgress("正在上传语音...");
+        const uploadedVoice = await uploadVoiceAudio(voiceDraft, "time-capsules");
+        uploadedVoiceUrl = uploadedVoice.url;
+        if (uploadedVoice.key) uploadedKeys.push(uploadedVoice.key);
+      }
       const payload: TimeCapsuleInput = {
         title: normalizedTitle,
         content: normalizedContent,
         openDate,
         openMode,
-        voiceUrl,
+        voiceUrl: uploadedVoiceUrl || voiceUrl,
         photos: payloadPhotos,
       };
 
@@ -225,8 +239,8 @@ export default function CapsuleEditorPage() {
       Taro.showToast({ title: editingCapsule ? "修改已保存" : "胶囊已封存", icon: "success" });
       Taro.navigateBack({ delta: 1 });
     } catch {
-      await deleteUploadedImages(uploadedKeys);
-      setStatus("保存失败，已清理本次上传的临时照片。请检查网络后重试。");
+      await deleteUploadedMedia(uploadedKeys);
+      setStatus("保存失败，已清理本次上传的临时文件。请检查网络后重试。");
     } finally {
       setProgress("");
       setWorking(false);
@@ -327,6 +341,29 @@ export default function CapsuleEditorPage() {
                 placeholder="到那一天，你最希望我们记得什么？"
               />
             </View>
+
+            {voiceUrl && !voiceDraft && !voiceRecording && (
+              <View className="capsule-existing-voice">
+                <View className="capsule-existing-voice-heading">
+                  <Text className="capsule-editor-label">已保存的胶囊语音</Text>
+                  <Text className="capsule-editor-section-note">新录音会在保存后替换它</Text>
+                </View>
+                <VoicePlayer
+                  src={resolveAssetUrl(voiceUrl, apiBaseUrl)}
+                  compact
+                  onError={setStatus}
+                />
+              </View>
+            )}
+
+            <VoiceRecorder
+              draft={voiceDraft}
+              disabled={working}
+              onChange={setVoiceDraft}
+              onClear={() => setVoiceDraft(null)}
+              onRecordingChange={setVoiceRecording}
+              onError={setStatus}
+            />
           </View>
 
           <View className="capsule-editor-section card">

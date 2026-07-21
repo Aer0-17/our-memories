@@ -9,9 +9,11 @@ import {
   createWhisper,
   deleteUploadedMedia,
   getWhispers,
+  apiBaseUrl,
   readSession,
   replyWhisper,
-  uploadWhisperAudio,
+  resolveAssetUrl,
+  uploadVoiceAudio,
   type Whisper,
 } from "../../lib/api";
 import type { VoiceDraft } from "../../lib/voice";
@@ -97,7 +99,7 @@ export default function WhispersPage() {
     setActionError("");
     let uploadedKey = "";
     try {
-      const uploaded = voiceDraft ? await uploadWhisperAudio(voiceDraft) : null;
+      const uploaded = voiceDraft ? await uploadVoiceAudio(voiceDraft, "whispers") : null;
       uploadedKey = uploaded?.key || "";
       await createWhisper({
         title: nextTitle,
@@ -150,7 +152,7 @@ export default function WhispersPage() {
     setActionError("");
     let uploadedKey = "";
     try {
-      const uploaded = replyVoiceDraft ? await uploadWhisperAudio(replyVoiceDraft) : null;
+      const uploaded = replyVoiceDraft ? await uploadVoiceAudio(replyVoiceDraft, "whispers") : null;
       uploadedKey = uploaded?.key || "";
       await replyWhisper(whisperId, {
         content: nextContent,
@@ -303,7 +305,14 @@ export default function WhispersPage() {
                         </View>
                         <View className="message-bubble">
                           {message.content && <Text className="message-copy">{message.content}</Text>}
-                          {message.voiceUrl && <VoicePlayer src={message.voiceUrl} label="私语语音" compact onError={setActionError} />}
+                          {message.voiceUrl && (
+                            <VoicePlayer
+                              src={resolveAssetUrl(message.voiceUrl, apiBaseUrl)}
+                              label="私语语音"
+                              compact
+                              onError={setActionError}
+                            />
+                          )}
                           {!message.content && !message.voiceUrl && <Text className="message-copy">这条私语暂时无法显示。</Text>}
                         </View>
                       </View>

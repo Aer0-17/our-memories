@@ -3,6 +3,7 @@ import { Button, Image, Text, View } from "@tarojs/components";
 import Taro, { useDidShow, usePullDownRefresh } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { EmptyState, ErrorBanner, LoadingState } from "../../components/PageStates";
+import { VoicePlayer } from "../../components/VoicePlayer";
 import {
   apiBaseUrl,
   deleteTimeCapsule,
@@ -242,7 +243,16 @@ export default function CapsulesPage() {
                   {item.isOpened ? (
                     <View className="capsule-reveal">
                       <Text className="capsule-content">{item.content || "这枚胶囊已经开启。"}</Text>
-                      {item.voiceUrl && <Text className="capsule-voice-note">这枚胶囊还有一段语音，请在网页端收听。</Text>}
+                      {item.voiceUrl && (
+                        <View className="capsule-voice">
+                          <Text className="capsule-voice-label">胶囊语音</Text>
+                          <VoicePlayer
+                            src={resolveAssetUrl(item.voiceUrl, apiBaseUrl)}
+                            compact
+                            onError={setStatus}
+                          />
+                        </View>
+                      )}
                       {(item.photos?.length || 0) > 1 && (
                         <View className="capsule-gallery">
                           {item.photos?.slice(1).map((photo) => {

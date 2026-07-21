@@ -194,13 +194,17 @@
   padding-top: $space-3;
 }
 
-.capsule-voice-note {
-  border-radius: $radius-md;
-  background: var(--color-blue-soft);
+.capsule-voice {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.capsule-voice-label {
   color: var(--color-blue);
   font-size: $text-xs;
+  font-weight: 600;
   line-height: 20px;
-  padding: $space-3;
 }
 
 .capsule-gallery {

@@ -4,7 +4,9 @@
 .capsule-form,
 .capsule-editor-section,
 .capsule-editor-heading-copy,
-.capsule-editor-field-group {
+.capsule-editor-field-group,
+.capsule-existing-voice,
+.capsule-existing-voice-heading {
   display: flex;
   flex-direction: column;
 }
@@ -124,6 +126,16 @@
   height: 192px;
   line-height: 24px;
   padding: $space-3;
+}
+
+.capsule-existing-voice {
+  gap: $space-1;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.capsule-existing-voice-heading {
+  gap: $space-1;
 }
 
 .capsule-photo-grid {

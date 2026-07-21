@@ -331,7 +331,10 @@ export async function deleteUploadedMedia(keys: string[]) {
   );
 }
 
-export async function uploadWhisperAudio(draft: VoiceDraft) {
+export async function uploadVoiceAudio(
+  draft: VoiceDraft,
+  folder: "whispers" | "time-capsules",
+) {
   if (draft.fileSize > 12 * 1024 * 1024) {
     throw new Error("语音太大，请控制在 60 秒内。");
   }
@@ -339,7 +342,7 @@ export async function uploadWhisperAudio(draft: VoiceDraft) {
   const uploaded = await request<{ url: string; key: string }>("/upload", {
     method: "POST",
     data: {
-      folder: "whispers",
+      folder,
       dataUrl: `data:audio/mpeg;base64,${data}`,
     },
   });
