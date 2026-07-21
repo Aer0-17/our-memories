@@ -54,6 +54,10 @@ export default function AnniversariesPage() {
     Taro.navigateTo({ url: `/pages/anniversary-editor/index${query}` });
   };
 
+  const openReplay = (cardId: string) => {
+    Taro.navigateTo({ url: `/pages/anniversary-replay/index?id=${encodeURIComponent(cardId)}` });
+  };
+
   const removeCard = async (card: AnniversaryCard) => {
     if (deletingId) return;
     const result = await Taro.showModal({
@@ -164,6 +168,10 @@ export default function AnniversariesPage() {
                       />
                     </View>
                   )}
+
+                  <Button className="anniversary-replay-action" onClick={() => openReplay(card.id)}>
+                    回放这一天
+                  </Button>
 
                   {canManage && (
                     <View className="anniversary-actions">

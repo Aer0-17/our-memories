@@ -135,6 +135,32 @@ export type AnniversaryCardInput = {
   photos: MemoryPhotoPayload[];
 };
 
+export type AnniversaryReplayPhoto = AnniversaryPhoto & {
+  mediaType?: string;
+  width?: number;
+  height?: number;
+};
+
+export type AnniversaryReplayMemory = {
+  id: string;
+  title?: string;
+  date: string;
+  text: string;
+  city: string;
+  placeName?: string;
+  mood?: string;
+  tags?: string[];
+  partnerNote?: string;
+  voiceTextUrl?: string;
+  partnerVoiceUrl?: string;
+  photos?: AnniversaryReplayPhoto[];
+};
+
+export type AnniversaryReplay = {
+  card: AnniversaryCard;
+  memories: AnniversaryReplayMemory[];
+};
+
 export type MemoryInput = {
   cityId: string;
   city: string;
@@ -406,6 +432,12 @@ export function deleteAnniversaryCard(cardId: string) {
   return request<{ ok: true }>(`/anniversary-cards/${encodeURIComponent(cardId)}`, {
     method: "DELETE",
   });
+}
+
+export function getAnniversaryReplay(cardId: string) {
+  return request<AnniversaryReplay>(
+    `/anniversary-cards/${encodeURIComponent(cardId)}/replay`,
+  );
 }
 
 export function getWhispers() {

@@ -5,6 +5,7 @@ export default defineAppConfig({
     "pages/memory-editor/index",
     "pages/anniversaries/index",
     "pages/anniversary-editor/index",
+    "pages/anniversary-replay/index",
     "pages/whispers/index",
     "pages/capsules/index",
     "pages/capsule-editor/index",
