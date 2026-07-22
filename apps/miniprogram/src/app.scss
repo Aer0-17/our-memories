@@ -21,6 +21,10 @@ page {
   --color-danger: #b84d52;
   --color-white: #ffffff;
   --color-transparent: transparent;
+  --color-overlay: rgba(34, 40, 39, 0.42);
+  --color-surface-raised: rgba(255, 255, 255, 0.94);
+  --color-accent-ring: rgba(199, 92, 92, 0.35);
+  --color-label-shadow: rgba(255, 255, 255, 0.9);
   min-height: 100%;
   background: var(--color-canvas);
   color: var(--color-ink);

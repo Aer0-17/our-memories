@@ -29,6 +29,7 @@
     "mobile:android:build:online": "npm run android:build:online -w @map-of-us/mobile",
     "miniprogram:dev": "npm run dev:weapp -w @map-of-us/miniprogram",
     "miniprogram:build": "npm run build:weapp -w @map-of-us/miniprogram",
+    "map:geo": "node scripts/build-map-geo.mjs",
     "db:generate": "echo \"Go/SQLite backend does not require generated DB client\"",
     "db:migrate": "cd backend && go run ./cmd/migrate",
     "db:seed": "cd backend && AUTO_SEED=true go run ./cmd/migrate"

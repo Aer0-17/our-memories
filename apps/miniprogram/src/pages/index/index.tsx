@@ -145,6 +145,14 @@ export default function IndexPage() {
             </View>
             <Text className="shortcut-arrow">›</Text>
           </Button>
+          <Button className="shortcut shortcut-map" onClick={() => openSection("/pages/map/index")}>
+            <Image className="shortcut-icon" src={memoryIcon} mode="aspectFit" />
+            <View className="shortcut-copy">
+              <Text className="shortcut-title">足迹地图</Text>
+              <Text className="shortcut-meta">点亮走过的地方</Text>
+            </View>
+            <Text className="shortcut-arrow">›</Text>
+          </Button>
           <Button className="shortcut shortcut-anniversary" onClick={() => openSection("/pages/anniversaries/index", true)}>
             <Image className="shortcut-icon" src={anniversaryIcon} mode="aspectFit" />
             <View className="shortcut-copy">

@@ -494,3 +494,168 @@ export function deleteTimeCapsule(capsuleId: string) {
     method: "DELETE",
   });
 }
+
+export type MemorySummaryEntry = {
+  cityId: string;
+  city: string;
+  cityEn?: string;
+  count: number;
+  coverImage?: string;
+  updatedAt?: string;
+  latest?: {
+    id: string;
+    cityId: string;
+    city: string;
+    title?: string;
+    date?: string;
+    text?: string;
+    placeName?: string;
+    image?: string;
+    createdById?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+};
+
+export type MemorySummary = Record<string, MemorySummaryEntry>;
+
+export function getMemorySummary() {
+  return request<{ summary: MemorySummary }>("/memories/summary");
+}
+
+export type WeatherPointInput = {
+  cityId: string;
+  lat: number;
+  lng: number;
+  fallbackTemp: number;
+};
+
+export type WeatherApiItem = {
+  cityId: string;
+  temp: number;
+  kind: string;
+  label: string;
+};
+
+export function getWeather(points: WeatherPointInput[]) {
+  return request<{ weather?: Record<string, WeatherApiItem> }>("/weather", {
+    method: "POST",
+    data: { points },
+  });
+}
+
+// Future check-ins reuse the generic auxiliary-items endpoint (kind=future-checkin),
+// storing the geo payload as a JSON string in `note` and a display label in `title`,
+// matching the web app's encoding so both clients read the same records.
+export const forestSpiritVariantCount = 16;
+export const futureCheckinKind = "future-checkin";
+
+export type FutureCheckin = {
+  id: string;
+  provinceId: string;
+  provinceName: string;
+  cityId: string;
+  cityName: string;
+  regionId: string;
+  regionName: string;
+  lng: number;
+  lat: number;
+  mascotVariant: number;
+  createdAt: string;
+};
+
+export type FutureCheckinInput = Omit<FutureCheckin, "id" | "createdAt">;
+
+type ServerAuxiliaryItem = {
+  id: string;
+  title?: string;
+  date?: string;
+  note?: string;
+  cityId?: string;
+  createdAt?: string;
+};
+
+function normalizeMascotVariant(value: unknown): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) return 0;
+  return Math.abs(Math.round(value)) % forestSpiritVariantCount;
+}
+
+function coordinate(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Number(value.toFixed(6));
+}
+
+function serverItemToCheckin(item: ServerAuxiliaryItem): FutureCheckin | null {
+  if (!item.note) return null;
+  let note: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(item.note) as unknown;
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
+    note = parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+
+  const lng = coordinate(note.lng);
+  const lat = coordinate(note.lat);
+  const provinceId = typeof note.provinceId === "string" ? note.provinceId : "";
+  const cityId = item.cityId || (typeof note.cityId === "string" ? note.cityId : "");
+  const regionId = typeof note.regionId === "string" ? note.regionId : "";
+  if (lng === null || lat === null || !provinceId || !cityId || !regionId) return null;
+
+  return {
+    id: item.id,
+    provinceId,
+    provinceName: typeof note.provinceName === "string" ? note.provinceName : provinceId,
+    cityId,
+    cityName: typeof note.cityName === "string" ? note.cityName : cityId,
+    regionId,
+    regionName: typeof note.regionName === "string" ? note.regionName : "全市",
+    lng,
+    lat,
+    mascotVariant: normalizeMascotVariant(note.mascotVariant),
+    createdAt: item.createdAt || new Date().toISOString(),
+  };
+}
+
+export function futureCheckinLabel(checkin: Pick<FutureCheckin, "provinceName" | "cityName" | "regionName">) {
+  return `${checkin.provinceName} ${checkin.cityName} ${checkin.regionName}`;
+}
+
+export async function listFutureCheckins(): Promise<FutureCheckin[]> {
+  const data = await request<{ items?: ServerAuxiliaryItem[] }>(
+    `/auxiliary-items?kind=${futureCheckinKind}`,
+  );
+  return (data.items ?? [])
+    .map(serverItemToCheckin)
+    .filter((checkin): checkin is FutureCheckin => checkin !== null);
+}
+
+export async function createFutureCheckin(input: FutureCheckinInput): Promise<FutureCheckin> {
+  const body = {
+    kind: futureCheckinKind,
+    title: futureCheckinLabel(input),
+    cityId: input.cityId,
+    note: JSON.stringify({
+      provinceId: input.provinceId,
+      provinceName: input.provinceName,
+      cityName: input.cityName,
+      regionId: input.regionId,
+      regionName: input.regionName,
+      lng: input.lng,
+      lat: input.lat,
+      mascotVariant: input.mascotVariant,
+    }),
+  };
+  const response = await request<{ id: string }>("/auxiliary-items", { method: "POST", data: body });
+  return {
+    ...input,
+    id: response.id,
+    mascotVariant: normalizeMascotVariant(input.mascotVariant),
+    createdAt: new Date().toISOString(),
+  };
+}
+
+export function deleteFutureCheckin(id: string) {
+  return request<{ ok: true }>(`/auxiliary-items/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
