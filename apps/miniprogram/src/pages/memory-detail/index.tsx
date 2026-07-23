@@ -104,6 +104,12 @@ export default function MemoryDetailPage() {
   const canSaveSupplement = Boolean(
     canSupplement && supplementChanged && !working && !voiceRecording,
   );
+  const hasPartnerPerspective = Boolean(
+    memory?.partnerNote?.trim() || memory?.partnerVoiceUrl,
+  );
+  const perspectiveCount = hasPartnerPerspective ? 2 : 1;
+  const creatorPerspectiveLabel = isCreator ? "我的视角" : "TA 的视角";
+  const partnerPerspectiveLabel = isCreator ? "TA 的视角" : "我的视角";
 
   const previewPhotos = (current: string) => {
     if (photos.length === 0) return;
@@ -142,16 +148,14 @@ export default function MemoryDetailPage() {
       setNote(note.trim());
       setPartnerVoiceUrl(nextVoiceUrl);
       setVoiceDraft(null);
-      Taro.showToast({ title: "补充已保存", icon: "success" });
+      Taro.showToast({ title: "视角已保存", icon: "success" });
     } catch {
       if (uploadedKey) await deleteUploadedMedia([uploadedKey]);
-      setStatus("补充保存失败，已清理本次上传的语音，请稍后再试。");
+      setStatus("视角保存失败，已清理本次上传的语音，请稍后再试。");
     } finally {
       setWorking(false);
     }
   };
-
-  const supplementLabel = memory?.partnerNoteAuthorId === session?.user.id ? "我的补充" : "TA 的补充";
 
   return (
     <View className="page memory-detail-page">
@@ -184,8 +188,6 @@ export default function MemoryDetailPage() {
                 {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
               </Text>
             )}
-            <Text className="memory-detail-text">{memory.text}</Text>
-
             {(memory.mood || memory.tags?.length) && (
               <View className="memory-detail-tags">
                 {memory.mood && <Text className="memory-detail-tag mood">{memory.mood}</Text>}
@@ -196,16 +198,119 @@ export default function MemoryDetailPage() {
             )}
           </View>
 
-          {memory.voiceTextUrl && (
-            <View className="memory-detail-voice">
-              <Text className="memory-detail-section-label">那天留下的声音</Text>
-              <VoicePlayer
-                src={resolveAssetUrl(memory.voiceTextUrl, apiBaseUrl)}
-                label="回忆语音"
-                onError={setStatus}
-              />
+          <View className="memory-perspectives">
+            <View className="memory-perspectives-heading">
+              <View className="memory-perspectives-heading-copy">
+                <Text className="memory-detail-section-title">同一天，两种记得</Text>
+                <Text className="memory-perspectives-subtitle">两个人的视角，都留在这段回忆里。</Text>
+              </View>
+              <Text className="memory-perspectives-count">{perspectiveCount} / 2</Text>
             </View>
-          )}
+
+            <View className="memory-perspective memory-perspective-creator">
+              <View className="memory-perspective-heading">
+                <View className="memory-perspective-avatar creator">{isCreator ? "我" : "TA"}</View>
+                <View className="memory-perspective-heading-copy">
+                  <Text className="memory-perspective-label">{creatorPerspectiveLabel}</Text>
+                  <Text className="memory-perspective-meta">最初写下</Text>
+                </View>
+              </View>
+              <Text className="memory-perspective-copy">{memory.text}</Text>
+              {memory.voiceTextUrl && (
+                <VoicePlayer
+                  src={resolveAssetUrl(memory.voiceTextUrl, apiBaseUrl)}
+                  label="回忆语音"
+                  onError={setStatus}
+                />
+              )}
+            </View>
+
+            {canSupplement ? (
+              <View className="memory-perspective memory-perspective-partner memory-perspective-editable">
+                <View className="memory-perspective-heading">
+                  <View className="memory-perspective-avatar partner">我</View>
+                  <View className="memory-perspective-heading-copy">
+                    <Text className="memory-perspective-label">我的视角</Text>
+                    <Text className="memory-perspective-meta">把你记得的也留在这里</Text>
+                  </View>
+                  <Text className="memory-detail-section-count">{note.length} / {NOTE_LIMIT}</Text>
+                </View>
+
+                <Textarea
+                  className="field memory-supplement-textarea"
+                  disabled={working}
+                  maxlength={NOTE_LIMIT}
+                  value={note}
+                  onInput={(event) => setNote(event.detail.value)}
+                  placeholder="那天你记得什么？"
+                />
+
+                {partnerVoiceUrl && !voiceDraft && !voiceRecording && (
+                  <View className="memory-supplement-existing-voice">
+                    <View className="memory-supplement-voice-heading">
+                      <Text className="memory-detail-section-label">已保存的视角语音</Text>
+                      <Button
+                        className="memory-supplement-remove-voice"
+                        disabled={working}
+                        onClick={() => setPartnerVoiceUrl("")}
+                      >
+                        移除
+                      </Button>
+                    </View>
+                    <VoicePlayer
+                      src={resolveAssetUrl(partnerVoiceUrl, apiBaseUrl)}
+                      compact
+                      onError={setStatus}
+                    />
+                  </View>
+                )}
+
+                <VoiceRecorder
+                  draft={voiceDraft}
+                  disabled={working}
+                  onChange={setVoiceDraft}
+                  onClear={() => setVoiceDraft(null)}
+                  onRecordingChange={setVoiceRecording}
+                  onError={setStatus}
+                />
+
+                <Button
+                  className="btn memory-supplement-save"
+                  disabled={!canSaveSupplement}
+                  loading={working}
+                  onClick={() => void saveSupplement()}
+                >
+                  保存我的视角
+                </Button>
+              </View>
+            ) : hasPartnerPerspective ? (
+              <View className="memory-perspective memory-perspective-partner">
+                <View className="memory-perspective-heading">
+                  <View className="memory-perspective-avatar partner">TA</View>
+                  <View className="memory-perspective-heading-copy">
+                    <Text className="memory-perspective-label">{partnerPerspectiveLabel}</Text>
+                    <Text className="memory-perspective-meta">后来补充</Text>
+                  </View>
+                </View>
+                {memory.partnerNote && <Text className="memory-perspective-copy">{memory.partnerNote}</Text>}
+                {memory.partnerVoiceUrl && (
+                  <VoicePlayer
+                    src={resolveAssetUrl(memory.partnerVoiceUrl, apiBaseUrl)}
+                    compact
+                    onError={setStatus}
+                  />
+                )}
+              </View>
+            ) : (
+              <View className="memory-perspective memory-perspective-empty">
+                <View className="memory-perspective-avatar partner">TA</View>
+                <View className="memory-perspective-empty-copy">
+                  <Text className="memory-perspective-label">{partnerPerspectiveLabel}</Text>
+                  <Text className="memory-perspective-meta">还在等 TA 留下那天的记得</Text>
+                </View>
+              </View>
+            )}
+          </View>
 
           {photos.length > 1 && (
             <View className="memory-detail-gallery-section">
@@ -225,79 +330,6 @@ export default function MemoryDetailPage() {
                   />
                 ))}
               </View>
-            </View>
-          )}
-
-          {(memory.partnerNote || memory.partnerVoiceUrl) && (
-            <View className="memory-supplement-view">
-              <Text className="memory-detail-section-label">{supplementLabel}</Text>
-              {memory.partnerNote && <Text className="memory-supplement-copy">{memory.partnerNote}</Text>}
-              {memory.partnerVoiceUrl && (
-                <VoicePlayer
-                  src={resolveAssetUrl(memory.partnerVoiceUrl, apiBaseUrl)}
-                  compact
-                  onError={setStatus}
-                />
-              )}
-            </View>
-          )}
-
-          {canSupplement && (
-            <View className="memory-supplement-editor card">
-              <View className="memory-detail-section-heading">
-                <View className="memory-supplement-heading-copy">
-                  <Text className="memory-detail-section-title">我的补充</Text>
-                  <Text className="memory-supplement-subtitle">把你的视角也留在这段回忆里</Text>
-                </View>
-                <Text className="memory-detail-section-count">{note.length} / {NOTE_LIMIT}</Text>
-              </View>
-
-              <Textarea
-                className="field memory-supplement-textarea"
-                disabled={working}
-                maxlength={NOTE_LIMIT}
-                value={note}
-                onInput={(event) => setNote(event.detail.value)}
-                placeholder="写下你记得的细节..."
-              />
-
-              {partnerVoiceUrl && !voiceDraft && !voiceRecording && (
-                <View className="memory-supplement-existing-voice">
-                  <View className="memory-supplement-voice-heading">
-                    <Text className="memory-detail-section-label">已保存的补充语音</Text>
-                    <Button
-                      className="memory-supplement-remove-voice"
-                      disabled={working}
-                      onClick={() => setPartnerVoiceUrl("")}
-                    >
-                      移除
-                    </Button>
-                  </View>
-                  <VoicePlayer
-                    src={resolveAssetUrl(partnerVoiceUrl, apiBaseUrl)}
-                    compact
-                    onError={setStatus}
-                  />
-                </View>
-              )}
-
-              <VoiceRecorder
-                draft={voiceDraft}
-                disabled={working}
-                onChange={setVoiceDraft}
-                onClear={() => setVoiceDraft(null)}
-                onRecordingChange={setVoiceRecording}
-                onError={setStatus}
-              />
-
-              <Button
-                className="btn memory-supplement-save"
-                disabled={!canSaveSupplement}
-                loading={working}
-                onClick={() => void saveSupplement()}
-              >
-                保存补充
-              </Button>
             </View>
           )}
 
