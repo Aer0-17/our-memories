@@ -11,6 +11,8 @@ export default defineAppConfig({
     "pages/whispers/index",
     "pages/capsules/index",
     "pages/capsule-editor/index",
+    "pages/diaries/index",
+    "pages/diary-editor/index",
     "pages/settings/index",
   ],
   window: {

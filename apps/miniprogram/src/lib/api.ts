@@ -573,7 +573,132 @@ type ServerAuxiliaryItem = {
   note?: string;
   cityId?: string;
   createdAt?: string;
+  updatedAt?: string;
 };
+
+export const diaryKind = "diary";
+
+export type DiaryHistoryEntry = {
+  id: string;
+  text: string;
+  editedAt: string;
+  editorName: string;
+};
+
+export type Diary = {
+  id: string;
+  title: string;
+  date: string;
+  body: string;
+  cityId: string;
+  linkedMemoryId?: string;
+  linkedMemoryTitle?: string;
+  linkedMemoryDate?: string;
+  history: DiaryHistoryEntry[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type DiaryInput = Omit<Diary, "id" | "createdAt" | "updatedAt">;
+
+type DiaryNote = Pick<
+  Diary,
+  "body" | "linkedMemoryId" | "linkedMemoryTitle" | "linkedMemoryDate" | "history"
+>;
+
+function parseDiaryNote(note: string): DiaryNote {
+  const fallback: DiaryNote = { body: note, history: [] };
+  if (!note.trim()) return fallback;
+  try {
+    const parsed = JSON.parse(note) as Partial<DiaryNote>;
+    const history = Array.isArray(parsed.history)
+      ? parsed.history.flatMap((entry) => {
+          if (!entry || typeof entry !== "object") return [];
+          const candidate = entry as Partial<DiaryHistoryEntry>;
+          if (typeof candidate.id !== "string" || typeof candidate.text !== "string") return [];
+          return [{
+            id: candidate.id,
+            text: candidate.text,
+            editedAt: typeof candidate.editedAt === "string" ? candidate.editedAt : "",
+            editorName: typeof candidate.editorName === "string" ? candidate.editorName : "某个人",
+          }];
+        })
+      : [];
+    return {
+      body: typeof parsed.body === "string" ? parsed.body : note,
+      linkedMemoryId: typeof parsed.linkedMemoryId === "string" ? parsed.linkedMemoryId : undefined,
+      linkedMemoryTitle: typeof parsed.linkedMemoryTitle === "string" ? parsed.linkedMemoryTitle : undefined,
+      linkedMemoryDate: typeof parsed.linkedMemoryDate === "string" ? parsed.linkedMemoryDate : undefined,
+      history,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function serverItemToDiary(item: ServerAuxiliaryItem): Diary | null {
+  if (!item.id || !item.title?.trim()) return null;
+  const payload = parseDiaryNote(item.note || "");
+  return {
+    id: item.id,
+    title: item.title.trim(),
+    date: item.date || "",
+    body: payload.body,
+    cityId: item.cityId || "",
+    linkedMemoryId: payload.linkedMemoryId,
+    linkedMemoryTitle: payload.linkedMemoryTitle,
+    linkedMemoryDate: payload.linkedMemoryDate,
+    history: payload.history,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
+function diaryRequestBody(input: DiaryInput) {
+  return {
+    kind: diaryKind,
+    title: input.title.trim(),
+    date: input.date,
+    cityId: input.cityId,
+    note: JSON.stringify({
+      body: input.body.trim(),
+      linkedMemoryId: input.linkedMemoryId,
+      linkedMemoryTitle: input.linkedMemoryTitle,
+      linkedMemoryDate: input.linkedMemoryDate,
+      history: input.history.slice(0, 12),
+    } satisfies DiaryNote),
+  };
+}
+
+export async function getDiaries(): Promise<Diary[]> {
+  const data = await request<{ items?: ServerAuxiliaryItem[] }>(
+    `/auxiliary-items?kind=${diaryKind}`,
+  );
+  return (data.items || [])
+    .map(serverItemToDiary)
+    .filter((diary): diary is Diary => diary !== null);
+}
+
+export async function createDiary(input: DiaryInput): Promise<string> {
+  const response = await request<{ id: string }>("/auxiliary-items", {
+    method: "POST",
+    data: diaryRequestBody(input),
+  });
+  return response.id;
+}
+
+export function updateDiary(id: string, input: DiaryInput) {
+  return request<{ ok: true }>(`/auxiliary-items/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    data: diaryRequestBody(input),
+  });
+}
+
+export function deleteDiary(id: string) {
+  return request<{ ok: true }>(`/auxiliary-items/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
 
 function normalizeMascotVariant(value: unknown): number {
   if (typeof value !== "number" || !Number.isFinite(value)) return 0;

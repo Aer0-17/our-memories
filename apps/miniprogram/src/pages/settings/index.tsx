@@ -6,6 +6,7 @@ import { logout, readSession, type Session } from "../../lib/api";
 import avatarUs from "../../assets/illustrations/avatar-us.png";
 import whisperIcon from "../../assets/illustrations/icon-message-circle.png";
 import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
+import diaryIcon from "../../assets/lucide/calendar-days.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
 
@@ -100,6 +101,16 @@ export default function SettingsPage() {
             <View className="action-copy">
               <Text className="action-title">时光胶囊</Text>
               <Text className="action-subtitle">看看留给未来的信</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
+          <Button className="settings-action" onClick={() => openPage("/pages/diaries/index")}>
+            <View className="action-icon-box action-icon-green">
+              <Image className="action-icon" src={diaryIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">双人日记</Text>
+              <Text className="action-subtitle">一起记录还没归档的片段</Text>
             </View>
             <Text className="action-arrow">›</Text>
           </Button>

@@ -161,6 +161,14 @@ export default function IndexPage() {
             </View>
             <Text className="shortcut-arrow">›</Text>
           </Button>
+          <Button className="shortcut shortcut-diary" onClick={() => openSection("/pages/diaries/index")}>
+            <Image className="shortcut-icon" src={anniversaryIcon} mode="aspectFit" />
+            <View className="shortcut-copy">
+              <Text className="shortcut-title">双人日记</Text>
+              <Text className="shortcut-meta">把今天写给我们</Text>
+            </View>
+            <Text className="shortcut-arrow">›</Text>
+          </Button>
           <Button className="shortcut shortcut-whisper" onClick={() => openSection("/pages/whispers/index")}>
             <Image className="shortcut-icon" src={whisperIcon} mode="aspectFit" />
             <View className="shortcut-copy">
