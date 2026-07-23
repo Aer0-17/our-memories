@@ -47,6 +47,7 @@ export default function CapsulesPage() {
   const [loading, setLoading] = useState(false);
   const [openingId, setOpeningId] = useState("");
   const [deletingId, setDeletingId] = useState("");
+  const [justOpenedId, setJustOpenedId] = useState("");
 
   const load = useCallback(async (background = false) => {
     if (!readSession()) {
@@ -128,7 +129,9 @@ export default function CapsulesPage() {
     setStatus("");
     try {
       await openTimeCapsule(capsule.id);
-      await load(true);
+      const refreshed = await load(true);
+      const openedCapsule = refreshed.find((item) => item.id === capsule.id);
+      if (openedCapsule?.isOpened) setJustOpenedId(capsule.id);
       Taro.showToast({
         title: willWait ? "已准备，等待 TA" : "胶囊已开启",
         icon: willWait ? "none" : "success",
@@ -138,6 +141,28 @@ export default function CapsulesPage() {
     } finally {
       setOpeningId("");
     }
+  };
+
+  const confirmReveal = async (capsule: TimeCapsule) => {
+    if (openingId || deletingId) return;
+    const openedBy = capsule.openedByUserIds || [];
+    const partnerIsReady = openedBy.some((userId) => userId !== currentUserId);
+    const together = capsule.openMode === "together";
+    const result = await Taro.showModal({
+      title: together
+        ? partnerIsReady
+          ? "和 TA 一起打开？"
+          : "为这枚胶囊准备好了吗？"
+        : "现在开启这枚胶囊？",
+      content: together
+        ? partnerIsReady
+          ? "TA 已经准备好了。确认后，这封写给未来的信会立即揭晓。"
+          : "确认后会留下你的准备状态，等 TA 也确认时再一起揭晓。"
+        : "开启后，这封写给未来的信会立即揭晓。",
+      confirmText: together && !partnerIsReady ? "准备好了" : "现在打开",
+      cancelText: "再等等",
+    });
+    if (result.confirm) await revealCapsule(capsule);
   };
 
   const previewPhotos = (capsule: TimeCapsule, current: string) => {
@@ -179,6 +204,10 @@ export default function CapsulesPage() {
             const isDue = !item.isOpened && !isFuture;
             const openedBy = item.openedByUserIds || [];
             const hasConfirmed = openedBy.includes(currentUserId);
+            const partnerHasConfirmed = openedBy.some((userId) => userId !== currentUserId);
+            const myReady = item.isOpened || hasConfirmed;
+            const partnerReady = item.isOpened || partnerHasConfirmed;
+            const readyCount = item.isOpened ? 2 : Math.min(openedBy.length, 2);
             const canManage = Boolean(
               currentUserId && item.createdById === currentUserId && !item.isOpened && isFuture,
             );
@@ -189,18 +218,19 @@ export default function CapsulesPage() {
             const stateLabel = item.isOpened
               ? "已开启"
               : hasConfirmed
-                ? "等待 TA"
+                ? "我已准备"
                 : isDue
                   ? "待开启"
                   : "封存中";
             const openButtonLabel = item.openMode === "together"
-              ? openedBy.length > 0
+              ? partnerHasConfirmed
                 ? "和 TA 一起打开"
                 : "我准备好了"
               : "开启胶囊";
+            const justOpened = justOpenedId === item.id;
 
             return (
-              <View className="capsule-card card" key={item.id}>
+              <View className={justOpened ? "capsule-card card just-opened" : "capsule-card card"} key={item.id}>
                 {coverUrl ? (
                   <Image
                     className="capsule-cover"
@@ -240,8 +270,47 @@ export default function CapsulesPage() {
                     {item.openMode === "together" ? "两个人确认后开启" : "到期后任意一人开启"}
                   </Text>
 
+                  {item.openMode === "together" && !isFuture && (
+                    <View className={item.isOpened ? "capsule-ready-panel complete" : "capsule-ready-panel"}>
+                      <View className="capsule-ready-heading">
+                        <Text className="capsule-ready-title">一起开启</Text>
+                        <Text className="capsule-ready-count">{readyCount} / 2 已准备</Text>
+                      </View>
+                      <View className="capsule-ready-steps">
+                        <View className="capsule-ready-step">
+                          <View className={myReady ? "capsule-ready-mark ready" : "capsule-ready-mark"}>1</View>
+                          <View className="capsule-ready-copy">
+                            <Text className="capsule-ready-person">我</Text>
+                            <Text className="capsule-ready-status">{myReady ? "已准备" : "待确认"}</Text>
+                          </View>
+                        </View>
+                        <View className={myReady && partnerReady ? "capsule-ready-line ready" : "capsule-ready-line"} />
+                        <View className="capsule-ready-step">
+                          <View className={partnerReady ? "capsule-ready-mark ready" : "capsule-ready-mark"}>2</View>
+                          <View className="capsule-ready-copy">
+                            <Text className="capsule-ready-person">TA</Text>
+                            <Text className="capsule-ready-status">{partnerReady ? "已准备" : "待确认"}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+
                   {item.isOpened ? (
-                    <View className="capsule-reveal">
+                    <View className={justOpened ? "capsule-reveal just-opened" : "capsule-reveal"}>
+                      <View className="capsule-reveal-heading">
+                        <View className="capsule-reveal-heading-copy">
+                          <Text className="capsule-reveal-title">
+                            {justOpened ? "时间到了" : "来自过去的信"}
+                          </Text>
+                          <Text className="capsule-reveal-date">
+                            {item.revealedAt
+                              ? `开启于 ${displayOpenDate(item.revealedAt)}`
+                              : "这封信已经抵达现在"}
+                          </Text>
+                        </View>
+                        <Image className="capsule-reveal-icon" src={hourglassIcon} mode="aspectFit" />
+                      </View>
                       <Text className="capsule-content">{item.content || "这枚胶囊已经开启。"}</Text>
                       {item.voiceUrl && (
                         <View className="capsule-voice">
@@ -286,7 +355,7 @@ export default function CapsulesPage() {
                           className="btn capsule-open-button"
                           disabled={openingId === item.id}
                           loading={openingId === item.id}
-                          onClick={() => void revealCapsule(item)}
+                          onClick={() => void confirmReveal(item)}
                         >
                           {openButtonLabel}
                         </Button>
