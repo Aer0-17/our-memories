@@ -3,6 +3,7 @@
 .anniversary-replay-page,
 .replay-content,
 .replay-hero-copy,
+.replay-create-memory-copy,
 .replay-metric,
 .replay-note,
 .replay-voice-section,
@@ -184,6 +185,37 @@
 .replay-gallery-section,
 .replay-memories-section {
   gap: $space-3;
+}
+
+.replay-create-memory-panel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  border: 1px solid var(--color-accent-soft);
+  border-radius: $radius-md;
+  background: var(--color-surface-warm);
+  padding: $space-4;
+}
+
+.replay-create-memory-copy {
+  gap: $space-1;
+}
+
+.replay-create-memory-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.replay-create-memory-subtitle {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.replay-create-memory {
+  width: 100%;
 }
 
 .replay-section-heading {

@@ -104,6 +104,10 @@ function remotePhotoDrafts(memory: Memory): PhotoDraft[] {
 export default function MemoryEditorPage() {
   const router = useRouter();
   const memoryId = typeof router.params.id === "string" ? router.params.id : "";
+  const isAnniversaryDraft = !memoryId && router.params.template === "anniversary";
+  const draftDate = typeof router.params.date === "string" ? router.params.date.slice(0, 10) : "";
+  const draftTitle = typeof router.params.title === "string" ? router.params.title : "";
+  const draftTags = typeof router.params.tags === "string" ? router.params.tags : "";
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [loading, setLoading] = useState(Boolean(memoryId));
   const [working, setWorking] = useState(false);
@@ -126,6 +130,9 @@ export default function MemoryEditorPage() {
       return;
     }
     if (!memoryId) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(draftDate)) setDate(draftDate);
+      if (draftTitle) setTitle(draftTitle.slice(0, 120));
+      if (draftTags) setTags(draftTags);
       setLoading(false);
       return;
     }
@@ -152,7 +159,7 @@ export default function MemoryEditorPage() {
       })
       .catch(() => setStatus("没有找到这段回忆，或当前身份没有编辑权限。"))
       .finally(() => setLoading(false));
-  }, [memoryId]);
+  }, [draftDate, draftTags, draftTitle, memoryId]);
 
   const canSave = useMemo(
     () => Boolean(
@@ -281,11 +288,15 @@ export default function MemoryEditorPage() {
 
   return (
     <View className="page memory-editor-page">
-      <AppHeader title={editingMemory ? "编辑回忆" : "记录回忆"} back />
+      <AppHeader title={editingMemory ? "编辑回忆" : isAnniversaryDraft ? "记录今年" : "记录回忆"} back />
 
       <View className="screen-intro editor-intro">
-        <Text className="screen-title">{editingMemory ? "补好这段故事" : "把今天留在这里"}</Text>
-        <Text className="screen-subtitle">照片可以以后再补，城市、日期和文字需要填写。</Text>
+        <Text className="screen-title">
+          {editingMemory ? "补好这段故事" : isAnniversaryDraft ? "把今年也留在这里" : "把今天留在这里"}
+        </Text>
+        <Text className="screen-subtitle">
+          {isAnniversaryDraft ? "写下今天的感受，明年回放时会再次遇见。" : "照片可以以后再补，城市、日期和文字需要填写。"}
+        </Text>
       </View>
 
       {status && <ErrorBanner copy={status} />}

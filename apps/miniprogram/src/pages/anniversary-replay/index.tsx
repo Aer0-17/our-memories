@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Image, Text, View } from "@tarojs/components";
+import { Button, Image, Text, View } from "@tarojs/components";
 import Taro, { useDidShow, usePullDownRefresh, useRouter } from "@tarojs/taro";
 import { anniversaryDisplayState } from "@map-of-us/shared";
 import { AppHeader } from "../../components/AppHeader";
@@ -35,6 +35,14 @@ function photoUrls(photos?: AnniversaryReplayPhoto[]) {
 
 function memoryTitle(memory: AnniversaryReplayMemory) {
   return memory.title || memory.city || "一段回忆";
+}
+
+function localDateValue() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export default function AnniversaryReplayPage() {
@@ -84,6 +92,19 @@ export default function AnniversaryReplayPage() {
   const preview = (urls: string[], current: string) => {
     if (urls.length === 0) return;
     Taro.previewImage({ current, urls });
+  };
+
+  const openCurrentMemoryEditor = () => {
+    if (!data?.card) return;
+    const query = [
+      ["template", "anniversary"],
+      ["date", localDateValue()],
+      ["title", `${data.card.title || "这个纪念日"} · 今年`],
+      ["tags", "纪念日"],
+    ]
+      .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+      .join("&");
+    Taro.navigateTo({ url: `/pages/memory-editor/index?${query}` });
   };
 
   return (
@@ -253,6 +274,16 @@ export default function AnniversaryReplayPage() {
                 })}
               </View>
             )}
+          </View>
+
+          <View className="replay-create-memory-panel">
+            <View className="replay-create-memory-copy">
+              <Text className="replay-create-memory-title">把今年也留在这里</Text>
+              <Text className="replay-create-memory-subtitle">写下今天的感受，明年回放时会再次遇见。</Text>
+            </View>
+            <Button className="btn replay-create-memory" onClick={openCurrentMemoryEditor}>
+              记录今年的感受
+            </Button>
           </View>
         </View>
       ) : null}
