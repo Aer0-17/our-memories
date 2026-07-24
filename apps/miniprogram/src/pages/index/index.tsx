@@ -4,9 +4,12 @@ import Taro, { useDidShow, usePullDownRefresh } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { ErrorBanner } from "../../components/PageStates";
 import {
+  createWhisper,
+  getWhispers,
   getPublicConfig,
   login,
   readSession,
+  replyWhisper,
   verifyPassword,
   type LoginMember,
   type PublicConfig,
@@ -23,6 +26,9 @@ import shieldIcon from "../../assets/illustrations/icon-shield-check.png";
 import userIcon from "../../assets/illustrations/icon-user-round.png";
 import "./index.scss";
 
+const quickSignals = ["刚刚想到你", "想抱抱你", "今天也很想你", "晚点见，想你了"];
+const signalThreadTitle = "想你信号";
+
 export default function IndexPage() {
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [session, setSession] = useState<Session | null>(() => readSession());
@@ -33,6 +39,8 @@ export default function IndexPage() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState(false);
+  const [signalWorking, setSignalWorking] = useState(false);
+  const [lastSignal, setLastSignal] = useState("");
 
   const loadConfig = () => {
     setStatus("");
@@ -117,6 +125,36 @@ export default function IndexPage() {
     Taro.navigateTo({ url });
   };
 
+  const sendQuickSignal = async () => {
+    if (signalWorking) return;
+    try {
+      const selection = await Taro.showActionSheet({
+        itemList: quickSignals,
+        alertText: "选一句此刻最想告诉 TA 的话",
+      });
+      const phrase = quickSignals[selection.tapIndex];
+      if (!phrase) return;
+
+      setSignalWorking(true);
+      const data = await getWhispers();
+      const thread = (data.whispers || []).find((item) => item.title === signalThreadTitle);
+      if (thread) {
+        await replyWhisper(thread.id, { content: phrase });
+      } else {
+        await createWhisper({ title: signalThreadTitle, content: phrase });
+      }
+      setLastSignal(phrase);
+      Taro.showToast({ title: "已经送给 TA", icon: "success" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.toLowerCase().includes("cancel")) {
+        Taro.showToast({ title: "信号暂时没送达", icon: "none" });
+      }
+    } finally {
+      setSignalWorking(false);
+    }
+  };
+
   if (session) {
     return (
       <View className="page home-page">
@@ -129,6 +167,28 @@ export default function IndexPage() {
             <Text className="home-subtitle">去看看我们最近留下的片段。</Text>
           </View>
           <Image className="home-avatar" src={avatarUs} mode="aspectFit" />
+        </View>
+
+        <View className={lastSignal ? "signal-panel sent" : "signal-panel"}>
+          <View className="signal-heading">
+            <View className="signal-icon-shell">
+              <Image className="signal-icon" src={whisperIcon} mode="aspectFit" />
+            </View>
+            <View className="signal-copy">
+              <Text className="signal-title">想你信号</Text>
+              <Text className="signal-subtitle">
+                {lastSignal ? `刚刚送出：${lastSignal}` : "选一句此刻的心意，轻轻送给 TA。"}
+              </Text>
+            </View>
+          </View>
+          <Button
+            className="signal-action"
+            disabled={signalWorking}
+            loading={signalWorking}
+            onClick={() => void sendQuickSignal()}
+          >
+            {lastSignal ? "再送一句" : "轻轻告诉 TA"}
+          </Button>
         </View>
 
         <View className="section-heading">

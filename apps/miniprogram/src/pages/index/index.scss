@@ -273,6 +273,86 @@
   margin: $space-6 0 $space-4;
 }
 
+.signal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  margin-top: $space-4;
+  border: 1px solid var(--color-blue-soft);
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  padding: $space-4;
+  transition: background $duration-fast ease, border-color $duration-fast ease;
+}
+
+.signal-panel.sent {
+  border-color: var(--color-green-soft);
+  background: var(--color-green-soft);
+}
+
+.signal-heading {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+}
+
+.signal-icon-shell {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.signal-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.signal-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.signal-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.signal-subtitle {
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.signal-action {
+  min-height: 44px;
+  border-radius: $radius-md;
+  background: var(--color-blue);
+  color: var(--color-white);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-4;
+}
+
+.signal-panel.sent .signal-action {
+  background: var(--color-green);
+}
+
+.signal-action[disabled] {
+  opacity: 0.52;
+}
+
 .shortcut-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
