@@ -60,6 +60,13 @@ interface FootprintStop extends MapProps.point {
   order: number;
 }
 
+function displayMapDate(value?: string) {
+  if (!value) return "";
+  const [year, month, day] = value.slice(0, 10).replace(/\./g, "-").split("-");
+  if (!year || !month || !day) return value;
+  return `${year}.${month}.${day}`;
+}
+
 export default function MapPage() {
   const [summary, setSummary] = useState<MemorySummary>({});
   const [futureCheckins, setFutureCheckins] = useState<FutureCheckin[]>([]);
@@ -245,8 +252,14 @@ export default function MapPage() {
       .sort((a, b) => (b.latest?.date || "").localeCompare(a.latest?.date || ""))[0];
     const latest = latestEntry?.latest;
     const cover = latestEntry?.coverImage || latest?.image;
-    return { count, cities: selectedCities.length, latest, cover };
+    return { count, cities: selectedCities.length, latest, latestEntry, cover };
   }, [selectedCities]);
+  const selectedCityLetters = useMemo(
+    () => [...selectedCities]
+      .filter((entry) => entry.latest)
+      .sort((a, b) => (b.latest?.date || "").localeCompare(a.latest?.date || "")),
+    [selectedCities],
+  );
 
   const handleMapTap = useCallback(
     (event: { detail?: { longitude?: number; latitude?: number } }) => {
@@ -280,6 +293,16 @@ export default function MapPage() {
       .includePoints({ points: nativeChinaBounds, padding: [32] })
       .catch(() => Taro.showToast({ title: "地图视野重置失败", icon: "none" }));
   }, []);
+
+  const openMemoryDetail = (memoryId: string) => {
+    setSelectedProvinceId(null);
+    Taro.navigateTo({ url: `/pages/memory-detail/index?id=${encodeURIComponent(memoryId)}` });
+  };
+
+  const recordFirstMemory = () => {
+    setSelectedProvinceId(null);
+    Taro.navigateTo({ url: "/pages/memory-editor/index" });
+  };
 
   // --- Future check-in editor ---
   const checkinCityOptions = useMemo(
@@ -401,9 +424,12 @@ export default function MapPage() {
       {/* Province popup */}
       {selectedProvince ? (
         <View className="map-modal" onClick={() => setSelectedProvinceId(null)}>
-          <View className="map-modal__card" onClick={(e) => e.stopPropagation()}>
+          <View className="map-modal__card map-letter" onClick={(e) => e.stopPropagation()}>
             <View className="map-modal__heading">
-              <Text className="map-modal__title">{selectedProvince.name}</Text>
+              <View className="map-letter__heading-copy">
+                <Text className="map-letter__eyebrow">城市情书</Text>
+                <Text className="map-modal__title">写给{selectedProvince.name}</Text>
+              </View>
               <Button
                 className="map-modal__close"
                 aria-label="关闭省份详情"
@@ -412,44 +438,101 @@ export default function MapPage() {
                 ×
               </Button>
             </View>
-            <View className="map-modal__body">
+            <View className="map-letter__hero">
               {selectedStats.cover ? (
                 <Image
-                  className="map-modal__cover"
+                  className="map-letter__cover"
                   src={resolveAssetUrl(selectedStats.cover, apiBaseUrl)}
                   mode="aspectFill"
                 />
               ) : (
-                <View className="map-modal__cover map-modal__cover--empty">
-                  <Text className="muted">未点亮</Text>
+                <View className="map-letter__cover map-letter__cover--empty">
+                  <Text className="map-letter__empty-mark">{selectedProvince.name.slice(0, 1)}</Text>
+                  <Text className="muted">故事还没写到这里</Text>
                 </View>
               )}
-              <View className="map-modal__info">
-                {selectedStats.count > 0 ? (
-                  <>
-                    <Text className="map-modal__count">
-                      {selectedStats.count} 条回忆 · 点亮 {selectedStats.cities} 城
-                    </Text>
-                    {selectedStats.latest ? (
-                      <Text className="map-modal__latest">
-                        {selectedStats.latest.title || selectedStats.latest.text || "最近的回忆"}
-                        {selectedStats.latest.date ? ` · ${selectedStats.latest.date}` : ""}
-                      </Text>
-                    ) : null}
-                  </>
-                ) : (
-                  <Text className="map-modal__latest">还没有回忆，去添加这里的第一段吧。</Text>
-                )}
-              </View>
+              {selectedStats.count > 0 ? (
+                <View className="map-letter__stamp">
+                  <Text className="map-letter__stamp-value">{selectedStats.count}</Text>
+                  <Text className="map-letter__stamp-label">段故事</Text>
+                </View>
+              ) : null}
             </View>
+
+            {selectedStats.count > 0 ? (
+              <>
+                <View className="map-letter__summary">
+                  <Text className="map-letter__summary-title">
+                    你们在这里走过 {selectedStats.cities} 座城市
+                  </Text>
+                  <Text className="map-letter__summary-copy">
+                    {selectedStats.latest?.text || selectedStats.latest?.title ||
+                      `最近一封，留在${selectedStats.latestEntry?.city || selectedProvince.name}。`}
+                  </Text>
+                  {selectedStats.latest?.date ? (
+                    <Text className="map-letter__summary-date">
+                      最近写于 {displayMapDate(selectedStats.latest.date)}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <ScrollView scrollY className="map-letter__list">
+                  <View className="map-letter__list-inner">
+                    {selectedCityLetters.map((entry) => {
+                      const latest = entry.latest;
+                      if (!latest) return null;
+                      const cityCover = entry.coverImage || latest.image;
+                      return (
+                        <Button
+                          className="map-letter__city"
+                          key={entry.cityId}
+                          onClick={() => openMemoryDetail(latest.id)}
+                        >
+                          {cityCover ? (
+                            <Image
+                              className="map-letter__city-cover"
+                              src={resolveAssetUrl(cityCover, apiBaseUrl)}
+                              mode="aspectFill"
+                              lazyLoad
+                            />
+                          ) : (
+                            <View className="map-letter__city-cover map-letter__city-cover--empty">
+                              <Text>{entry.city.slice(0, 1)}</Text>
+                            </View>
+                          )}
+                          <View className="map-letter__city-copy">
+                            <View className="map-letter__city-line">
+                              <Text className="map-letter__city-name">{entry.city}</Text>
+                              <Text className="map-letter__city-count">{entry.count} 段</Text>
+                            </View>
+                            <Text className="map-letter__city-title">
+                              {latest.title || latest.placeName || latest.text || "最近的回忆"}
+                            </Text>
+                            {latest.date ? (
+                              <Text className="map-letter__city-date">{displayMapDate(latest.date)}</Text>
+                            ) : null}
+                          </View>
+                          <Text className="map-letter__city-arrow">›</Text>
+                        </Button>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+              </>
+            ) : (
+              <View className="map-letter__empty-copy">
+                <Text className="map-letter__summary-title">把第一段故事留在这里</Text>
+                <Text className="map-letter__summary-copy">以后再点开，它就会成为你们写给这里的第一封信。</Text>
+              </View>
+            )}
+
             <Button
               className="btn map-modal__enter"
-              onClick={() => {
-                setSelectedProvinceId(null);
-                Taro.switchTab({ url: "/pages/memories/index" });
-              }}
+              onClick={() => selectedStats.latest
+                ? openMemoryDetail(selectedStats.latest.id)
+                : recordFirstMemory()}
             >
-              查看回忆
+              {selectedStats.latest ? "读最近的一封" : "记录第一段回忆"}
             </Button>
           </View>
         </View>
