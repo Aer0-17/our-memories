@@ -43,6 +43,17 @@ export type PublicConfig = {
   users: Array<{ username: string; displayName: string }>;
 };
 
+export type NotificationItem = {
+  id: string;
+  type: string;
+  targetType?: string;
+  targetId?: string;
+  title: string;
+  body: string;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export type WhisperReply = {
   id: string;
   whisperId: string;
@@ -245,6 +256,20 @@ async function request<T>(path: string, options: ApiOptions = {}, auth = true, r
 
 export function getPublicConfig() {
   return request<PublicConfig>("/public/config", {}, false);
+}
+
+export function getNotifications() {
+  return request<{ notifications: NotificationItem[] }>("/notifications");
+}
+
+export function markNotificationRead(notificationId: string) {
+  return request<{ ok: true }>(`/notifications/${encodeURIComponent(notificationId)}/read`, {
+    method: "PATCH",
+  });
+}
+
+export function markAllNotificationsRead() {
+  return request<{ ok: true }>("/notifications/read-all", { method: "PATCH" });
 }
 
 function sessionFromLogin(payload: LoginPayload): Session {

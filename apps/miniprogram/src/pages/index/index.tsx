@@ -1,17 +1,21 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Image, Input, Text, View } from "@tarojs/components";
 import Taro, { useDidShow, usePullDownRefresh } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { ErrorBanner } from "../../components/PageStates";
 import {
   createWhisper,
+  getNotifications,
   getWhispers,
   getPublicConfig,
   login,
+  markAllNotificationsRead,
+  markNotificationRead,
   readSession,
   replyWhisper,
   verifyPassword,
   type LoginMember,
+  type NotificationItem,
   type PublicConfig,
   type Session,
 } from "../../lib/api";
@@ -29,6 +33,36 @@ import "./index.scss";
 const quickSignals = ["刚刚想到你", "想抱抱你", "今天也很想你", "晚点见，想你了"];
 const signalThreadTitle = "想你信号";
 
+function notificationTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+  if (minutes < 1) return "刚刚";
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  return `${date.getMonth() + 1} 月 ${date.getDate()} 日`;
+}
+
+function notificationTarget(item: NotificationItem) {
+  if (item.targetType === "memory") {
+    if (item.type === "memory.deleted" || !item.targetId) {
+      return { url: "/pages/memories/index", tab: true };
+    }
+    return {
+      url: `/pages/memory-detail/index?id=${encodeURIComponent(item.targetId)}`,
+      tab: false,
+    };
+  }
+  if (item.targetType === "time_capsule") return { url: "/pages/capsules/index", tab: false };
+  if (item.targetType === "anniversary") return { url: "/pages/anniversaries/index", tab: true };
+  if (item.targetType === "whisper" || item.targetType === "signal") {
+    return { url: "/pages/whispers/index", tab: false };
+  }
+  if (item.targetType === "settings") return { url: "/pages/settings/index", tab: true };
+  return null;
+}
+
 export default function IndexPage() {
   const [config, setConfig] = useState<PublicConfig | null>(null);
   const [session, setSession] = useState<Session | null>(() => readSession());
@@ -41,6 +75,21 @@ export default function IndexPage() {
   const [working, setWorking] = useState(false);
   const [signalWorking, setSignalWorking] = useState(false);
   const [lastSignal, setLastSignal] = useState("");
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationWorking, setNotificationWorking] = useState(false);
+
+  const loadNotifications = useCallback(async () => {
+    if (!readSession()) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const data = await getNotifications();
+      setNotifications(data.notifications || []);
+    } catch {
+      // Recent activity is supplementary; keep the home page usable when it cannot refresh.
+    }
+  }, []);
 
   const loadConfig = () => {
     setStatus("");
@@ -59,7 +108,10 @@ export default function IndexPage() {
   useDidShow(() => {
     const currentSession = readSession();
     setSession(currentSession);
-    if (!currentSession) {
+    if (currentSession) {
+      void loadNotifications();
+    } else {
+      setNotifications([]);
       setLoginStep(1);
       setVerifiedUsers([]);
       setUserId("");
@@ -69,8 +121,11 @@ export default function IndexPage() {
   });
 
   usePullDownRefresh(() => {
-    setSession(readSession());
-    void loadConfig().finally(() => Taro.stopPullDownRefresh());
+    const currentSession = readSession();
+    setSession(currentSession);
+    const refreshes: Promise<unknown>[] = [loadConfig()];
+    if (currentSession) refreshes.push(loadNotifications());
+    void Promise.allSettled(refreshes).finally(() => Taro.stopPullDownRefresh());
   });
 
   const submitLogin = async () => {
@@ -155,7 +210,40 @@ export default function IndexPage() {
     }
   };
 
+  const openNotification = async (item: NotificationItem) => {
+    if (!item.isRead) {
+      setNotifications((current) => current.map((entry) => (
+        entry.id === item.id ? { ...entry, isRead: true } : entry
+      )));
+      await markNotificationRead(item.id).catch(() => undefined);
+    }
+    const target = notificationTarget(item);
+    if (!target) return;
+    if (target.tab) {
+      Taro.switchTab({ url: target.url });
+    } else {
+      Taro.navigateTo({ url: target.url });
+    }
+  };
+
+  const markEveryNotificationRead = async () => {
+    if (notificationWorking || notifications.every((item) => item.isRead)) return;
+    setNotificationWorking(true);
+    const previous = notifications;
+    setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
+    try {
+      await markAllNotificationsRead();
+      Taro.showToast({ title: "都看过了", icon: "success" });
+    } catch {
+      setNotifications(previous);
+      Taro.showToast({ title: "暂时没有同步", icon: "none" });
+    } finally {
+      setNotificationWorking(false);
+    }
+  };
+
   if (session) {
+    const unreadNotifications = notifications.filter((item) => !item.isRead).length;
     return (
       <View className="page home-page">
         <AppHeader title={session.space.name} />
@@ -189,6 +277,54 @@ export default function IndexPage() {
           >
             {lastSignal ? "再送一句" : "轻轻告诉 TA"}
           </Button>
+        </View>
+
+        <View className="presence-section">
+          <View className="presence-heading">
+            <View className="presence-heading-copy">
+              <Text className="presence-title">TA 刚刚来过</Text>
+              <Text className="presence-subtitle">
+                {unreadNotifications > 0 ? `${unreadNotifications} 条新动静` : "最近留下的轻轻动静"}
+              </Text>
+            </View>
+            {unreadNotifications > 0 ? (
+              <Button
+                className="presence-read-all"
+                disabled={notificationWorking}
+                onClick={() => void markEveryNotificationRead()}
+              >
+                全部看过
+              </Button>
+            ) : null}
+          </View>
+
+          <View className="presence-card">
+            {notifications.length > 0 ? notifications.map((item) => (
+              <Button
+                className={item.isRead ? "presence-item" : "presence-item unread"}
+                key={item.id}
+                onClick={() => void openNotification(item)}
+              >
+                <View className="presence-mark" />
+                <View className="presence-copy">
+                  <View className="presence-line">
+                    <Text className="presence-item-title">{item.title}</Text>
+                    <Text className="presence-time">{notificationTime(item.createdAt)}</Text>
+                  </View>
+                  <Text className="presence-body">{item.body || "TA 在这里留下了新的动静。"}</Text>
+                </View>
+                <Text className="presence-arrow">›</Text>
+              </Button>
+            )) : (
+              <View className="presence-empty">
+                <Image className="presence-empty-avatar" src={avatarUs} mode="aspectFit" />
+                <View className="presence-empty-copy">
+                  <Text className="presence-empty-title">这里还很安静</Text>
+                  <Text className="presence-empty-text">对方留下新回忆或私语时，会在这里告诉你。</Text>
+                </View>
+              </View>
+            )}
+          </View>
         </View>
 
         <View className="section-heading">
