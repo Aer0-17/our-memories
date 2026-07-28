@@ -7,6 +7,7 @@ import avatarUs from "../../assets/illustrations/avatar-us.png";
 import whisperIcon from "../../assets/illustrations/icon-message-circle.png";
 import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
 import diaryIcon from "../../assets/lucide/calendar-days.svg";
+import trashIcon from "../../assets/lucide/trash-2.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
 
@@ -111,6 +112,22 @@ export default function SettingsPage() {
             <View className="action-copy">
               <Text className="action-title">双人日记</Text>
               <Text className="action-subtitle">一起记录还没归档的片段</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
+        </View>
+      </View>
+
+      <View className="settings-section">
+        <Text className="settings-section-title">数据保护</Text>
+        <View className="action-list">
+          <Button className="settings-action" onClick={() => openPage("/pages/memory-trash/index")}>
+            <View className="action-icon-box action-icon-red">
+              <Image className="action-icon" src={trashIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">回忆回收站</Text>
+              <Text className="action-subtitle">误删的回忆可在 30 天内恢复</Text>
             </View>
             <Text className="action-arrow">›</Text>
           </Button>

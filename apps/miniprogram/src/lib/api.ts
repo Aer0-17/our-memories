@@ -194,6 +194,20 @@ export type MemoryMutationResponse = {
   memories: LocalMemoryStore;
 };
 
+export type TrashedMemory = {
+  id: string;
+  city: string;
+  title?: string;
+  date: string;
+  text: string;
+  mood?: string;
+  placeName?: string;
+  image?: string;
+  photos?: string[];
+  createdById?: string;
+  deletedAt: string;
+};
+
 export function readSession() {
   return Taro.getStorageSync<Session | "">(sessionKey) || null;
 }
@@ -340,6 +354,16 @@ export function updateMemorySupplement(
 export function deleteMemory(memoryId: string) {
   return request<MemoryMutationResponse>(`/memories/${encodeURIComponent(memoryId)}`, {
     method: "DELETE",
+  });
+}
+
+export function getTrashedMemories() {
+  return request<{ memories: TrashedMemory[] }>("/memories/trash");
+}
+
+export function restoreMemory(memoryId: string) {
+  return request<MemoryMutationResponse>(`/memories/${encodeURIComponent(memoryId)}/restore`, {
+    method: "POST",
   });
 }
 
