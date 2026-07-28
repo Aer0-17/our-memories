@@ -4,6 +4,10 @@
 .memory-detail-content,
 .memory-detail-story,
 .memory-detail-gallery-section,
+.memory-echoes,
+.memory-echoes-heading-copy,
+.memory-echo-list,
+.memory-echo-body,
 .memory-perspectives,
 .memory-perspective,
 .memory-perspectives-heading-copy,
@@ -366,8 +370,133 @@
   width: 100%;
 }
 
+.memory-echoes {
+  gap: $space-3;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-5;
+}
+
+.memory-echoes-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.memory-echoes-heading-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.memory-echoes-subtitle,
+.memory-echoes-count {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.memory-echoes-count {
+  flex-shrink: 0;
+  padding-top: $space-1;
+}
+
+.memory-echo-list {
+  gap: $space-2;
+}
+
+.memory-echo-card {
+  display: flex;
+  width: 100%;
+  min-height: 88px;
+  align-items: center;
+  gap: $space-3;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: $space-2;
+  text-align: left;
+  transition: background $duration-fast ease;
+}
+
+.memory-echo-card:active {
+  background: var(--color-surface-soft);
+}
+
+.memory-echo-cover {
+  display: block;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+}
+
+.memory-echo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-blue);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.memory-echo-body {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.memory-echo-reason {
+  overflow: hidden;
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-echo-title {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-echo-meta {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-echo-arrow {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-muted);
+  font-size: $text-xl;
+  line-height: 44px;
+}
+
 @media (min-width: $breakpoint-tablet) {
   .memory-detail-gallery {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .memory-echo-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }

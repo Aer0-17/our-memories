@@ -25,6 +25,12 @@ type MemoryDetail = Memory & {
   partnerNoteAuthorId?: string;
 };
 
+type MemoryEcho = {
+  memory: MemoryDetail;
+  reason: string;
+  score: number;
+};
+
 function displayDate(value: string) {
   const parts = value.slice(0, 10).replace(/\./g, "-").split("-");
   if (parts.length !== 3) return value;
@@ -41,10 +47,71 @@ function memoryPhotos(memory: MemoryDetail | null) {
     .map((url) => resolveAssetUrl(url, apiBaseUrl));
 }
 
+function normalizedDate(value: string) {
+  return value.slice(0, 10).replace(/\./g, "-");
+}
+
+function memoryEchoes(current: MemoryDetail | null, memories: MemoryDetail[]): MemoryEcho[] {
+  if (!current) return [];
+  const [currentYear, currentMonth, currentDay] = normalizedDate(current.date).split("-");
+
+  return memories
+    .filter((candidate) => candidate.id !== current.id)
+    .map((candidate) => {
+      const [candidateYear, candidateMonth, candidateDay] = normalizedDate(candidate.date).split("-");
+      const sameCalendarDay = Boolean(
+        currentMonth && currentDay &&
+        currentMonth === candidateMonth &&
+        currentDay === candidateDay &&
+        currentYear !== candidateYear,
+      );
+      const sharedCodes = (current.tags || []).filter((tag) => candidate.tags?.includes(tag));
+      const samePlace = Boolean(
+        current.placeName && candidate.placeName &&
+        current.placeName.trim() === candidate.placeName.trim(),
+      );
+      const sameCity = Boolean(
+        (current.cityId && candidate.cityId && current.cityId === candidate.cityId) ||
+        (current.city && candidate.city && current.city === candidate.city),
+      );
+
+      let reason = "";
+      let score = 0;
+      if (sameCalendarDay) {
+        const yearsApart = Math.abs(Number(currentYear) - Number(candidateYear));
+        reason = yearsApart > 0 ? `隔了 ${yearsApart} 年的同一天` : "不同年份的同一天";
+        score += 100;
+      }
+      if (sharedCodes.length > 0) {
+        if (!reason) reason = `也写着 #${sharedCodes[0]}`;
+        score += Math.min(sharedCodes.length, 3) * 40;
+      }
+      if (samePlace) {
+        if (!reason) reason = `又回到了${current.placeName}`;
+        score += 30;
+      }
+      if (sameCity) {
+        if (!reason) reason = `同在${current.city}留下`;
+        score += 20;
+      }
+
+      return { memory: candidate, reason, score };
+    })
+    .filter((echo) => echo.score > 0)
+    .sort((a, b) => b.score - a.score || b.memory.date.localeCompare(a.memory.date))
+    .slice(0, 3);
+}
+
+function memoryEchoCover(memory: MemoryDetail) {
+  const url = memory.photos?.[0] || memory.image;
+  return url ? resolveAssetUrl(url, apiBaseUrl) : "";
+}
+
 export default function MemoryDetailPage() {
   const router = useRouter();
   const memoryId = typeof router.params.id === "string" ? router.params.id : "";
   const [memory, setMemory] = useState<MemoryDetail | null>(null);
+  const [memoryPool, setMemoryPool] = useState<MemoryDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [status, setStatus] = useState("");
@@ -69,8 +136,10 @@ export default function MemoryDetailPage() {
     setStatus("");
     try {
       const data = await getMemories();
-      const item = flattenMemories(data.memories).find((candidate) => candidate.id === memoryId);
+      const allMemories = flattenMemories(data.memories);
+      const item = allMemories.find((candidate) => candidate.id === memoryId);
       if (!item) throw new Error("Memory not found");
+      setMemoryPool(allMemories);
       setMemory(item);
       setNote(item.partnerNote || "");
       setPartnerVoiceUrl(item.partnerVoiceUrl || "");
@@ -94,6 +163,7 @@ export default function MemoryDetailPage() {
   const isCreator = Boolean(memory?.createdById && session?.user.id === memory.createdById);
   const canSupplement = Boolean(memory?.createdById && session?.user.id && !isCreator);
   const photos = useMemo(() => memoryPhotos(memory), [memory]);
+  const echoes = useMemo(() => memoryEchoes(memory, memoryPool), [memory, memoryPool]);
   const originalNote = memory?.partnerNote || "";
   const originalVoiceUrl = memory?.partnerVoiceUrl || "";
   const supplementChanged = Boolean(
@@ -119,6 +189,10 @@ export default function MemoryDetailPage() {
   const openEditor = () => {
     if (!memory || !isCreator) return;
     Taro.navigateTo({ url: `/pages/memory-editor/index?id=${encodeURIComponent(memory.id)}` });
+  };
+
+  const openEcho = (echoId: string) => {
+    Taro.redirectTo({ url: `/pages/memory-detail/index?id=${encodeURIComponent(echoId)}` });
   };
 
   const saveSupplement = async () => {
@@ -203,9 +277,9 @@ export default function MemoryDetailPage() {
                   <Text className="memory-detail-codes-count">{memory.tags?.length} 个</Text>
                 </View>
                 <View className="memory-detail-code-row">
-                {memory.tags?.map((tag) => (
+                  {memory.tags?.map((tag) => (
                     <Text className="memory-detail-code" key={`${memory.id}-${tag}`}>#{tag}</Text>
-                ))}
+                  ))}
                 </View>
               </View>
             )}
@@ -342,6 +416,48 @@ export default function MemoryDetailPage() {
                     onClick={() => previewPhotos(photo)}
                   />
                 ))}
+              </View>
+            </View>
+          )}
+
+          {echoes.length > 0 && (
+            <View className="memory-echoes">
+              <View className="memory-echoes-heading">
+                <View className="memory-echoes-heading-copy">
+                  <Text className="memory-detail-section-title">回忆的回声</Text>
+                  <Text className="memory-echoes-subtitle">有些日子，会在后来的故事里轻轻回应。</Text>
+                </View>
+                <Text className="memory-echoes-count">{echoes.length} 段</Text>
+              </View>
+              <View className="memory-echo-list">
+                {echoes.map((echo) => {
+                  const cover = memoryEchoCover(echo.memory);
+                  return (
+                    <Button
+                      className="memory-echo-card"
+                      key={echo.memory.id}
+                      onClick={() => openEcho(echo.memory.id)}
+                    >
+                      {cover ? (
+                        <Image className="memory-echo-cover" src={cover} mode="aspectFill" lazyLoad />
+                      ) : (
+                        <View className="memory-echo-cover memory-echo-placeholder">
+                          <Text>{echo.memory.city?.slice(0, 1) || "忆"}</Text>
+                        </View>
+                      )}
+                      <View className="memory-echo-body">
+                        <Text className="memory-echo-reason">{echo.reason}</Text>
+                        <Text className="memory-echo-title">
+                          {echo.memory.title || echo.memory.city || "未命名回忆"}
+                        </Text>
+                        <Text className="memory-echo-meta">
+                          {displayDate(echo.memory.date)}{echo.memory.city ? ` · ${echo.memory.city}` : ""}
+                        </Text>
+                      </View>
+                      <Text className="memory-echo-arrow">›</Text>
+                    </Button>
+                  );
+                })}
               </View>
             </View>
           )}
