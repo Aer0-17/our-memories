@@ -25,6 +25,80 @@ function flattenMemories(store: Record<string, Memory[]>) {
   return Object.values(store).flat();
 }
 
+function dateParts(value: string) {
+  const [year, month, day] = value.slice(0, 10).replace(/\./g, "-").split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) return null;
+  return { year, month, day, date };
+}
+
+function localDayKey(now: Date) {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function stableHash(value: string) {
+  let hash = 2166136261;
+  for (const character of value) {
+    hash ^= character.codePointAt(0) || 0;
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function dailyReunionMemory(memories: Memory[], spaceId: string, now = new Date()) {
+  const shared = memories
+    .filter((memory) => memory.visibility === "both")
+    .sort((a, b) => a.id.localeCompare(b.id));
+  if (shared.length === 0) return null;
+
+  const today = { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() };
+  const sameDay = shared.filter((memory) => {
+    const parts = dateParts(memory.date);
+    return Boolean(
+      parts &&
+      parts.year < today.year &&
+      parts.month === today.month &&
+      parts.day === today.day,
+    );
+  });
+  const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+  const olderMemories = shared.filter((memory) => {
+    const parts = dateParts(memory.date);
+    return Boolean(parts && parts.date.getTime() <= thirtyDaysAgo);
+  });
+  const candidates = sameDay.length > 0
+    ? sameDay
+    : olderMemories.length > 0
+      ? olderMemories
+      : shared;
+  const index = stableHash(`${localDayKey(now)}:${spaceId}`) % candidates.length;
+  const memory = candidates[index];
+  const memoryDate = dateParts(memory.date);
+  const daysAgo = memoryDate
+    ? Math.max(0, Math.floor((now.getTime() - memoryDate.date.getTime()) / (24 * 60 * 60 * 1000)))
+    : 0;
+  const sameDayYears = memoryDate && memoryDate.month === today.month && memoryDate.day === today.day
+    ? today.year - memoryDate.year
+    : 0;
+  const ageLabel = sameDayYears > 0
+    ? `${sameDayYears} 年前的今天`
+    : daysAgo >= 365
+      ? `${Math.floor(daysAgo / 365)} 年前`
+      : daysAgo >= 30
+        ? `${Math.floor(daysAgo / 30)} 个月前`
+        : `${Math.max(daysAgo, 1)} 天前`;
+
+  return { memory, ageLabel, sharedCount: shared.length };
+}
+
 export default function MemoriesPage() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [status, setStatus] = useState("");
@@ -63,6 +137,11 @@ export default function MemoriesPage() {
   const sorted = useMemo(
     () => [...memories].sort((a, b) => b.date.localeCompare(a.date)),
     [memories],
+  );
+  const session = readSession();
+  const dailyReunion = useMemo(
+    () => dailyReunionMemory(sorted, session?.space.id || "our-space"),
+    [session?.space.id, sorted],
   );
 
   const cityOptions = useMemo(
@@ -169,7 +248,7 @@ export default function MemoriesPage() {
     }
   };
 
-  const currentUserId = readSession()?.user.id;
+  const currentUserId = session?.user.id;
 
   return (
     <View className="page memories-page">
@@ -185,6 +264,43 @@ export default function MemoriesPage() {
           <Text className="memory-count-label">{hasFilters ? "个匹配" : "段回忆"}</Text>
         </View>
       </View>
+
+      {dailyReunion && (
+        <Button
+          className="memory-reunion card"
+          onClick={() => openDetail(dailyReunion.memory.id)}
+        >
+          {dailyReunion.memory.photos?.[0] || dailyReunion.memory.image ? (
+            <Image
+              className="memory-reunion-cover"
+              src={resolveAssetUrl(
+                dailyReunion.memory.photos?.[0] || dailyReunion.memory.image,
+                apiBaseUrl,
+              )}
+              mode="aspectFill"
+              lazyLoad
+            />
+          ) : (
+            <View className="memory-reunion-cover memory-reunion-placeholder">
+              <Text>{dailyReunion.memory.city?.slice(0, 1) || "忆"}</Text>
+            </View>
+          )}
+          <View className="memory-reunion-body">
+            <Text className="memory-reunion-label">今天一起重逢</Text>
+            <Text className="memory-reunion-title">
+              {dailyReunion.memory.title || dailyReunion.memory.city || "未命名回忆"}
+            </Text>
+            <Text className="memory-reunion-copy">
+              {dailyReunion.memory.text ||
+                `从 ${dailyReunion.sharedCount} 段共同回忆里，今天翻到了这一页。`}
+            </Text>
+            <View className="memory-reunion-footer">
+              <Text className="memory-reunion-age">{dailyReunion.ageLabel}</Text>
+              <Text className="memory-reunion-action">重新看看 ›</Text>
+            </View>
+          </View>
+        </Button>
+      )}
 
       <View className="memory-search card">
         <View className="memory-search-input-row">

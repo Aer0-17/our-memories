@@ -43,6 +43,105 @@
   line-height: 20px;
 }
 
+.memory-reunion {
+  display: flex;
+  width: 100%;
+  min-height: 144px;
+  overflow: hidden;
+  align-items: stretch;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: 0;
+  text-align: left;
+  transition: background $duration-fast ease;
+}
+
+.memory-reunion:active {
+  background: var(--color-surface-warm);
+}
+
+.memory-reunion-cover {
+  display: block;
+  width: 112px;
+  min-height: 144px;
+  flex-shrink: 0;
+  background: var(--color-blue-soft);
+}
+
+.memory-reunion-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-blue);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.memory-reunion-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+  padding: $space-3;
+}
+
+.memory-reunion-label {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.memory-reunion-title {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-reunion-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.memory-reunion-footer {
+  display: flex;
+  min-height: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-2;
+  margin-top: auto;
+}
+
+.memory-reunion-age,
+.memory-reunion-action {
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.memory-reunion-age {
+  overflow: hidden;
+  color: var(--color-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory-reunion-action {
+  flex-shrink: 0;
+  color: var(--color-accent-deep);
+}
+
 .memory-search {
   display: flex;
   flex-direction: column;
@@ -412,6 +511,10 @@
 }
 
 @media (min-width: $breakpoint-tablet) {
+  .memory-reunion-cover {
+    width: 144px;
+  }
+
   .memory-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
