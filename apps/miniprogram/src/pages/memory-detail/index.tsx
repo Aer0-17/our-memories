@@ -188,12 +188,25 @@ export default function MemoryDetailPage() {
                 {[memory.city, memory.placeName].filter(Boolean).join(" · ")}
               </Text>
             )}
-            {(memory.mood || memory.tags?.length) && (
+            {memory.mood && (
               <View className="memory-detail-tags">
-                {memory.mood && <Text className="memory-detail-tag mood">{memory.mood}</Text>}
+                <Text className="memory-detail-tag mood">{memory.mood}</Text>
+              </View>
+            )}
+            {Boolean(memory.tags?.length) && (
+              <View className="memory-detail-codes">
+                <View className="memory-detail-codes-heading">
+                  <View className="memory-detail-codes-heading-copy">
+                    <Text className="memory-detail-codes-title">我们的暗号</Text>
+                    <Text className="memory-detail-codes-subtitle">只有你们知道，它们指向哪段故事。</Text>
+                  </View>
+                  <Text className="memory-detail-codes-count">{memory.tags?.length} 个</Text>
+                </View>
+                <View className="memory-detail-code-row">
                 {memory.tags?.map((tag) => (
-                  <Text className="memory-detail-tag" key={`${memory.id}-${tag}`}>#{tag}</Text>
+                    <Text className="memory-detail-code" key={`${memory.id}-${tag}`}>#{tag}</Text>
                 ))}
+                </View>
               </View>
             )}
           </View>

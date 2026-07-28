@@ -110,6 +110,67 @@
   color: var(--color-accent-deep);
 }
 
+.memory-detail-codes,
+.memory-detail-codes-heading-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.memory-detail-codes {
+  gap: $space-3;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  padding: $space-4;
+}
+
+.memory-detail-codes-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.memory-detail-codes-heading-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.memory-detail-codes-title {
+  color: var(--color-gold);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.memory-detail-codes-subtitle,
+.memory-detail-codes-count {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.memory-detail-codes-count {
+  flex-shrink: 0;
+}
+
+.memory-detail-code-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.memory-detail-code {
+  border-radius: $radius-sm;
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: $space-2 $space-3;
+}
+
 .memory-detail-gallery-section {
   gap: $space-3;
 }

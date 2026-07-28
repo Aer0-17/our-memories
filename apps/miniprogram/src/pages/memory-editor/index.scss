@@ -195,6 +195,57 @@
   color: var(--color-accent-deep);
 }
 
+.secret-code-field {
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.secret-code-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding-top: $space-1;
+}
+
+.secret-code-suggestions-label {
+  color: var(--color-gold);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.secret-code-suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.secret-code-suggestion {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: $space-1;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 0 $space-3;
+  transition: background $duration-fast ease, border-color $duration-fast ease;
+}
+
+.secret-code-suggestion-mark {
+  color: var(--color-gold);
+}
+
+.secret-code-suggestion.active {
+  border-color: var(--color-gold);
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
 .visibility-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -79,10 +79,16 @@ export default function MemoriesPage() {
     () => Array.from(new Set(sorted.map((memory) => memory.mood).filter((mood): mood is string => Boolean(mood)))).sort(),
     [sorted],
   );
-  const tagOptions = useMemo(
-    () => Array.from(new Set(sorted.flatMap((memory) => memory.tags || []).filter((tag): tag is string => Boolean(tag)))).sort(),
-    [sorted],
-  );
+  const secretCodeStats = useMemo(() => {
+    const counts = new Map<string, number>();
+    sorted.forEach((memory) => {
+      memory.tags?.forEach((tag) => counts.set(tag, (counts.get(tag) || 0) + 1));
+    });
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, "zh-CN"));
+  }, [sorted]);
+  const tagOptions = useMemo(() => secretCodeStats.map(({ tag }) => tag), [secretCodeStats]);
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return sorted.filter((memory) => {
@@ -211,6 +217,32 @@ export default function MemoriesPage() {
             {hasFilters && <Button className="memory-filter-clear" onClick={clearFilters}>重置</Button>}
           </View>
         </ScrollView>
+        {secretCodeStats.length > 0 && (
+          <View className="memory-code-vault">
+            <View className="memory-code-vault-heading">
+              <View className="memory-code-vault-copy">
+                <Text className="memory-code-vault-title">我们的暗号</Text>
+                <Text className="memory-code-vault-subtitle">点一下，只看属于它的故事</Text>
+              </View>
+              <Text className="memory-code-vault-count">{secretCodeStats.length} 个</Text>
+            </View>
+            <ScrollView className="memory-code-scroll" scrollX enableFlex={false} showScrollbar={false}>
+              <View className="memory-code-row">
+                {secretCodeStats.map(({ tag, count }) => (
+                  <Button
+                    className={tagFilter === tag ? "memory-code active" : "memory-code"}
+                    key={tag}
+                    onClick={() => setTagFilter((current) => (current === tag ? "" : tag))}
+                  >
+                    <Text className="memory-code-mark">#</Text>
+                    <Text className="memory-code-name">{tag}</Text>
+                    <Text className="memory-code-count">{count}</Text>
+                  </Button>
+                ))}
+              </View>
+            </ScrollView>
+          </View>
+        )}
         {hasFilters && <Text className="memory-search-result">显示 {filtered.length} / {sorted.length} 段回忆</Text>}
       </View>
 
@@ -259,7 +291,7 @@ export default function MemoriesPage() {
                     <View className="tag-row">
                       {memory.mood && <Text className="tag tag-mood">{memory.mood}</Text>}
                       {memory.tags?.slice(0, 3).map((tag) => (
-                        <Text className="tag" key={`${memory.id}-${tag}`}>#{tag}</Text>
+                        <Text className="tag tag-code" key={`${memory.id}-${tag}`}>#{tag}</Text>
                       ))}
                     </View>
                   )}

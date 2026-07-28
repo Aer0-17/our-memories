@@ -120,6 +120,101 @@
   line-height: 20px;
 }
 
+.memory-code-vault {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.memory-code-vault-heading,
+.memory-code-vault-copy {
+  display: flex;
+}
+
+.memory-code-vault-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.memory-code-vault-copy {
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.memory-code-vault-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.memory-code-vault-subtitle,
+.memory-code-vault-count {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.memory-code-vault-count {
+  flex-shrink: 0;
+}
+
+.memory-code-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.memory-code-row {
+  display: flex;
+  gap: $space-2;
+  min-height: 44px;
+}
+
+.memory-code {
+  display: flex;
+  min-height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: $space-1;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 0 $space-3;
+  transition: background $duration-fast ease, border-color $duration-fast ease;
+}
+
+.memory-code-mark,
+.memory-code-count {
+  color: var(--color-gold);
+}
+
+.memory-code-count {
+  display: flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: var(--color-gold-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.memory-code.active {
+  border-color: var(--color-gold);
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
 .memory-list {
   display: flex;
   flex-direction: column;
@@ -231,6 +326,11 @@
 .tag-mood {
   background: var(--color-accent-soft);
   color: var(--color-accent-deep);
+}
+
+.tag-code {
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
 }
 
 .memory-detail-action {

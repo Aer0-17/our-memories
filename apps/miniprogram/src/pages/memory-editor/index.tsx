@@ -21,6 +21,7 @@ import "./index.scss";
 const MAX_PHOTOS = 6;
 const MAX_SOURCE_PHOTO_BYTES = 12 * 1024 * 1024;
 const moods = ["开心", "浪漫", "想念", "平静"];
+const secretCodeSuggestions = ["蓝色便利店", "雨停之后", "那天的风", "不许忘记"];
 
 const commonCities: Record<string, { id: string; nameEn: string }> = {
   北京: { id: "beijing", nameEn: "Beijing" },
@@ -122,6 +123,7 @@ export default function MemoryEditorPage() {
   const [mood, setMood] = useState("");
   const [tags, setTags] = useState("");
   const [visibility, setVisibility] = useState<"both" | "me">("both");
+  const selectedSecretCodes = useMemo(() => parseTags(tags), [tags]);
 
   useEffect(() => {
     const session = readSession();
@@ -217,6 +219,19 @@ export default function MemoryEditorPage() {
   const removePhoto = (photoId: string) => {
     if (working) return;
     setPhotos((current) => current.filter((photo) => photo.id !== photoId));
+  };
+
+  const toggleSecretCode = (secretCode: string) => {
+    const current = parseTags(tags);
+    const exists = current.includes(secretCode);
+    if (!exists && current.length >= 12) {
+      Taro.showToast({ title: "最多保留 12 个暗号", icon: "none" });
+      return;
+    }
+    const next = exists
+      ? current.filter((item) => item !== secretCode)
+      : [...current, secretCode];
+    setTags(next.join("，"));
   };
 
   const save = async () => {
@@ -425,16 +440,37 @@ export default function MemoryEditorPage() {
               </View>
             </View>
 
-            <View className="editor-field-group">
-              <Text className="editor-label">标签</Text>
+            <View className="editor-field-group secret-code-field">
+              <View className="editor-label-row">
+                <Text className="editor-label">我们的暗号</Text>
+                <Text className="editor-counter">已选 {selectedSecretCodes.length} / 12</Text>
+              </View>
               <Input
                 className="field"
                 maxlength={160}
                 value={tags}
                 onInput={(event) => setTags(event.detail.value)}
-                placeholder="旅行，夜景，第一次"
+                placeholder="例如：那天的风，蓝色便利店"
               />
-              <Text className="editor-help">用逗号或空格分开，最多保留 12 个。</Text>
+              <Text className="editor-help">用逗号或空格分开。只有你们知道，每个暗号指向哪段故事。</Text>
+              <View className="secret-code-suggestions">
+                <Text className="secret-code-suggestions-label">暗号灵感</Text>
+                <View className="secret-code-suggestion-row">
+                  {secretCodeSuggestions.map((secretCode) => {
+                    const active = selectedSecretCodes.includes(secretCode);
+                    return (
+                      <Button
+                        className={active ? "secret-code-suggestion active" : "secret-code-suggestion"}
+                        key={secretCode}
+                        onClick={() => toggleSecretCode(secretCode)}
+                      >
+                        <Text className="secret-code-suggestion-mark">#</Text>
+                        <Text>{secretCode}</Text>
+                      </Button>
+                    );
+                  })}
+                </View>
+              </View>
             </View>
 
             <View className="editor-field-group">
