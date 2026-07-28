@@ -625,6 +625,53 @@ type ServerAuxiliaryItem = {
   updatedAt?: string;
 };
 
+export const memoryFavoriteKind = "memory-favorite";
+
+export type MemoryFavorite = {
+  id: string;
+  memoryId: string;
+  createdAt?: string;
+};
+
+export async function getMemoryFavorites(): Promise<MemoryFavorite[]> {
+  const data = await request<{ items?: ServerAuxiliaryItem[] }>(
+    `/auxiliary-items?kind=${memoryFavoriteKind}`,
+  );
+  return (data.items || []).flatMap((item) => {
+    const memoryId = item.note?.trim() || "";
+    if (!item.id || !memoryId) return [];
+    return [{ id: item.id, memoryId, createdAt: item.createdAt }];
+  });
+}
+
+export async function createMemoryFavorite(input: {
+  id: string;
+  title?: string;
+  date?: string;
+  cityId?: string;
+}): Promise<MemoryFavorite> {
+  const response = await request<{ id: string }>("/auxiliary-items", {
+    method: "POST",
+    data: {
+      kind: memoryFavoriteKind,
+      title: input.title?.trim() || "共同收藏",
+      date: input.date || "",
+      cityId: input.cityId || "",
+      note: input.id,
+    },
+  });
+  return { id: response.id, memoryId: input.id, createdAt: new Date().toISOString() };
+}
+
+export async function deleteMemoryFavorites(favoriteIds: string[]) {
+  await Promise.all(
+    favoriteIds.map((favoriteId) => request<{ ok: true }>(
+      `/auxiliary-items/${encodeURIComponent(favoriteId)}`,
+      { method: "DELETE" },
+    )),
+  );
+}
+
 export const diaryKind = "diary";
 
 export type DiaryHistoryEntry = {

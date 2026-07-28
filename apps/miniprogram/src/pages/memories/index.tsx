@@ -7,11 +7,15 @@ import { AppHeader } from "../../components/AppHeader";
 import { EmptyState, ErrorBanner, LoadingState } from "../../components/PageStates";
 import {
   apiBaseUrl,
+  createMemoryFavorite,
   deleteMemory,
+  deleteMemoryFavorites,
+  getMemoryFavorites,
   getMemories,
   readSession,
   resolveAssetUrl,
 } from "../../lib/api";
+import type { MemoryFavorite } from "../../lib/api";
 import imagesIcon from "../../assets/lucide/images.svg";
 import "./index.scss";
 
@@ -99,11 +103,47 @@ function dailyReunionMemory(memories: Memory[], spaceId: string, now = new Date(
   return { memory, ageLabel, sharedCount: shared.length };
 }
 
+type MemoryViewMode = "cards" | "timeline";
+
+type MemoryTimelineGroup = {
+  key: string;
+  label: string;
+  memories: Memory[];
+};
+
+function groupMemoriesByMonth(memories: Memory[]): MemoryTimelineGroup[] {
+  const groups = new Map<string, MemoryTimelineGroup>();
+  memories.forEach((memory) => {
+    const parts = dateParts(memory.date);
+    const key = parts
+      ? `${parts.year}-${String(parts.month).padStart(2, "0")}`
+      : "unknown";
+    const label = parts ? `${parts.year} 年 ${parts.month} 月` : "日期未明";
+    const current = groups.get(key);
+    if (current) {
+      current.memories.push(memory);
+    } else {
+      groups.set(key, { key, label, memories: [memory] });
+    }
+  });
+  return [...groups.values()];
+}
+
+function timelineDay(value: string) {
+  const parts = dateParts(value);
+  return parts ? String(parts.day).padStart(2, "0") : "--";
+}
+
 export default function MemoriesPage() {
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [favoriteRecords, setFavoriteRecords] = useState<MemoryFavorite[]>([]);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [deletingId, setDeletingId] = useState("");
+  const [favoriteWorkingId, setFavoriteWorkingId] = useState("");
+  const [lastWanderId, setLastWanderId] = useState("");
+  const [viewMode, setViewMode] = useState<MemoryViewMode>("cards");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [cityFilter, setCityFilter] = useState("");
   const [moodFilter, setMoodFilter] = useState("");
@@ -117,8 +157,18 @@ export default function MemoriesPage() {
     setLoading(true);
     setStatus("");
     try {
-      const data = await getMemories();
-      setMemories(flattenMemories(data.memories));
+      const [memoryResult, favoriteResult] = await Promise.allSettled([
+        getMemories(),
+        getMemoryFavorites(),
+      ]);
+      if (memoryResult.status === "rejected") throw memoryResult.reason;
+      setMemories(flattenMemories(memoryResult.value.memories));
+      if (favoriteResult.status === "fulfilled") {
+        setFavoriteRecords(favoriteResult.value);
+      } else {
+        setFavoriteRecords([]);
+        setStatus("回忆已同步，但共同收藏暂时没有同步成功。");
+      }
     } catch {
       setStatus("暂时没有同步到回忆，请检查网络后再试。");
     } finally {
@@ -137,6 +187,14 @@ export default function MemoriesPage() {
   const sorted = useMemo(
     () => [...memories].sort((a, b) => b.date.localeCompare(a.date)),
     [memories],
+  );
+  const favoriteMemoryIds = useMemo(
+    () => new Set(favoriteRecords.map((favorite) => favorite.memoryId)),
+    [favoriteRecords],
+  );
+  const favoriteCount = useMemo(
+    () => sorted.filter((memory) => favoriteMemoryIds.has(memory.id)).length,
+    [favoriteMemoryIds, sorted],
   );
   const session = readSession();
   const dailyReunion = useMemo(
@@ -171,6 +229,7 @@ export default function MemoriesPage() {
   const filtered = useMemo(() => {
     const normalizedQuery = query.trim().toLocaleLowerCase();
     return sorted.filter((memory) => {
+      if (favoritesOnly && !favoriteMemoryIds.has(memory.id)) return false;
       if (cityFilter && memory.cityId !== cityFilter) return false;
       if (moodFilter && memory.mood !== moodFilter) return false;
       if (tagFilter && !memory.tags?.includes(tagFilter)) return false;
@@ -189,8 +248,9 @@ export default function MemoriesPage() {
         .toLocaleLowerCase();
       return searchable.includes(normalizedQuery);
     });
-  }, [cityFilter, moodFilter, query, sorted, tagFilter]);
-  const hasFilters = Boolean(query.trim() || cityFilter || moodFilter || tagFilter);
+  }, [cityFilter, favoriteMemoryIds, favoritesOnly, moodFilter, query, sorted, tagFilter]);
+  const timelineGroups = useMemo(() => groupMemoriesByMonth(filtered), [filtered]);
+  const hasFilters = Boolean(query.trim() || cityFilter || moodFilter || tagFilter || favoritesOnly);
   const selectedCityIndex = Math.max(0, cityOptions.findIndex((city) => city.id === cityFilter) + 1);
   const selectedMoodIndex = Math.max(0, moodOptions.findIndex((mood) => mood === moodFilter) + 1);
   const selectedTagIndex = Math.max(0, tagOptions.findIndex((tag) => tag === tagFilter) + 1);
@@ -215,6 +275,7 @@ export default function MemoriesPage() {
     setCityFilter("");
     setMoodFilter("");
     setTagFilter("");
+    setFavoritesOnly(false);
   };
 
   const openEditor = (memoryId?: string) => {
@@ -224,6 +285,46 @@ export default function MemoriesPage() {
 
   const openDetail = (memoryId: string) => {
     Taro.navigateTo({ url: `/pages/memory-detail/index?id=${encodeURIComponent(memoryId)}` });
+  };
+
+  const toggleFavorite = async (memory: Memory) => {
+    if (favoriteWorkingId) return;
+    const records = favoriteRecords.filter((favorite) => favorite.memoryId === memory.id);
+    setFavoriteWorkingId(memory.id);
+    setStatus("");
+    try {
+      if (records.length > 0) {
+        await deleteMemoryFavorites(records.map((favorite) => favorite.id));
+        setFavoriteRecords((current) => current.filter((favorite) => favorite.memoryId !== memory.id));
+        Taro.showToast({ title: "已取消共同收藏", icon: "success" });
+      } else {
+        const favorite = await createMemoryFavorite({
+          id: memory.id,
+          title: memory.title || memory.city || "共同收藏",
+          date: memory.date,
+          cityId: memory.cityId,
+        });
+        setFavoriteRecords((current) => [...current, favorite]);
+        Taro.showToast({ title: "已加入共同收藏", icon: "success" });
+      }
+    } catch {
+      setStatus("共同收藏没有保存成功，请检查网络后再试。");
+    } finally {
+      setFavoriteWorkingId("");
+    }
+  };
+
+  const wanderMemory = () => {
+    if (filtered.length === 0) {
+      Taro.showToast({ title: "当前没有可漫游的回忆", icon: "none" });
+      return;
+    }
+    const candidates = filtered.length > 1
+      ? filtered.filter((memory) => memory.id !== lastWanderId)
+      : filtered;
+    const memory = candidates[Math.floor(Math.random() * candidates.length)] || filtered[0];
+    setLastWanderId(memory.id);
+    openDetail(memory.id);
   };
 
   const removeMemory = async (memory: Memory) => {
@@ -302,6 +403,40 @@ export default function MemoriesPage() {
         </Button>
       )}
 
+      <View className="memory-browse card">
+        <View className="memory-browse-heading">
+          <View className="memory-browse-copy">
+            <Text className="memory-browse-title">换个方式重温</Text>
+            <Text className="memory-browse-subtitle">沿时间慢慢看，或让一段故事找到你。</Text>
+          </View>
+          <Button className="memory-wander" onClick={wanderMemory}>
+            <Text className="memory-wander-mark">↝</Text>
+            <Text>随机漫游</Text>
+          </Button>
+        </View>
+        <View className="memory-view-controls">
+          <Button
+            className={viewMode === "cards" ? "memory-view-control active" : "memory-view-control"}
+            onClick={() => setViewMode("cards")}
+          >
+            卡片
+          </Button>
+          <Button
+            className={viewMode === "timeline" ? "memory-view-control active" : "memory-view-control"}
+            onClick={() => setViewMode("timeline")}
+          >
+            时间线
+          </Button>
+          <Button
+            className={favoritesOnly ? "memory-view-control favorite active" : "memory-view-control favorite"}
+            onClick={() => setFavoritesOnly((current) => !current)}
+          >
+            <Text className="memory-view-heart">♥</Text>
+            <Text>收藏 {favoriteCount}</Text>
+          </Button>
+        </View>
+      </View>
+
       <View className="memory-search card">
         <View className="memory-search-input-row">
           <Input
@@ -367,17 +502,81 @@ export default function MemoriesPage() {
         <LoadingState />
       ) : filtered.length === 0 && !status ? (
         <EmptyState
-          title={hasFilters ? "没有匹配的回忆" : "第一段回忆还没写下"}
-          copy={hasFilters ? "换个关键词或清空筛选条件再试试。" : "选几张照片，把那天的地点和故事留在这里。"}
-          actionLabel={hasFilters ? undefined : "记录第一段回忆"}
-          onAction={hasFilters ? undefined : () => openEditor()}
+          title={favoritesOnly ? "共同收藏还是空的" : hasFilters ? "没有匹配的回忆" : "第一段回忆还没写下"}
+          copy={favoritesOnly ? "点亮回忆卡片上的爱心，两个人都会在这里看到。" : hasFilters ? "换个关键词或清空筛选条件再试试。" : "选几张照片，把那天的地点和故事留在这里。"}
+          actionLabel={favoritesOnly ? "查看全部回忆" : hasFilters ? undefined : "记录第一段回忆"}
+          onAction={favoritesOnly ? clearFilters : hasFilters ? undefined : () => openEditor()}
         />
+      ) : viewMode === "timeline" ? (
+        <View className="memory-timeline">
+          {timelineGroups.map((group) => (
+            <View className="memory-timeline-group" key={group.key}>
+              <View className="memory-timeline-heading">
+                <Text className="memory-timeline-month">{group.label}</Text>
+                <Text className="memory-timeline-count">{group.memories.length} 段</Text>
+              </View>
+              <View className="memory-timeline-items">
+                {group.memories.map((memory) => {
+                  const isFavorite = favoriteMemoryIds.has(memory.id);
+                  const cover = memory.photos?.[0] || memory.image;
+                  return (
+                    <View className="memory-timeline-item" key={memory.id}>
+                      <View className="memory-timeline-rail" aria-hidden="true">
+                        <View className="memory-timeline-dot" />
+                      </View>
+                      <Button className="memory-timeline-main" onClick={() => openDetail(memory.id)}>
+                        {cover ? (
+                          <Image
+                            className="memory-timeline-cover"
+                            src={resolveAssetUrl(cover, apiBaseUrl)}
+                            mode="aspectFill"
+                            lazyLoad
+                          />
+                        ) : (
+                          <View className="memory-timeline-cover memory-timeline-placeholder">
+                            <Text>{memory.city?.slice(0, 1) || "忆"}</Text>
+                          </View>
+                        )}
+                        <View className="memory-timeline-copy">
+                          <Text className="memory-timeline-day">{timelineDay(memory.date)} 日</Text>
+                          <Text className="memory-timeline-title">
+                            {memory.title || memory.city || "未命名回忆"}
+                          </Text>
+                          <Text className="memory-timeline-place">
+                            {[memory.city, memory.placeName].filter(Boolean).join(" · ") || "留在那一天的故事"}
+                          </Text>
+                        </View>
+                      </Button>
+                      <Button
+                        className={isFavorite ? "memory-timeline-favorite active" : "memory-timeline-favorite"}
+                        aria-label={isFavorite ? "取消共同收藏" : "加入共同收藏"}
+                        disabled={favoriteWorkingId === memory.id}
+                        onClick={() => void toggleFavorite(memory)}
+                      >
+                        {isFavorite ? "♥" : "♡"}
+                      </Button>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+        </View>
       ) : (
         <View className="memory-list">
           {filtered.map((memory) => {
             const canManage = Boolean(currentUserId && memory.createdById === currentUserId);
+            const isFavorite = favoriteMemoryIds.has(memory.id);
             return (
               <View className="memory-card card" key={memory.id}>
+                <Button
+                  className={isFavorite ? "memory-favorite active" : "memory-favorite"}
+                  aria-label={isFavorite ? "取消共同收藏" : "加入共同收藏"}
+                  disabled={favoriteWorkingId === memory.id}
+                  onClick={() => void toggleFavorite(memory)}
+                >
+                  {isFavorite ? "♥" : "♡"}
+                </Button>
                 {memory.image ? (
                   <Image
                     className="memory-cover"
