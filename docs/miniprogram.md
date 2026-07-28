@@ -10,6 +10,8 @@
 TARO_APP_API_BASE_URL=https://memory.example.com/api/v1 npm run miniprogram:build
 ```
 
+生产构建会拒绝空地址、HTTP、localhost 和缺少 `/api/v1` 的地址，并在构建结束后检查产物，避免把本机地址上传到微信。
+
 开发时也可以指向本机后端：
 
 ```bash

@@ -1,9 +1,13 @@
 import { defineConfig, type UserConfigExport } from "@tarojs/cli";
 
-declare const process: { env: { TARO_APP_API_BASE_URL?: string } };
+declare const process: { env: { NODE_ENV?: string; TARO_APP_API_BASE_URL?: string } };
 
 export default defineConfig(async () => {
-  const apiBaseUrl = process.env.TARO_APP_API_BASE_URL || "http://localhost:8080/api/v1";
+  const configuredApiBaseUrl = process.env.TARO_APP_API_BASE_URL?.trim();
+  if (process.env.NODE_ENV === "production" && !configuredApiBaseUrl) {
+    throw new Error("TARO_APP_API_BASE_URL is required for a production mini program build.");
+  }
+  const apiBaseUrl = configuredApiBaseUrl || "http://localhost:8080/api/v1";
   const config: UserConfigExport = {
     projectName: "our-memories-miniprogram",
     date: "2026-06-09",
