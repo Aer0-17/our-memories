@@ -1,0 +1,499 @@
+@use "../../styles/tokens" as *;
+
+.yearbook-page,
+.yearbook-content,
+.yearbook-intro-copy,
+.yearbook-overview,
+.yearbook-overview-lead,
+.yearbook-overview-copy,
+.yearbook-section,
+.yearbook-section-copy,
+.yearbook-mark,
+.yearbook-mark-items,
+.yearbook-highlight-copy,
+.yearbook-story-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.yearbook-page {
+  gap: $space-4;
+  padding-bottom: calc(48px + env(safe-area-inset-bottom));
+}
+
+.yearbook-content {
+  gap: $space-4;
+}
+
+.yearbook-intro {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: $space-4;
+}
+
+.yearbook-intro-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.yearbook-kicker {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.yearbook-title {
+  color: var(--color-ink);
+  font-size: $text-2xl;
+  font-weight: 700;
+  line-height: 32px;
+  word-break: break-word;
+}
+
+.yearbook-subtitle {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.yearbook-year-scroll,
+.yearbook-month-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.yearbook-year-row,
+.yearbook-month-row {
+  display: flex;
+}
+
+.yearbook-year-row {
+  gap: $space-2;
+  min-height: 48px;
+}
+
+.yearbook-year {
+  min-width: 80px;
+  min-height: 48px;
+  flex-shrink: 0;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 48px;
+  padding: 0 $space-4;
+  transition: background $duration-fast ease, border-color $duration-fast ease;
+}
+
+.yearbook-year.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+}
+
+.yearbook-overview {
+  gap: $space-4;
+  overflow: hidden;
+  background: var(--color-surface-warm);
+  padding: $space-5 $space-4;
+}
+
+.yearbook-overview-lead {
+  flex-direction: row;
+  align-items: center;
+  gap: $space-3;
+}
+
+.yearbook-overview-value {
+  flex-shrink: 0;
+  color: var(--color-accent-deep);
+  font-size: $text-2xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.yearbook-overview-copy {
+  gap: $space-1;
+}
+
+.yearbook-overview-label {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.yearbook-overview-note {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.yearbook-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface-raised);
+}
+
+.yearbook-metric {
+  display: flex;
+  min-height: 72px;
+  flex-direction: column;
+  justify-content: center;
+  gap: $space-1;
+  padding: $space-3 $space-4;
+}
+
+.yearbook-metric:nth-child(odd) {
+  border-right: 1px solid var(--color-line);
+}
+
+.yearbook-metric:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--color-line);
+}
+
+.yearbook-metric-value {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.yearbook-metric-label {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.yearbook-section {
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.yearbook-section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.yearbook-section-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.yearbook-section-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.yearbook-section-subtitle {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.yearbook-section-action {
+  min-width: 80px;
+  min-height: 44px;
+  flex-shrink: 0;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.yearbook-month-row {
+  gap: $space-2;
+  min-height: 136px;
+}
+
+.yearbook-month {
+  display: flex;
+  width: 48px;
+  min-width: 48px;
+  min-height: 136px;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-2;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  color: var(--color-muted);
+  padding: $space-2 0;
+  transition: background $duration-fast ease, border-color $duration-fast ease;
+}
+
+.yearbook-month.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+}
+
+.yearbook-month-count,
+.yearbook-month-label {
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.yearbook-month-count {
+  font-weight: 700;
+}
+
+.yearbook-month-track {
+  display: flex;
+  width: 16px;
+  height: 64px;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.yearbook-month-bar {
+  width: 8px;
+  border-radius: $radius-sm;
+  background: var(--color-line);
+}
+
+.yearbook-month-bar.filled {
+  background: var(--color-accent);
+}
+
+.yearbook-story-list,
+.yearbook-highlight-list {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.yearbook-story,
+.yearbook-highlight {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: $space-3;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: $space-3;
+  text-align: left;
+}
+
+.yearbook-story:last-child,
+.yearbook-highlight:last-child {
+  border-bottom: 0;
+}
+
+.yearbook-story {
+  min-height: 96px;
+}
+
+.yearbook-story-cover {
+  display: flex;
+  width: 72px;
+  height: 72px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+}
+
+.yearbook-story-placeholder {
+  color: var(--color-blue);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.yearbook-story-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+.yearbook-story-date,
+.yearbook-highlight-label {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.yearbook-story-title,
+.yearbook-highlight-title {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yearbook-story-place,
+.yearbook-highlight-meta {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yearbook-story-arrow,
+.yearbook-highlight-arrow {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: $text-2xl;
+  line-height: 32px;
+}
+
+.yearbook-month-empty {
+  display: flex;
+  min-height: 112px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border: 1px dashed var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  padding: $space-4;
+  text-align: center;
+}
+
+.yearbook-month-empty-mark {
+  color: var(--color-accent);
+  font-size: $text-2xl;
+  line-height: 32px;
+}
+
+.yearbook-month-empty-copy {
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 20px;
+}
+
+.yearbook-mark-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $space-3;
+}
+
+.yearbook-mark {
+  gap: $space-3;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  padding: $space-3;
+}
+
+.yearbook-mark-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.yearbook-mark-items {
+  gap: $space-2;
+}
+
+.yearbook-mark-item {
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  border-radius: $radius-sm;
+  background: var(--color-surface);
+  padding: $space-1 $space-2;
+}
+
+.yearbook-mark-label,
+.yearbook-mark-count,
+.yearbook-mark-empty {
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.yearbook-mark-label {
+  overflow: hidden;
+  color: var(--color-ink-soft);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yearbook-mark-count {
+  flex-shrink: 0;
+  color: var(--color-gold);
+  font-weight: 700;
+}
+
+.yearbook-mark-empty {
+  color: var(--color-muted);
+}
+
+.yearbook-highlight {
+  min-height: 88px;
+}
+
+.yearbook-highlight-index {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.yearbook-highlight-copy {
+  min-width: 0;
+  flex: 1;
+  gap: $space-1;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .yearbook-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .yearbook-metric:nth-child(odd),
+  .yearbook-metric:nth-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .yearbook-metric:not(:last-child) {
+    border-right: 1px solid var(--color-line);
+  }
+
+  .yearbook-mark-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

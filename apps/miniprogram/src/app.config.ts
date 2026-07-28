@@ -5,6 +5,7 @@ export default defineAppConfig({
     "pages/memory-editor/index",
     "pages/memory-detail/index",
     "pages/memory-trash/index",
+    "pages/yearbook/index",
     "pages/map/index",
     "pages/anniversaries/index",
     "pages/anniversary-editor/index",

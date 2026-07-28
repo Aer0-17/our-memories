@@ -7,6 +7,7 @@ import avatarUs from "../../assets/illustrations/avatar-us.png";
 import whisperIcon from "../../assets/illustrations/icon-message-circle.png";
 import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
 import diaryIcon from "../../assets/lucide/calendar-days.svg";
+import yearbookIcon from "../../assets/lucide/images.svg";
 import trashIcon from "../../assets/lucide/trash-2.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
@@ -112,6 +113,16 @@ export default function SettingsPage() {
             <View className="action-copy">
               <Text className="action-title">双人日记</Text>
               <Text className="action-subtitle">一起记录还没归档的片段</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
+          <Button className="settings-action" onClick={() => openPage("/pages/yearbook/index")}>
+            <View className="action-icon-box action-icon-red">
+              <Image className="action-icon" src={yearbookIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">回忆年鉴</Text>
+              <Text className="action-subtitle">沿十二个月，重看这一年的故事</Text>
             </View>
             <Text className="action-arrow">›</Text>
           </Button>
