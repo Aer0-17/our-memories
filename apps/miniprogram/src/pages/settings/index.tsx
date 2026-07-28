@@ -7,7 +7,7 @@ import avatarUs from "../../assets/illustrations/avatar-us.png";
 import whisperIcon from "../../assets/illustrations/icon-message-circle.png";
 import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
 import diaryIcon from "../../assets/lucide/calendar-days.svg";
-import yearbookIcon from "../../assets/lucide/images.svg";
+import imagesIcon from "../../assets/lucide/images.svg";
 import trashIcon from "../../assets/lucide/trash-2.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
@@ -118,11 +118,21 @@ export default function SettingsPage() {
           </Button>
           <Button className="settings-action" onClick={() => openPage("/pages/yearbook/index")}>
             <View className="action-icon-box action-icon-red">
-              <Image className="action-icon" src={yearbookIcon} mode="aspectFit" />
+              <Image className="action-icon" src={imagesIcon} mode="aspectFit" />
             </View>
             <View className="action-copy">
               <Text className="action-title">回忆年鉴</Text>
               <Text className="action-subtitle">沿十二个月，重看这一年的故事</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
+          <Button className="settings-action" onClick={() => openPage("/pages/photo-wall/index")}>
+            <View className="action-icon-box action-icon-blue">
+              <Image className="action-icon" src={imagesIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">共同照片墙</Text>
+              <Text className="action-subtitle">把散落在回忆里的照片放在一起</Text>
             </View>
             <Text className="action-arrow">›</Text>
           </Button>

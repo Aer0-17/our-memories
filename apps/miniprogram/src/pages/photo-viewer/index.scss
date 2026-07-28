@@ -1,0 +1,178 @@
+@use "../../styles/tokens" as *;
+
+.photo-viewer,
+.photo-viewer-header,
+.photo-viewer-slide,
+.photo-viewer-footer,
+.photo-viewer-copy,
+.photo-viewer-actions {
+  display: flex;
+}
+
+.photo-viewer {
+  width: 100vw;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--color-ink);
+  color: var(--color-white);
+}
+
+.photo-viewer-header {
+  min-height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  padding: calc(env(safe-area-inset-top) + #{$space-2}) $space-4 $space-2;
+}
+
+.photo-viewer-close,
+.photo-viewer-header-space {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.photo-viewer-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-size: $text-2xl;
+  line-height: 48px;
+  padding: 0;
+}
+
+.photo-viewer-count {
+  color: var(--color-white);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.photo-viewer-swiper {
+  width: 100%;
+  height: calc(100vh - 240px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 160px;
+  flex: 1;
+}
+
+.photo-viewer-slide {
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-viewer-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo-viewer-footer {
+  min-height: 176px;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: $space-4;
+  border-top: 1px solid var(--color-overlay);
+  background: var(--color-ink);
+  padding: $space-4 $space-4 calc(env(safe-area-inset-bottom) + #{$space-4});
+}
+
+.photo-viewer-copy {
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.photo-viewer-date,
+.photo-viewer-place {
+  color: var(--color-label-shadow);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.photo-viewer-title {
+  overflow: hidden;
+  color: var(--color-white);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-viewer-place {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.photo-viewer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.photo-viewer-action {
+  min-width: 0;
+  min-height: 48px;
+  border-radius: $radius-md;
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 48px;
+  padding: 0 $space-3;
+}
+
+.photo-viewer-action.secondary {
+  border: 1px solid var(--color-surface-raised);
+  background: var(--color-transparent);
+  color: var(--color-white);
+}
+
+.photo-viewer-action.primary {
+  background: var(--color-accent);
+  color: var(--color-white);
+}
+
+.photo-viewer-missing {
+  align-items: center;
+  justify-content: center;
+  gap: $space-3;
+  padding: $space-5;
+  text-align: center;
+}
+
+.photo-viewer-missing-mark {
+  color: var(--color-label-shadow);
+  font-size: $text-2xl;
+  line-height: 32px;
+}
+
+.photo-viewer-missing-title {
+  color: var(--color-white);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.photo-viewer-missing-copy {
+  color: var(--color-label-shadow);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.photo-viewer-missing-action {
+  width: 100%;
+  min-height: 48px;
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 48px;
+  margin-top: $space-2;
+}
