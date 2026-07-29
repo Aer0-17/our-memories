@@ -1,0 +1,219 @@
+@use "../../styles/tokens" as *;
+
+.questions-page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.questions-hero {
+  display: flex;
+  min-height: 176px;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  border-radius: $radius-md;
+  background: var(--color-accent-soft);
+  padding: $space-5 $space-4;
+}
+
+.questions-hero-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.questions-kicker,
+.question-card-state {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.questions-title {
+  color: var(--color-ink);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+  word-break: break-word;
+}
+
+.questions-subtitle {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.questions-seal {
+  display: flex;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: $text-2xl;
+  line-height: 64px;
+}
+
+.questions-stats {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  align-items: center;
+  padding: $space-4;
+}
+
+.questions-stat {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-1;
+  text-align: center;
+}
+
+.questions-stat-value {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.questions-stat-label,
+.question-card-date,
+.question-card-count {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.questions-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-line);
+}
+
+.questions-create {
+  min-height: 48px;
+  line-height: 48px;
+}
+
+.questions-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  padding: $space-1;
+}
+
+.questions-filter {
+  min-height: 44px;
+  border-radius: $radius-sm;
+  background: var(--color-transparent);
+  color: var(--color-muted);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-2;
+}
+
+.questions-filter.active {
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+  color: var(--color-ink);
+}
+
+.question-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding-bottom: $space-5;
+}
+
+.question-card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 168px;
+  flex-direction: column;
+  gap: $space-3;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+  color: var(--color-ink);
+  padding: $space-4;
+  text-align: left;
+}
+
+.question-card.revealed {
+  background: var(--color-green-soft);
+}
+
+.question-card.revealed .question-card-state {
+  color: var(--color-green);
+}
+
+.question-card-topline,
+.question-card-footer {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.question-card-prompt {
+  padding-right: $space-5;
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+  word-break: break-word;
+}
+
+.question-card-footer {
+  margin-top: auto;
+}
+
+.question-answer-progress {
+  height: 8px;
+  min-width: 80px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+}
+
+.question-answer-progress-fill {
+  height: 100%;
+  border-radius: $radius-sm;
+  background: var(--color-accent);
+  transition: width $duration-fast ease;
+}
+
+.question-card.revealed .question-answer-progress-fill {
+  background: var(--color-green);
+}
+
+.question-card-arrow {
+  position: absolute;
+  top: 64px;
+  right: $space-4;
+  color: var(--color-muted);
+  font-size: $text-xl;
+  line-height: 32px;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .question-card-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

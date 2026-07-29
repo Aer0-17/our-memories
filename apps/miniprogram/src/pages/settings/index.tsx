@@ -9,6 +9,7 @@ import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
 import diaryIcon from "../../assets/lucide/calendar-days.svg";
 import imagesIcon from "../../assets/lucide/images.svg";
 import wishesIcon from "../../assets/lucide/list-checks.svg";
+import questionsIcon from "../../assets/lucide/message-circle.svg";
 import trashIcon from "../../assets/lucide/trash-2.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
@@ -134,6 +135,16 @@ export default function SettingsPage() {
             <View className="action-copy">
               <Text className="action-title">共同旅行计划</Text>
               <Text className="action-subtitle">一起排行程，也一起完成沿途打卡</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
+          <Button className="settings-action" onClick={() => openPage("/pages/questions/index")}>
+            <View className="action-icon-box action-icon-red">
+              <Image className="action-icon" src={questionsIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">心动问答</Text>
+              <Text className="action-subtitle">各自写下，等两份答案一起揭晓</Text>
             </View>
             <Text className="action-arrow">›</Text>
           </Button>

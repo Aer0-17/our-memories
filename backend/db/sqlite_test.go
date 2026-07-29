@@ -32,6 +32,8 @@ func TestMigrateAutoMigrateCreatesCoreSchema(t *testing.T) {
 		"memories",
 		"memory_photos",
 		"notifications",
+		"couple_questions",
+		"couple_question_answers",
 		"relationship_signals",
 		"push_devices",
 	} {
@@ -55,6 +57,8 @@ func TestMigrateAutoMigrateCreatesCoreSchema(t *testing.T) {
 	assertColumnExists(t, "anniversary_cards", "bgm_preset")
 	assertIndexExists(t, "idx_memories_space_date_order")
 	assertIndexExists(t, "idx_notifications_user_read")
+	assertIndexExists(t, "idx_couple_questions_space_created")
+	assertIndexExists(t, "idx_couple_question_answers_question_user")
 	assertIndexExists(t, "idx_relationship_signals_space_expires")
 }
 

@@ -67,6 +67,12 @@ func notificationMessage(event DomainEvent) (string, string, bool) {
 		return "地图角色已更新", "TA 生成了新的地图像素角色。", true
 	case TripGuideCreated:
 		return "新的旅行计划", "TA 新建了一份共同旅行计划。", true
+	case CoupleQuestionCreated:
+		return "新的心动问答", "TA 留下了一道题，等你写下自己的答案。", true
+	case CoupleQuestionAnswered:
+		return "TA 已经回答", "TA 的答案已经封存，轮到你了。", true
+	case CoupleQuestionRevealed:
+		return "答案一起揭晓了", "你们已经写下两份答案，去看看彼此怎么说。", true
 	default:
 		return "", "", false
 	}
@@ -88,6 +94,8 @@ func targetType(eventType Type) string {
 		return "settings"
 	case TripGuideCreated, TripGuideUpdated, TripGuideDeleted:
 		return "trip_guide"
+	case CoupleQuestionCreated, CoupleQuestionAnswered, CoupleQuestionRevealed, CoupleQuestionDeleted:
+		return "couple_question"
 	default:
 		return ""
 	}

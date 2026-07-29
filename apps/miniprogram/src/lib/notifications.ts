@@ -31,13 +31,24 @@ export function notificationTarget(item: NotificationItem): NotificationTarget |
       tab: false,
     };
   }
+  if (item.targetType === "couple_question") {
+    if (!item.targetId) return { url: "/pages/questions/index", tab: false };
+    return {
+      url: `/pages/question-detail/index?id=${encodeURIComponent(item.targetId)}`,
+      tab: false,
+    };
+  }
   if (item.targetType === "settings") return { url: "/pages/settings/index", tab: true };
   return null;
 }
 
 export function notificationCategory(item: NotificationItem): NotificationCategory {
   if (item.targetType === "memory") return "memory";
-  if (item.targetType === "whisper" || item.targetType === "signal") return "message";
+  if (
+    item.targetType === "whisper" ||
+    item.targetType === "signal" ||
+    item.targetType === "couple_question"
+  ) return "message";
   if (
     item.targetType === "time_capsule" ||
     item.targetType === "anniversary" ||

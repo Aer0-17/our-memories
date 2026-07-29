@@ -85,6 +85,30 @@ export type TripGuide = {
   updatedAt?: string;
 };
 
+export type CoupleQuestionAnswer = {
+  userId: string;
+  displayName: string;
+  content: string;
+  answeredAt: string;
+  isMine: boolean;
+};
+
+export type CoupleQuestion = {
+  id: string;
+  prompt: string;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  revealedAt?: string;
+  revealed: boolean;
+  answeredByMe: boolean;
+  partnerAnswered: boolean;
+  answerCount: number;
+  requiredAnswers: number;
+  myAnswer?: CoupleQuestionAnswer;
+  answers?: CoupleQuestionAnswer[];
+};
+
 export type WhisperReply = {
   id: string;
   whisperId: string;
@@ -1027,6 +1051,30 @@ export function updateTripGuide(id: string, payload: TripGuidePayload) {
 
 export function deleteTripGuide(id: string) {
   return request<{ ok: true }>(`/trip-guides/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function getCoupleQuestions() {
+  return request<{ questions: CoupleQuestion[] }>("/couple-questions");
+}
+
+export function createCoupleQuestion(prompt: string) {
+  return request<{ question: CoupleQuestion }>("/couple-questions", {
+    method: "POST",
+    data: { prompt },
+  });
+}
+
+export function answerCoupleQuestion(id: string, content: string) {
+  return request<{ question: CoupleQuestion }>(`/couple-questions/${encodeURIComponent(id)}/answer`, {
+    method: "PUT",
+    data: { content },
+  });
+}
+
+export function deleteCoupleQuestion(id: string) {
+  return request<{ ok: true }>(`/couple-questions/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

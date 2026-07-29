@@ -159,6 +159,11 @@ func main() {
 			auth.DELETE("/trip-guide-drafts/:id", handlers.DeleteTripDraft)
 			auth.POST("/trip-guide-drafts/:id/accept", handlers.AcceptTripDraft)
 
+			auth.GET("/couple-questions", handlers.GetCoupleQuestions)
+			auth.POST("/couple-questions", handlers.CreateCoupleQuestion)
+			auth.PUT("/couple-questions/:id/answer", handlers.AnswerCoupleQuestion)
+			auth.DELETE("/couple-questions/:id", handlers.DeleteCoupleQuestion)
+
 			auth.POST("/ai/memory-polish", handlers.PolishMemory)
 			auth.POST("/ai/memory-search", handlers.SearchMemoriesByIntent)
 			auth.POST("/activation-codes", handlers.CreateActivationCode)

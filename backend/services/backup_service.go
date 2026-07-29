@@ -144,6 +144,17 @@ var backupTableSpecs = []repositories.BackupTableSpec{
 		Query: `SELECT * FROM users WHERE space_id = ? ORDER BY username, id`,
 	},
 	{
+		Name:  "couple_questions",
+		Query: `SELECT * FROM couple_questions WHERE space_id = ? ORDER BY created_at, id`,
+	},
+	{
+		Name: "couple_question_answers",
+		Query: `SELECT a.* FROM couple_question_answers a
+			JOIN couple_questions q ON q.id = a.question_id
+			WHERE q.space_id = ?
+			ORDER BY a.question_id, a.answered_at, a.id`,
+	},
+	{
 		Name:  "memories",
 		Query: `SELECT * FROM memories WHERE space_id = ? ORDER BY date, created_at, id`,
 	},
@@ -203,6 +214,8 @@ var backupTableSpecs = []repositories.BackupTableSpec{
 
 var backupImportOrder = []string{
 	"users",
+	"couple_questions",
+	"couple_question_answers",
 	"memories",
 	"memory_photos",
 	"anniversary_cards",

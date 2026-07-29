@@ -243,6 +243,28 @@ type Notification struct {
 
 func (Notification) TableName() string { return "notifications" }
 
+type CoupleQuestion struct {
+	ID          string `gorm:"column:id;primaryKey;type:TEXT"`
+	SpaceID     string `gorm:"column:space_id;type:TEXT"`
+	Prompt      string `gorm:"column:prompt;type:TEXT"`
+	CreatedByID string `gorm:"column:created_by_id;type:TEXT"`
+	RevealedAt  string `gorm:"column:revealed_at;type:DATETIME"`
+	CreatedAt   string `gorm:"column:created_at;type:DATETIME;default:CURRENT_TIMESTAMP"`
+	UpdatedAt   string `gorm:"column:updated_at;type:DATETIME;default:CURRENT_TIMESTAMP"`
+}
+
+func (CoupleQuestion) TableName() string { return "couple_questions" }
+
+type CoupleQuestionAnswer struct {
+	ID         string `gorm:"column:id;primaryKey;type:TEXT"`
+	QuestionID string `gorm:"column:question_id;type:TEXT;uniqueIndex:idx_couple_question_answers_question_user"`
+	UserID     string `gorm:"column:user_id;type:TEXT;uniqueIndex:idx_couple_question_answers_question_user"`
+	Content    string `gorm:"column:content;type:TEXT"`
+	AnsweredAt string `gorm:"column:answered_at;type:DATETIME;default:CURRENT_TIMESTAMP"`
+}
+
+func (CoupleQuestionAnswer) TableName() string { return "couple_question_answers" }
+
 type RelationshipSignal struct {
 	ID           string `gorm:"column:id;primaryKey;type:TEXT"`
 	SpaceID      string `gorm:"column:space_id;type:TEXT"`
@@ -274,6 +296,8 @@ func AutoMigrate(db *gorm.DB) error {
 		&AuditLog{},
 		&PushDevice{},
 		&Notification{},
+		&CoupleQuestion{},
+		&CoupleQuestionAnswer{},
 		&RelationshipSignal{},
 	}
 

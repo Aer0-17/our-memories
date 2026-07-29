@@ -77,3 +77,25 @@ func TestNotificationPublisherRoutesTripGuides(t *testing.T) {
 		t.Fatalf("expected trip notification copy, got %#v", store)
 	}
 }
+
+func TestNotificationPublisherRoutesCoupleQuestions(t *testing.T) {
+	for _, eventType := range []Type{CoupleQuestionCreated, CoupleQuestionAnswered, CoupleQuestionRevealed} {
+		store := &fakeNotificationStore{}
+		publisher := NewNotificationPublisher(store, fakeSpaceUsers{userIDs: []string{"user-2"}})
+
+		if err := publisher.Publish(context.Background(), DomainEvent{
+			Type:     eventType,
+			SpaceID:  "space-1",
+			ActorID:  "user-1",
+			TargetID: "question-1",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if store.eventType != string(eventType) || store.targetType != "couple_question" || store.targetID != "question-1" {
+			t.Fatalf("unexpected couple question notification for %s: %#v", eventType, store)
+		}
+		if store.title == "" || store.body == "" {
+			t.Fatalf("expected couple question notification copy for %s, got %#v", eventType, store)
+		}
+	}
+}

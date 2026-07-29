@@ -114,6 +114,7 @@ func Migrate() {
 
 	createIndex("idx_notifications_user_read", "notifications", "space_id, user_id, is_read, created_at DESC")
 	createIndex("idx_notifications_cleanup", "notifications", "is_read, created_at")
+	createIndex("idx_couple_questions_space_created", "couple_questions", "space_id, created_at DESC")
 
 	createIndex("idx_relationship_signals_space_expires", "relationship_signals", "space_id, expires_at")
 }

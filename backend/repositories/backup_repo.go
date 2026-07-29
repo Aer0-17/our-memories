@@ -150,6 +150,7 @@ func deleteSpaceForBackupImport(tx *gorm.DB, spaceID string) error {
 		return nil
 	}
 	statements := []string{
+		`DELETE FROM couple_question_answers WHERE question_id IN (SELECT id FROM couple_questions WHERE space_id = ?)`,
 		`DELETE FROM memory_photos WHERE memory_id IN (SELECT id FROM memories WHERE space_id = ?)`,
 		`DELETE FROM anniversary_photos WHERE anniversary_card_id IN (SELECT id FROM anniversary_cards WHERE space_id = ?)`,
 		`DELETE FROM time_capsule_photos WHERE time_capsule_id IN (SELECT id FROM time_capsules WHERE space_id = ?)`,
@@ -157,6 +158,7 @@ func deleteSpaceForBackupImport(tx *gorm.DB, spaceID string) error {
 		`DELETE FROM orders WHERE space_id = ?`,
 		`DELETE FROM settings WHERE space_id = ?`,
 		`DELETE FROM auxiliary_items WHERE space_id = ?`,
+		`DELETE FROM couple_questions WHERE space_id = ?`,
 		`DELETE FROM time_capsules WHERE space_id = ?`,
 		`DELETE FROM whispers WHERE space_id = ?`,
 		`DELETE FROM anniversary_cards WHERE space_id = ?`,
