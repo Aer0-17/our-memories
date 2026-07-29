@@ -1,0 +1,357 @@
+@use "../../styles/tokens" as *;
+
+.wishes-page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.wishes-hero {
+  display: flex;
+  min-height: 136px;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  border-radius: $radius-md;
+  background: var(--color-surface-warm);
+  padding: $space-5 $space-4;
+}
+
+.wishes-hero-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.wishes-kicker {
+  color: var(--color-gold);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.wishes-title {
+  color: var(--color-ink);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+  word-break: break-word;
+}
+
+.wishes-subtitle {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.wishes-hero-icon {
+  display: flex;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-gold-soft);
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+
+.wishes-hero-icon image {
+  width: 28px;
+  height: 28px;
+}
+
+.wishes-progress {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding: $space-4;
+}
+
+.wishes-progress-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-4;
+}
+
+.wishes-progress-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.wishes-progress-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.wishes-progress-note {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.wishes-progress-value {
+  flex-shrink: 0;
+  color: var(--color-green);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+}
+
+.wishes-progress-track {
+  overflow: hidden;
+  width: 100%;
+  height: 8px;
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+}
+
+.wishes-progress-fill {
+  min-width: 0;
+  height: 8px;
+  border-radius: $radius-sm;
+  background: var(--color-green);
+  transition: width $duration-fast ease;
+}
+
+.wishes-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  padding: $space-1;
+}
+
+.wishes-filter {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border-radius: $radius-sm;
+  background: var(--color-transparent);
+  color: var(--color-muted);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-2;
+}
+
+.wishes-filter.active {
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+  color: var(--color-ink);
+}
+
+.wishes-filter-count {
+  display: flex;
+  min-width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: var(--color-line);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+  padding: 0 $space-1;
+}
+
+.wishes-filter.active .wishes-filter-count {
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
+.wishes-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  padding-bottom: 72px;
+}
+
+.wish-card {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.wish-card.completed {
+  border-color: var(--color-green-soft);
+}
+
+.wish-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+}
+
+.wish-state {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-gold-soft);
+  border-radius: 50%;
+  background: var(--color-surface-warm);
+  color: var(--color-gold);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 48px;
+}
+
+.wish-state.completed {
+  border-color: var(--color-green-soft);
+  background: var(--color-green-soft);
+  color: var(--color-green);
+  font-size: $text-lg;
+}
+
+.wish-state[disabled] {
+  opacity: 0.44;
+}
+
+.wish-card-heading {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.wish-card-title {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+  word-break: break-word;
+}
+
+.wish-card.completed .wish-card-title {
+  color: var(--color-ink-soft);
+}
+
+.wish-card-date {
+  color: var(--color-gold);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.wish-card-date.completed {
+  color: var(--color-green);
+}
+
+.wish-card-description {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.wish-completed-by {
+  border-left: 2px solid var(--color-green-soft);
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+  padding-left: $space-3;
+}
+
+.wish-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-2;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-3;
+}
+
+.wish-action {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.wish-action.memory {
+  margin-right: auto;
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
+}
+
+.wish-action.danger {
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
+}
+
+.wish-action[disabled] {
+  opacity: 0.44;
+}
+
+.wish-action-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.wish-create-fab {
+  position: fixed;
+  z-index: 10;
+  right: $space-4;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  display: flex;
+  min-width: 112px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  box-shadow: $shadow-button;
+  color: var(--color-white);
+  padding: 0 $space-4;
+}
+
+.wish-create-plus {
+  font-size: $text-lg;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.wish-create-label {
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .wishes-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+
+  .wish-create-fab {
+    right: calc((100vw - #{$page-max}) / 2 + #{$space-5});
+  }
+}

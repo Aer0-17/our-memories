@@ -108,6 +108,7 @@ export default function MemoryEditorPage() {
   const isAnniversaryDraft = !memoryId && router.params.template === "anniversary";
   const draftDate = typeof router.params.date === "string" ? router.params.date.slice(0, 10) : "";
   const draftTitle = typeof router.params.title === "string" ? router.params.title : "";
+  const draftText = typeof router.params.text === "string" ? router.params.text : "";
   const draftTags = typeof router.params.tags === "string" ? router.params.tags : "";
   const [editingMemory, setEditingMemory] = useState<Memory | null>(null);
   const [loading, setLoading] = useState(Boolean(memoryId));
@@ -134,6 +135,7 @@ export default function MemoryEditorPage() {
     if (!memoryId) {
       if (/^\d{4}-\d{2}-\d{2}$/.test(draftDate)) setDate(draftDate);
       if (draftTitle) setTitle(draftTitle.slice(0, 120));
+      if (draftText) setText(draftText.slice(0, 500));
       if (draftTags) setTags(draftTags);
       setLoading(false);
       return;
@@ -161,7 +163,7 @@ export default function MemoryEditorPage() {
       })
       .catch(() => setStatus("没有找到这段回忆，或当前身份没有编辑权限。"))
       .finally(() => setLoading(false));
-  }, [draftDate, draftTags, draftTitle, memoryId]);
+  }, [draftDate, draftTags, draftText, draftTitle, memoryId]);
 
   const canSave = useMemo(
     () => Boolean(

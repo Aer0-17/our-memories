@@ -5,6 +5,8 @@ export default defineAppConfig({
     "pages/memory-editor/index",
     "pages/memory-detail/index",
     "pages/memory-trash/index",
+    "pages/wishes/index",
+    "pages/wish-editor/index",
     "pages/yearbook/index",
     "pages/photo-wall/index",
     "pages/photo-viewer/index",

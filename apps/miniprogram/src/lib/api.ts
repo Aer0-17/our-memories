@@ -672,6 +672,100 @@ export async function deleteMemoryFavorites(favoriteIds: string[]) {
   );
 }
 
+export const wishlistKind = "wishlist";
+
+export type WishStatus = "planned" | "completed";
+
+export type Wish = {
+  id: string;
+  title: string;
+  targetDate: string;
+  description: string;
+  status: WishStatus;
+  completedAt?: string;
+  completedBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type WishInput = Omit<Wish, "id" | "createdAt" | "updatedAt">;
+
+type WishNote = Pick<Wish, "description" | "status" | "completedAt" | "completedBy">;
+
+function parseWishNote(note: string): WishNote {
+  const fallback: WishNote = { description: note, status: "planned" };
+  if (!note.trim()) return fallback;
+  try {
+    const parsed = JSON.parse(note) as Partial<WishNote>;
+    return {
+      description: typeof parsed.description === "string" ? parsed.description : "",
+      status: parsed.status === "completed" ? "completed" : "planned",
+      completedAt: typeof parsed.completedAt === "string" ? parsed.completedAt : undefined,
+      completedBy: typeof parsed.completedBy === "string" ? parsed.completedBy : undefined,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function wishPayload(input: Omit<WishInput, "targetDate"> & { targetDate: string }) {
+  return {
+    kind: wishlistKind,
+    title: input.title.trim(),
+    date: input.targetDate,
+    cityId: "",
+    note: JSON.stringify({
+      description: input.description.trim(),
+      status: input.status,
+      completedAt: input.completedAt || undefined,
+      completedBy: input.completedBy || undefined,
+    } satisfies WishNote),
+  };
+}
+
+function serverItemToWish(item: ServerAuxiliaryItem): Wish | null {
+  const title = item.title?.trim() || "";
+  if (!item.id || !title) return null;
+  const note = parseWishNote(item.note || "");
+  return {
+    id: item.id,
+    title,
+    targetDate: item.date || "",
+    ...note,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
+export async function getWishes(): Promise<Wish[]> {
+  const data = await request<{ items?: ServerAuxiliaryItem[] }>(
+    `/auxiliary-items?kind=${wishlistKind}`,
+  );
+  return (data.items || [])
+    .map(serverItemToWish)
+    .filter((wish): wish is Wish => wish !== null);
+}
+
+export function createWish(input: WishInput) {
+  return request<{ id: string }>("/auxiliary-items", {
+    method: "POST",
+    data: wishPayload(input),
+  });
+}
+
+export function updateWish(wishId: string, input: WishInput) {
+  return request<{ ok: true }>(`/auxiliary-items/${encodeURIComponent(wishId)}`, {
+    method: "PATCH",
+    data: wishPayload(input),
+  });
+}
+
+export function deleteWish(wishId: string) {
+  return request<{ ok: true }>(`/auxiliary-items/${encodeURIComponent(wishId)}`, {
+    method: "DELETE",
+  });
+}
+
 export const diaryKind = "diary";
 
 export type DiaryHistoryEntry = {

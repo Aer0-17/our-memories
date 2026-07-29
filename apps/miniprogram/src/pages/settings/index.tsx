@@ -8,6 +8,7 @@ import whisperIcon from "../../assets/illustrations/icon-message-circle.png";
 import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
 import diaryIcon from "../../assets/lucide/calendar-days.svg";
 import imagesIcon from "../../assets/lucide/images.svg";
+import wishesIcon from "../../assets/lucide/list-checks.svg";
 import trashIcon from "../../assets/lucide/trash-2.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
@@ -113,6 +114,16 @@ export default function SettingsPage() {
             <View className="action-copy">
               <Text className="action-title">双人日记</Text>
               <Text className="action-subtitle">一起记录还没归档的片段</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
+          <Button className="settings-action" onClick={() => openPage("/pages/wishes/index")}>
+            <View className="action-icon-box action-icon-gold">
+              <Image className="action-icon" src={wishesIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">共同愿望</Text>
+              <Text className="action-subtitle">一起写下，也一起把它变成回忆</Text>
             </View>
             <Text className="action-arrow">›</Text>
           </Button>
