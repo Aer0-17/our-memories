@@ -272,8 +272,9 @@ export function getPublicConfig() {
   return request<PublicConfig>("/public/config", {}, false);
 }
 
-export function getNotifications() {
-  return request<{ notifications: NotificationItem[] }>("/notifications");
+export function getNotifications(limit = 3) {
+  const normalizedLimit = Math.max(1, Math.min(100, Math.round(limit) || 3));
+  return request<{ notifications: NotificationItem[] }>(`/notifications?limit=${normalizedLimit}`);
 }
 
 export function markNotificationRead(notificationId: string) {

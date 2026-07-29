@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -83,19 +84,22 @@ func TestRunSchedulerOnceDispatchesDueEventsOncePerDay(t *testing.T) {
 	}
 }
 
-func TestCleanupExcessNotificationsKeepsLatestThreePerUser(t *testing.T) {
+func TestCleanupExcessNotificationsKeepsLatestHundredPerUser(t *testing.T) {
 	database := setupSchedulerTestDB(t)
-	if err := database.Exec(`
-		INSERT INTO notifications (id, space_id, user_id, type, target_type, target_id, title, body, is_read, created_at)
-		VALUES
-			('n-1', 'space-1', 'user-1', 'memory.created', 'memory', 'm-1', '1', '', 0, '2026-06-26T00:00:00Z'),
-			('n-2', 'space-1', 'user-1', 'memory.created', 'memory', 'm-2', '2', '', 0, '2026-06-27T00:00:00Z'),
-			('n-3', 'space-1', 'user-1', 'memory.created', 'memory', 'm-3', '3', '', 0, '2026-06-28T00:00:00Z'),
-			('n-4', 'space-1', 'user-1', 'memory.created', 'memory', 'm-4', '4', '', 0, '2026-06-29T00:00:00Z'),
-			('n-5', 'space-1', 'user-2', 'memory.created', 'memory', 'm-5', '5', '', 0, '2026-06-25T00:00:00Z'),
-			('n-6', 'space-1', 'user-2', 'memory.created', 'memory', 'm-6', '6', '', 0, '2026-06-26T00:00:00Z'),
-			('n-7', 'space-1', 'user-2', 'memory.created', 'memory', 'm-7', '7', '', 0, '2026-06-27T00:00:00Z');
-	`).Error; err != nil {
+	records := make([]dbschema.Notification, 0, 105)
+	for index := 1; index <= 105; index++ {
+		records = append(records, dbschema.Notification{
+			ID:         fmt.Sprintf("n-%03d", index),
+			SpaceID:    "space-1",
+			UserID:     "user-1",
+			Type:       "memory.created",
+			TargetType: "memory",
+			TargetID:   fmt.Sprintf("m-%03d", index),
+			Title:      fmt.Sprintf("%d", index),
+			CreatedAt:  time.Date(2026, 1, 1, 0, index, 0, 0, time.UTC).Format(time.RFC3339),
+		})
+	}
+	if err := database.Create(&records).Error; err != nil {
 		t.Fatal(err)
 	}
 
@@ -107,13 +111,12 @@ func TestCleanupExcessNotificationsKeepsLatestThreePerUser(t *testing.T) {
 	if err := database.
 		Table("notifications").
 		Select("id").
-		Order("user_id ASC, created_at ASC").
+		Order("created_at ASC, id ASC").
 		Pluck("id", &ids).
 		Error; err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"n-2", "n-3", "n-4", "n-5", "n-6", "n-7"}
-	if strings.Join(ids, ",") != strings.Join(want, ",") {
-		t.Fatalf("expected notifications %v, got %v", want, ids)
+	if len(ids) != 100 || ids[0] != "n-006" || ids[len(ids)-1] != "n-105" {
+		t.Fatalf("expected latest 100 notifications n-006..n-105, got first=%q last=%q count=%d", ids[0], ids[len(ids)-1], len(ids))
 	}
 }

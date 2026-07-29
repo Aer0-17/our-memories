@@ -80,6 +80,23 @@ func TestNotificationHandlersListAndMarkRead(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	c, _ = gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/notifications?limit=100", nil)
+	c.Set("spaceID", "space-1")
+	c.Set("userID", "user-1")
+	GetNotifications(c)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected extended list to succeed, got %d: %s", w.Code, w.Body.String())
+	}
+	response.Notifications = nil
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if len(response.Notifications) != 4 || response.Notifications[3]["id"] != "notification-4" {
+		t.Fatalf("unexpected extended notifications: %#v", response)
+	}
+
+	w = httptest.NewRecorder()
+	c, _ = gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest(http.MethodPatch, "/api/v1/notifications/notification-1/read", nil)
 	c.Params = gin.Params{{Key: "id", Value: "notification-1"}}
 	c.Set("spaceID", "space-1")
@@ -95,5 +112,23 @@ func TestNotificationHandlersListAndMarkRead(t *testing.T) {
 	}
 	if unread != 0 {
 		t.Fatalf("expected notification to be read, unread=%d", unread)
+	}
+}
+
+func TestNotificationListLimit(t *testing.T) {
+	tests := []struct {
+		value string
+		want  int
+	}{
+		{value: "", want: 3},
+		{value: "invalid", want: 3},
+		{value: "0", want: 3},
+		{value: "20", want: 20},
+		{value: "999", want: 100},
+	}
+	for _, test := range tests {
+		if got := notificationListLimit(test.value); got != test.want {
+			t.Fatalf("notificationListLimit(%q)=%d, want %d", test.value, got, test.want)
+		}
 	}
 }

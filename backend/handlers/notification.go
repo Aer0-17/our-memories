@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"errors"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/db"
@@ -9,13 +11,37 @@ import (
 	"our-memories-backend/utils"
 )
 
+const (
+	defaultNotificationListLimit = 3
+	maxNotificationListLimit     = 100
+)
+
 func GetNotifications(c *gin.Context) {
-	notifications, err := notificationRepo().List(c.GetString("spaceID"), c.GetString("userID"), 3)
+	notifications, err := notificationRepo().List(
+		c.GetString("spaceID"),
+		c.GetString("userID"),
+		notificationListLimit(c.Query("limit")),
+	)
 	if err != nil {
 		utils.Error(c, 500, "Failed to fetch notifications")
 		return
 	}
 	utils.Success(c, gin.H{"notifications": notifications})
+}
+
+func notificationListLimit(value string) int {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return defaultNotificationListLimit
+	}
+	limit, err := strconv.Atoi(value)
+	if err != nil || limit <= 0 {
+		return defaultNotificationListLimit
+	}
+	if limit > maxNotificationListLimit {
+		return maxNotificationListLimit
+	}
+	return limit
 }
 
 func MarkNotificationRead(c *gin.Context) {

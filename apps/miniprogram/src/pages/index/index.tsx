@@ -19,6 +19,7 @@ import {
   type PublicConfig,
   type Session,
 } from "../../lib/api";
+import { notificationTarget, notificationTime } from "../../lib/notifications";
 import avatarUs from "../../assets/illustrations/avatar-us.png";
 import coupleStanding from "../../assets/illustrations/couple-standing.png";
 import loginCity from "../../assets/illustrations/login-city.jpg";
@@ -32,36 +33,6 @@ import "./index.scss";
 
 const quickSignals = ["刚刚想到你", "想抱抱你", "今天也很想你", "晚点见，想你了"];
 const signalThreadTitle = "想你信号";
-
-function notificationTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
-  if (minutes < 1) return "刚刚";
-  if (minutes < 60) return `${minutes} 分钟前`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours} 小时前`;
-  return `${date.getMonth() + 1} 月 ${date.getDate()} 日`;
-}
-
-function notificationTarget(item: NotificationItem) {
-  if (item.targetType === "memory") {
-    if (item.type === "memory.deleted" || !item.targetId) {
-      return { url: "/pages/memories/index", tab: true };
-    }
-    return {
-      url: `/pages/memory-detail/index?id=${encodeURIComponent(item.targetId)}`,
-      tab: false,
-    };
-  }
-  if (item.targetType === "time_capsule") return { url: "/pages/capsules/index", tab: false };
-  if (item.targetType === "anniversary") return { url: "/pages/anniversaries/index", tab: true };
-  if (item.targetType === "whisper" || item.targetType === "signal") {
-    return { url: "/pages/whispers/index", tab: false };
-  }
-  if (item.targetType === "settings") return { url: "/pages/settings/index", tab: true };
-  return null;
-}
 
 export default function IndexPage() {
   const [config, setConfig] = useState<PublicConfig | null>(null);
@@ -299,23 +270,31 @@ export default function IndexPage() {
           </View>
 
           <View className="presence-card">
-            {notifications.length > 0 ? notifications.map((item) => (
-              <Button
-                className={item.isRead ? "presence-item" : "presence-item unread"}
-                key={item.id}
-                onClick={() => void openNotification(item)}
-              >
-                <View className="presence-mark" />
-                <View className="presence-copy">
-                  <View className="presence-line">
-                    <Text className="presence-item-title">{item.title}</Text>
-                    <Text className="presence-time">{notificationTime(item.createdAt)}</Text>
-                  </View>
-                  <Text className="presence-body">{item.body || "TA 在这里留下了新的动静。"}</Text>
-                </View>
-                <Text className="presence-arrow">›</Text>
-              </Button>
-            )) : (
+            {notifications.length > 0 ? (
+              <>
+                {notifications.map((item) => (
+                  <Button
+                    className={item.isRead ? "presence-item" : "presence-item unread"}
+                    key={item.id}
+                    onClick={() => void openNotification(item)}
+                  >
+                    <View className="presence-mark" />
+                    <View className="presence-copy">
+                      <View className="presence-line">
+                        <Text className="presence-item-title">{item.title}</Text>
+                        <Text className="presence-time">{notificationTime(item.createdAt)}</Text>
+                      </View>
+                      <Text className="presence-body">{item.body || "TA 在这里留下了新的动静。"}</Text>
+                    </View>
+                    <Text className="presence-arrow">›</Text>
+                  </Button>
+                ))}
+                <Button className="presence-view-all" onClick={() => openSection("/pages/notifications/index")}>
+                  <Text>查看全部动态</Text>
+                  <Text className="presence-view-all-arrow">›</Text>
+                </Button>
+              </>
+            ) : (
               <View className="presence-empty">
                 <Image className="presence-empty-avatar" src={avatarUs} mode="aspectFit" />
                 <View className="presence-empty-copy">

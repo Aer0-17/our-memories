@@ -192,7 +192,7 @@ func cleanupReadNotifications(database *gorm.DB, now time.Time) error {
 }
 
 func cleanupExcessNotifications(database *gorm.DB) error {
-	_, err := repositories.NewNotificationRepository(database).DeleteBeyondRecentPerUser(3, 500)
+	_, err := repositories.NewNotificationRepository(database).DeleteBeyondRecentPerUser(100, 500)
 	return err
 }
 

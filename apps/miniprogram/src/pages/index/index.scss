@@ -438,6 +438,28 @@
   border-bottom: 0;
 }
 
+.presence-view-all {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  border-top: 0;
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-accent-deep);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 48px;
+}
+
+.presence-view-all-arrow {
+  color: var(--color-muted);
+  font-size: $text-lg;
+  line-height: 24px;
+}
+
 .presence-item.unread {
   background: var(--color-accent-soft);
 }
