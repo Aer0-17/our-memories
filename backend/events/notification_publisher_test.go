@@ -57,3 +57,23 @@ func TestNotificationPublisherPersistsRecognizedEvents(t *testing.T) {
 		t.Fatalf("expected notification copy, got %#v", store)
 	}
 }
+
+func TestNotificationPublisherRoutesTripGuides(t *testing.T) {
+	store := &fakeNotificationStore{}
+	publisher := NewNotificationPublisher(store, fakeSpaceUsers{userIDs: []string{"user-2"}})
+
+	if err := publisher.Publish(context.Background(), DomainEvent{
+		Type:     TripGuideCreated,
+		SpaceID:  "space-1",
+		ActorID:  "user-1",
+		TargetID: "trip-1",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if store.eventType != string(TripGuideCreated) || store.targetType != "trip_guide" || store.targetID != "trip-1" {
+		t.Fatalf("unexpected trip notification target: %#v", store)
+	}
+	if store.title == "" || store.body == "" {
+		t.Fatalf("expected trip notification copy, got %#v", store)
+	}
+}

@@ -1,0 +1,236 @@
+@use "../../styles/tokens" as *;
+
+.trips-page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4;
+}
+
+.trips-hero {
+  display: flex;
+  min-height: 144px;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-4;
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  padding: $space-5 $space-4;
+}
+
+.trips-hero-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.trips-kicker,
+.trip-card-status {
+  color: var(--color-blue);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.trips-title {
+  color: var(--color-ink);
+  font-size: $text-xl;
+  font-weight: 700;
+  line-height: 32px;
+  word-break: break-word;
+}
+
+.trips-subtitle {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.trips-hero-icon {
+  display: flex;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-surface);
+}
+
+.trips-hero-icon image {
+  width: 32px;
+  height: 32px;
+}
+
+.trips-stats {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr 1px 1fr;
+  align-items: center;
+  padding: $space-4;
+}
+
+.trips-stat {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-direction: column;
+  gap: $space-1;
+  text-align: center;
+}
+
+.trips-stat-value {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.trips-stat-label {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.trips-stat-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--color-line);
+}
+
+.trips-create {
+  min-height: 48px;
+  line-height: 48px;
+}
+
+.trips-filters {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-1;
+  border-radius: $radius-md;
+  background: var(--color-surface-soft);
+  padding: $space-1;
+}
+
+.trips-filter {
+  min-height: 44px;
+  border-radius: $radius-sm;
+  background: var(--color-transparent);
+  color: var(--color-muted);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-2;
+}
+
+.trips-filter.active {
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+  color: var(--color-ink);
+}
+
+.trip-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+  padding-bottom: $space-5;
+}
+
+.trip-card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 192px;
+  align-items: stretch;
+  flex-direction: column;
+  gap: $space-2;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+  color: var(--color-ink);
+  padding: $space-4;
+  text-align: left;
+}
+
+.trip-card.completed {
+  background: var(--color-green-soft);
+}
+
+.trip-card.completed .trip-card-status {
+  color: var(--color-green);
+}
+
+.trip-card-topline,
+.trip-card-progress-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.trip-card-days,
+.trip-card-date,
+.trip-card-progress-copy {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.trip-card-title {
+  padding-right: $space-5;
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+  word-break: break-word;
+}
+
+.trip-card-route {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 24px;
+  word-break: break-word;
+}
+
+.trip-card-progress-row {
+  margin-top: $space-1;
+}
+
+.trip-card-progress-track {
+  height: 8px;
+  min-width: 80px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+}
+
+.trip-card-progress-fill {
+  height: 100%;
+  border-radius: $radius-sm;
+  background: var(--color-blue);
+  transition: width $duration-fast ease;
+}
+
+.trip-card.completed .trip-card-progress-fill {
+  background: var(--color-green);
+}
+
+.trip-card-arrow {
+  position: absolute;
+  top: 64px;
+  right: $space-4;
+  color: var(--color-muted);
+  font-size: $text-xl;
+  line-height: 32px;
+}
+
+@media (min-width: $breakpoint-tablet) {
+  .trip-card-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

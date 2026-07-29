@@ -54,6 +54,8 @@ func pushMessage(event DomainEvent) (string, string, bool) {
 		return "新的悄悄话", "TA 留下了一条悄悄话。", true
 	case WhisperReplied:
 		return "悄悄话有回复", "TA 回复了一条悄悄话。", true
+	case TripGuideCreated:
+		return "新的旅行计划", "TA 新建了一份共同旅行计划。", true
 	default:
 		return "", "", false
 	}

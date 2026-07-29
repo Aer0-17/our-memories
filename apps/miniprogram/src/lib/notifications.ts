@@ -24,6 +24,13 @@ export function notificationTarget(item: NotificationItem): NotificationTarget |
     return { url: "/pages/whispers/index", tab: false };
   }
   if (item.targetType === "future_checkin") return { url: "/pages/map/index", tab: false };
+  if (item.targetType === "trip_guide") {
+    if (!item.targetId) return { url: "/pages/trips/index", tab: false };
+    return {
+      url: `/pages/trip-detail/index?id=${encodeURIComponent(item.targetId)}`,
+      tab: false,
+    };
+  }
   if (item.targetType === "settings") return { url: "/pages/settings/index", tab: true };
   return null;
 }
@@ -31,7 +38,11 @@ export function notificationTarget(item: NotificationItem): NotificationTarget |
 export function notificationCategory(item: NotificationItem): NotificationCategory {
   if (item.targetType === "memory") return "memory";
   if (item.targetType === "whisper" || item.targetType === "signal") return "message";
-  if (item.targetType === "time_capsule" || item.targetType === "anniversary") return "occasion";
+  if (
+    item.targetType === "time_capsule" ||
+    item.targetType === "anniversary" ||
+    item.targetType === "trip_guide"
+  ) return "occasion";
   return "other";
 }
 

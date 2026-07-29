@@ -1,0 +1,293 @@
+@use "../../styles/tokens" as *;
+
+.trip-detail-page,
+.trip-detail-content,
+.trip-itinerary,
+.trip-detail-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.trip-detail-page,
+.trip-detail-content {
+  gap: $space-4;
+}
+
+.trip-detail-content {
+  padding-bottom: $space-5;
+}
+
+.trip-detail-hero {
+  display: flex;
+  min-height: 224px;
+  flex-direction: column;
+  gap: $space-2;
+  border-radius: $radius-md;
+  background: var(--color-blue-soft);
+  padding: $space-5 $space-4;
+}
+
+.trip-detail-hero.completed {
+  background: var(--color-green-soft);
+}
+
+.trip-detail-kicker,
+.trip-detail-section-label {
+  color: var(--color-blue);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.trip-detail-hero.completed .trip-detail-kicker {
+  color: var(--color-green);
+}
+
+.trip-detail-title {
+  color: var(--color-ink);
+  font-size: $text-2xl;
+  font-weight: 700;
+  line-height: 36px;
+  word-break: break-word;
+}
+
+.trip-detail-route {
+  color: var(--color-ink-soft);
+  font-size: $text-md;
+  font-weight: 600;
+  line-height: 24px;
+  word-break: break-word;
+}
+
+.trip-detail-date,
+.trip-detail-progress-copy {
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.trip-detail-progress-row {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  margin-top: $space-3;
+}
+
+.trip-detail-progress-track {
+  height: 8px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: $radius-sm;
+  background: var(--color-surface);
+}
+
+.trip-detail-progress-fill {
+  height: 100%;
+  border-radius: $radius-sm;
+  background: var(--color-blue);
+  transition: width $duration-fast ease;
+}
+
+.trip-detail-hero.completed .trip-detail-progress-fill {
+  background: var(--color-green);
+}
+
+.trip-detail-progress-value {
+  width: 48px;
+  flex-shrink: 0;
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: right;
+}
+
+.trip-detail-note {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+  padding: $space-4;
+}
+
+.trip-detail-note-copy {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.trip-itinerary {
+  gap: $space-3;
+}
+
+.trip-detail-section-heading,
+.trip-day-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.trip-detail-section-heading > view:first-child {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.trip-detail-section-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.trip-detail-section-subtitle,
+.trip-detail-section-count,
+.trip-day-date,
+.trip-day-progress,
+.trip-day-empty {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.trip-detail-section-count {
+  flex-shrink: 0;
+}
+
+.trip-day-card {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+}
+
+.trip-day-heading {
+  min-height: 72px;
+  padding: $space-3 $space-4;
+}
+
+.trip-day-number {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
+  font-size: $text-sm;
+  font-weight: 700;
+}
+
+.trip-day-heading-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.trip-day-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.trip-checkpoint-list {
+  border-top: 1px solid var(--color-line);
+}
+
+.trip-checkpoint {
+  display: grid;
+  width: 100%;
+  min-height: 56px;
+  grid-template-columns: 28px 1fr auto;
+  align-items: center;
+  gap: $space-3;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: $space-2 $space-4;
+  text-align: left;
+}
+
+.trip-checkpoint:last-child {
+  border-bottom: 0;
+}
+
+.trip-checkpoint.done {
+  background: var(--color-green-soft);
+}
+
+.trip-checkpoint-mark {
+  display: flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-green);
+  font-size: $text-sm;
+  font-weight: 700;
+}
+
+.trip-checkpoint.done .trip-checkpoint-mark {
+  border-color: var(--color-green);
+}
+
+.trip-checkpoint-name {
+  min-width: 0;
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.trip-checkpoint.done .trip-checkpoint-name {
+  color: var(--color-ink-soft);
+  text-decoration: line-through;
+}
+
+.trip-checkpoint-state {
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.trip-day-empty {
+  display: block;
+  border-top: 1px solid var(--color-line);
+  padding: $space-4;
+}
+
+.trip-detail-actions {
+  gap: $space-3;
+  margin-top: $space-2;
+}
+
+.trip-detail-primary,
+.trip-detail-secondary {
+  min-height: 48px;
+  line-height: 48px;
+}
+
+.trip-detail-delete {
+  min-height: 48px;
+  background: var(--color-transparent);
+  color: var(--color-danger);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 48px;
+}

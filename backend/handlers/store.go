@@ -8,9 +8,11 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	"our-memories-backend/cache"
+	"our-memories-backend/events"
 	"our-memories-backend/storage"
 	"our-memories-backend/utils"
 )
@@ -19,6 +21,9 @@ const (
 	cityAssetsSettingKey  = "cityAssets"
 	loginPhotosSettingKey = "loginPhotoStore"
 	tripStoreSettingKey   = "tripStore"
+	maxTripPayloadBytes   = 64 << 10
+	maxTripDays           = 30
+	maxTripStopsPerDay    = 12
 )
 
 type loginPhotoText struct {
@@ -271,6 +276,69 @@ func writeTripStore(spaceID string, store tripStore) error {
 	return writeSettingJSON(spaceID, tripStoreSettingKey, store)
 }
 
+func validateTripPayload(payload map[string]interface{}) error {
+	encoded, err := json.Marshal(payload)
+	if err != nil || len(encoded) > maxTripPayloadBytes {
+		return fmt.Errorf("trip payload is too large")
+	}
+
+	for _, field := range []struct {
+		key      string
+		required bool
+		limit    int
+	}{
+		{key: "title", required: true, limit: 80},
+		{key: "origin", limit: 80},
+		{key: "destination", required: true, limit: 80},
+		{key: "notes", limit: 2000},
+	} {
+		value, ok := payload[field.key].(string)
+		if field.required && (!ok || strings.TrimSpace(value) == "") {
+			return fmt.Errorf("trip %s is required", field.key)
+		}
+		if ok && utf8.RuneCountInString(value) > field.limit {
+			return fmt.Errorf("trip %s is too long", field.key)
+		}
+	}
+
+	days, ok := payload["days"].(float64)
+	if !ok || days < 1 || days > maxTripDays || days != float64(int(days)) {
+		return fmt.Errorf("trip days must be between 1 and %d", maxTripDays)
+	}
+	if status, ok := payload["status"].(string); ok && status != "planning" && status != "completed" {
+		return fmt.Errorf("invalid trip status")
+	}
+
+	plans, ok := payload["daysPlan"].([]interface{})
+	if !ok {
+		return fmt.Errorf("trip daysPlan is required")
+	}
+	if len(plans) > maxTripDays {
+		return fmt.Errorf("too many trip day plans")
+	}
+	for _, rawPlan := range plans {
+		plan, ok := rawPlan.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("invalid trip day plan")
+		}
+		stops, ok := plan["checkpoints"].([]interface{})
+		if !ok {
+			return fmt.Errorf("trip checkpoints are required")
+		}
+		if len(stops) > maxTripStopsPerDay {
+			return fmt.Errorf("too many trip checkpoints")
+		}
+		for _, rawStop := range stops {
+			stop, ok := rawStop.(map[string]interface{})
+			name, hasName := stop["name"].(string)
+			if !ok || !hasName || strings.TrimSpace(name) == "" || utf8.RuneCountInString(name) > 80 {
+				return fmt.Errorf("invalid trip checkpoint")
+			}
+		}
+	}
+	return nil
+}
+
 func GetTripGuides(c *gin.Context) {
 	store, err := readTripStore(c.GetString("spaceID"))
 	if err != nil {
@@ -289,6 +357,10 @@ func CreateTripGuide(c *gin.Context) {
 		utils.Error(c, 400, "Invalid request")
 		return
 	}
+	if err := validateTripPayload(req.Payload); err != nil {
+		utils.Error(c, 400, "Invalid trip guide")
+		return
+	}
 	store, err := readTripStore(spaceID)
 	if err != nil {
 		utils.Error(c, 500, "Failed to create trip guide")
@@ -301,6 +373,12 @@ func CreateTripGuide(c *gin.Context) {
 		utils.Error(c, 500, "Failed to create trip guide")
 		return
 	}
+	_ = domainPublisher.Publish(c.Request.Context(), events.DomainEvent{
+		Type:     events.TripGuideCreated,
+		SpaceID:  spaceID,
+		ActorID:  c.GetString("userID"),
+		TargetID: guide.ID,
+	})
 	utils.Success(c, gin.H{"guide": guide})
 }
 
@@ -320,6 +398,10 @@ func updateTripItem(c *gin.Context, draft bool) {
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.Error(c, 400, "Invalid request")
+		return
+	}
+	if err := validateTripPayload(req.Payload); err != nil {
+		utils.Error(c, 400, "Invalid trip guide")
 		return
 	}
 	store, err := readTripStore(spaceID)
@@ -349,6 +431,12 @@ func updateTripItem(c *gin.Context, draft bool) {
 				utils.Error(c, 500, "Failed to update trip guide")
 				return
 			}
+			_ = domainPublisher.Publish(c.Request.Context(), events.DomainEvent{
+				Type:     events.TripGuideUpdated,
+				SpaceID:  spaceID,
+				ActorID:  c.GetString("userID"),
+				TargetID: items[index].ID,
+			})
 			utils.Success(c, gin.H{"guide": items[index]})
 			return
 		}
@@ -372,14 +460,29 @@ func deleteTripItem(c *gin.Context, draft bool) {
 		utils.Error(c, 500, "Failed to delete trip item")
 		return
 	}
+	found := false
 	if draft {
+		for _, item := range store.Drafts {
+			found = found || item.ID == id
+		}
 		store.Drafts = filterTripItems(store.Drafts, id)
 	} else {
+		for _, item := range store.Guides {
+			found = found || item.ID == id
+		}
 		store.Guides = filterTripItems(store.Guides, id)
 	}
 	if err := writeTripStore(spaceID, store); err != nil {
 		utils.Error(c, 500, "Failed to delete trip item")
 		return
+	}
+	if found && !draft {
+		_ = domainPublisher.Publish(c.Request.Context(), events.DomainEvent{
+			Type:     events.TripGuideDeleted,
+			SpaceID:  spaceID,
+			ActorID:  c.GetString("userID"),
+			TargetID: id,
+		})
 	}
 	utils.Success(c, gin.H{"ok": true})
 }
@@ -404,6 +507,10 @@ func AcceptTripDraft(c *gin.Context) {
 	}
 	for index, draft := range store.Drafts {
 		if draft.ID == id {
+			if err := validateTripPayload(draft.Payload); err != nil {
+				utils.Error(c, 400, "Invalid trip guide")
+				return
+			}
 			now := time.Now().UTC().Format(time.RFC3339)
 			guide := tripItem{ID: utils.NewID(), Payload: draft.Payload, CreatedAt: now, UpdatedAt: now}
 			store.Guides = append([]tripItem{guide}, store.Guides...)
@@ -412,6 +519,12 @@ func AcceptTripDraft(c *gin.Context) {
 				utils.Error(c, 500, "Failed to accept trip draft")
 				return
 			}
+			_ = domainPublisher.Publish(c.Request.Context(), events.DomainEvent{
+				Type:     events.TripGuideCreated,
+				SpaceID:  spaceID,
+				ActorID:  c.GetString("userID"),
+				TargetID: guide.ID,
+			})
 			utils.Success(c, gin.H{"ok": true, "guide": guide})
 			return
 		}

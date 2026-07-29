@@ -65,6 +65,8 @@ func notificationMessage(event DomainEvent) (string, string, bool) {
 		return "悄悄话有回复", "TA 回复了一条悄悄话。", true
 	case AvatarGenerated:
 		return "地图角色已更新", "TA 生成了新的地图像素角色。", true
+	case TripGuideCreated:
+		return "新的旅行计划", "TA 新建了一份共同旅行计划。", true
 	default:
 		return "", "", false
 	}
@@ -84,6 +86,8 @@ func targetType(eventType Type) string {
 		return "signal"
 	case AvatarGenerated:
 		return "settings"
+	case TripGuideCreated, TripGuideUpdated, TripGuideDeleted:
+		return "trip_guide"
 	default:
 		return ""
 	}

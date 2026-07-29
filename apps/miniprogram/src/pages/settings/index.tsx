@@ -127,6 +127,16 @@ export default function SettingsPage() {
             </View>
             <Text className="action-arrow">›</Text>
           </Button>
+          <Button className="settings-action" onClick={() => openPage("/pages/trips/index")}>
+            <View className="action-icon-box action-icon-blue">
+              <Image className="action-icon" src={diaryIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">共同旅行计划</Text>
+              <Text className="action-subtitle">一起排行程，也一起完成沿途打卡</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
           <Button className="settings-action" onClick={() => openPage("/pages/yearbook/index")}>
             <View className="action-icon-box action-icon-red">
               <Image className="action-icon" src={imagesIcon} mode="aspectFit" />

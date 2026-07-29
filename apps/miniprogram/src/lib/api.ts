@@ -54,6 +54,37 @@ export type NotificationItem = {
   createdAt: string;
 };
 
+export type TripCheckpoint = {
+  id: string;
+  name: string;
+  done: boolean;
+};
+
+export type TripDayPlan = {
+  day: number;
+  date?: string;
+  checkpoints: TripCheckpoint[];
+};
+
+export type TripGuidePayload = {
+  title: string;
+  origin: string;
+  destination: string;
+  startDate?: string;
+  endDate?: string;
+  days: number;
+  status: "planning" | "completed";
+  notes?: string;
+  daysPlan: TripDayPlan[];
+};
+
+export type TripGuide = {
+  id: string;
+  payload: TripGuidePayload;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type WhisperReply = {
   id: string;
   whisperId: string;
@@ -974,4 +1005,28 @@ export async function createFutureCheckin(input: FutureCheckinInput): Promise<Fu
 
 export function deleteFutureCheckin(id: string) {
   return request<{ ok: true }>(`/auxiliary-items/${encodeURIComponent(id)}`, { method: "DELETE" });
+}
+
+export function getTripGuides() {
+  return request<{ guides: TripGuide[]; drafts?: TripGuide[] }>("/trip-guides");
+}
+
+export function createTripGuide(payload: TripGuidePayload) {
+  return request<{ guide: TripGuide }>("/trip-guides", {
+    method: "POST",
+    data: { payload },
+  });
+}
+
+export function updateTripGuide(id: string, payload: TripGuidePayload) {
+  return request<{ guide: TripGuide }>(`/trip-guides/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    data: { payload },
+  });
+}
+
+export function deleteTripGuide(id: string) {
+  return request<{ ok: true }>(`/trip-guides/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }

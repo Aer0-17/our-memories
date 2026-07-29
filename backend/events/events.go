@@ -30,6 +30,9 @@ const (
 	AvatarGenerated      Type = "avatar.generated"
 	FutureCheckinCreated Type = "future_checkin.created"
 	FutureCheckinDeleted Type = "future_checkin.deleted"
+	TripGuideCreated     Type = "trip_guide.created"
+	TripGuideUpdated     Type = "trip_guide.updated"
+	TripGuideDeleted     Type = "trip_guide.deleted"
 )
 
 type DomainEvent struct {
