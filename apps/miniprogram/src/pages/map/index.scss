@@ -12,7 +12,6 @@
 .map-intro {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: $space-4;
   padding: $space-4 0;
 }
@@ -40,9 +39,9 @@
 
 .map-checkin-open {
   display: flex;
-  min-width: 112px;
+  min-width: 0;
   min-height: 44px;
-  flex-shrink: 0;
+  flex: 1;
   align-items: center;
   justify-content: center;
   padding: 0 $space-3;
@@ -51,6 +50,100 @@
   font-size: $text-sm;
   font-weight: 600;
   line-height: 44px;
+}
+
+.map-signal-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: $space-3;
+  margin-bottom: $space-4;
+  border: 1px solid var(--color-accent-soft);
+  border-radius: $radius-md;
+  background: var(--color-surface-warm);
+  padding: $space-4;
+  box-shadow: $shadow-card;
+}
+
+.map-signal-card.sent {
+  border-color: var(--color-green-soft);
+  background: var(--color-green-soft);
+}
+
+.map-signal-card__icon-shell {
+  display: flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.map-signal-card__icon {
+  width: 28px;
+  height: 28px;
+}
+
+.map-signal-card__copy,
+.map-signal-composer__heading-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.map-signal-card__copy {
+  gap: $space-1;
+}
+
+.map-signal-card__kicker,
+.map-signal-composer__eyebrow {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.map-signal-card.sent .map-signal-card__kicker {
+  color: var(--color-green);
+}
+
+.map-signal-card__title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.map-signal-card__message {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.map-signal-card__actions {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.map-signal-card__action {
+  min-width: 88px;
+  min-height: 44px;
+  padding: 0 $space-3;
+  border-radius: $radius-sm;
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+}
+
+.map-signal-card__action.muted {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
 }
 
 .map-native-wrap {
@@ -82,6 +175,35 @@
   color: var(--color-ink-soft);
   font-size: $text-sm;
   line-height: 20px;
+}
+
+.map-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-3;
+  padding-top: $space-2;
+}
+
+.map-signal-open {
+  display: flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: $space-2;
+  padding: 0 $space-3;
+  border-radius: $radius-md;
+  background: var(--color-accent);
+  color: var(--color-white);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  box-shadow: $shadow-button;
+}
+
+.map-action-icon {
+  width: 24px;
+  height: 24px;
 }
 
 .map-fit-button {
@@ -163,6 +285,105 @@
   border-radius: $radius-md;
   background: var(--color-surface);
   box-shadow: $shadow-card;
+}
+
+.map-signal-composer {
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.map-signal-composer__heading-copy {
+  flex: 1;
+  gap: $space-1;
+}
+
+.map-signal-composer__intro {
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  gap: $space-3;
+  margin-bottom: $space-4;
+  border: 1px solid var(--color-accent-soft);
+  border-radius: $radius-md;
+  background: var(--color-surface-warm);
+  padding: $space-2 $space-3;
+}
+
+.map-signal-composer__heart {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.map-signal-composer__intro-copy {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 20px;
+}
+
+.map-signal-composer__label {
+  display: block;
+  margin: $space-4 0 $space-2;
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.map-signal-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+}
+
+.map-signal-preset {
+  min-height: 44px;
+  padding: 0 $space-3;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 44px;
+}
+
+.map-signal-preset.active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-deep);
+  font-weight: 700;
+}
+
+.map-signal-input-wrap {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  gap: $space-2;
+  margin-top: $space-3;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  padding: 0 $space-3;
+}
+
+.map-signal-input {
+  min-width: 0;
+  min-height: 44px;
+  flex: 1;
+  color: var(--color-ink);
+  font-size: $text-sm;
+  line-height: 44px;
+}
+
+.map-signal-input-count {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.map-signal-submit {
+  margin-top: $space-4;
 }
 
 .map-modal__heading {

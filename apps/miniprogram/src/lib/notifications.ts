@@ -20,8 +20,16 @@ export function notificationTarget(item: NotificationItem): NotificationTarget |
   }
   if (item.targetType === "time_capsule") return { url: "/pages/capsules/index", tab: false };
   if (item.targetType === "anniversary") return { url: "/pages/anniversaries/index", tab: true };
-  if (item.targetType === "whisper" || item.targetType === "signal") {
+  if (item.targetType === "whisper") {
     return { url: "/pages/whispers/index", tab: false };
+  }
+  if (item.targetType === "signal") {
+    return {
+      url: item.targetId
+        ? `/pages/map/index?signal=${encodeURIComponent(item.targetId)}`
+        : "/pages/map/index",
+      tab: false,
+    };
   }
   if (item.targetType === "future_checkin") return { url: "/pages/map/index", tab: false };
   if (item.targetType === "trip_guide") {

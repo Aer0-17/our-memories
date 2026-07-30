@@ -4,15 +4,12 @@ import Taro, { useDidShow, usePullDownRefresh } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { ErrorBanner } from "../../components/PageStates";
 import {
-  createWhisper,
   getNotifications,
-  getWhispers,
   getPublicConfig,
   login,
   markAllNotificationsRead,
   markNotificationRead,
   readSession,
-  replyWhisper,
   verifyPassword,
   type LoginMember,
   type NotificationItem,
@@ -26,13 +23,11 @@ import loginCity from "../../assets/illustrations/login-city.jpg";
 import memoryIcon from "../../assets/tabbar/images-active.png";
 import anniversaryIcon from "../../assets/tabbar/calendar-days-active.png";
 import whisperIcon from "../../assets/illustrations/icon-message-circle.png";
+import heartIcon from "../../assets/illustrations/heart.png";
 import capsuleIcon from "../../assets/illustrations/icon-hourglass.png";
 import shieldIcon from "../../assets/illustrations/icon-shield-check.png";
 import userIcon from "../../assets/illustrations/icon-user-round.png";
 import "./index.scss";
-
-const quickSignals = ["刚刚想到你", "想抱抱你", "今天也很想你", "晚点见，想你了"];
-const signalThreadTitle = "想你信号";
 
 export default function IndexPage() {
   const [config, setConfig] = useState<PublicConfig | null>(null);
@@ -44,8 +39,6 @@ export default function IndexPage() {
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState(false);
-  const [signalWorking, setSignalWorking] = useState(false);
-  const [lastSignal, setLastSignal] = useState("");
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notificationWorking, setNotificationWorking] = useState(false);
 
@@ -151,34 +144,8 @@ export default function IndexPage() {
     Taro.navigateTo({ url });
   };
 
-  const sendQuickSignal = async () => {
-    if (signalWorking) return;
-    try {
-      const selection = await Taro.showActionSheet({
-        itemList: quickSignals,
-        alertText: "选一句此刻最想告诉 TA 的话",
-      });
-      const phrase = quickSignals[selection.tapIndex];
-      if (!phrase) return;
-
-      setSignalWorking(true);
-      const data = await getWhispers();
-      const thread = (data.whispers || []).find((item) => item.title === signalThreadTitle);
-      if (thread) {
-        await replyWhisper(thread.id, { content: phrase });
-      } else {
-        await createWhisper({ title: signalThreadTitle, content: phrase });
-      }
-      setLastSignal(phrase);
-      Taro.showToast({ title: "已经送给 TA", icon: "success" });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!message.toLowerCase().includes("cancel")) {
-        Taro.showToast({ title: "信号暂时没送达", icon: "none" });
-      }
-    } finally {
-      setSignalWorking(false);
-    }
+  const openSignalComposer = () => {
+    Taro.navigateTo({ url: "/pages/map/index?composeSignal=1" });
   };
 
   const openNotification = async (item: NotificationItem) => {
@@ -228,25 +195,18 @@ export default function IndexPage() {
           <Image className="home-avatar" src={avatarUs} mode="aspectFit" />
         </View>
 
-        <View className={lastSignal ? "signal-panel sent" : "signal-panel"}>
+        <View className="signal-panel">
           <View className="signal-heading">
             <View className="signal-icon-shell">
-              <Image className="signal-icon" src={whisperIcon} mode="aspectFit" />
+              <Image className="signal-icon" src={heartIcon} mode="aspectFit" />
             </View>
             <View className="signal-copy">
-              <Text className="signal-title">想你信号</Text>
-              <Text className="signal-subtitle">
-                {lastSignal ? `刚刚送出：${lastSignal}` : "选一句此刻的心意，轻轻送给 TA。"}
-              </Text>
+              <Text className="signal-title">心动信号</Text>
+              <Text className="signal-subtitle">把一句想念留在某座城市，TA 会在 24 小时内看见。</Text>
             </View>
           </View>
-          <Button
-            className="signal-action"
-            disabled={signalWorking}
-            loading={signalWorking}
-            onClick={() => void sendQuickSignal()}
-          >
-            {lastSignal ? "再送一句" : "轻轻告诉 TA"}
+          <Button className="signal-action" onClick={openSignalComposer}>
+            去地图送一个
           </Button>
         </View>
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Button,
   Image,
+  Input,
   Map as TaroMap,
   Picker,
   ScrollView,
@@ -13,24 +14,29 @@ import {
   View,
   type MapProps,
 } from "@tarojs/components";
-import Taro, { useDidShow } from "@tarojs/taro";
+import Taro, { useDidShow, useRouter } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import { ErrorBanner, LoadingState } from "../../components/PageStates";
 import coupleMarkerIcon from "../../assets/illustrations/avatar-us.png";
 import futureMarkerIcon from "../../assets/illustrations/icon-hourglass.png";
+import heartIcon from "../../assets/illustrations/heart.png";
 import {
+  createRelationshipSignal,
   createFutureCheckin,
   deleteFutureCheckin,
   forestSpiritVariantCount,
   futureCheckinLabel,
   getMemorySummary,
+  getRelationshipSignals,
   listFutureCheckins,
   readSession,
   resolveAssetUrl,
   apiBaseUrl,
   type FutureCheckin,
   type MemorySummary,
+  type RelationshipSignal,
 } from "../../lib/api";
+import { notificationTime } from "../../lib/notifications";
 import {
   cityById,
   getCitiesByProvince,
@@ -51,7 +57,9 @@ import "./index.scss";
 const MAP_ID = "memory-native-map";
 const LATEST_MARKER_ID = 1;
 const FUTURE_MARKER_ID_START = 1000;
+const SIGNAL_MARKER_ID_START = 3000;
 const MAP_CENTER = toNativeMapPoint(104.2, 35.8);
+const signalMessages = ["突然想到那天的风", "想你了", "想和你再去一次", "这边的天气让我想起你"];
 
 interface FootprintStop extends MapProps.point {
   cityId: string;
@@ -68,13 +76,28 @@ function displayMapDate(value?: string) {
 }
 
 export default function MapPage() {
+  const router = useRouter();
   const [summary, setSummary] = useState<MemorySummary>({});
   const [futureCheckins, setFutureCheckins] = useState<FutureCheckin[]>([]);
+  const [signals, setSignals] = useState<RelationshipSignal[]>([]);
   const [weather, setWeather] = useState<WeatherInfo | null>(null);
   const [selectedProvinceId, setSelectedProvinceId] = useState<string | null>(null);
+  const [activeSignalId, setActiveSignalId] = useState(() => String(router.params.signal || ""));
+  const [mapCenter, setMapCenter] = useState(MAP_CENTER);
+  const [mapScale, setMapScale] = useState(4);
   const [showCharacters, setShowCharacters] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState("");
+
+  // A signal is deliberately short-lived: compose one city + one sentence,
+  // then let the receiving partner discover it on the map for 24 hours.
+  const [signalModalOpen, setSignalModalOpen] = useState(router.params.composeSignal === "1");
+  const [signalProvinceIndex, setSignalProvinceIndex] = useState(0);
+  const [signalCityIndex, setSignalCityIndex] = useState(0);
+  const [signalLocationInitialized, setSignalLocationInitialized] = useState(false);
+  const [signalMessage, setSignalMessage] = useState(signalMessages[0]);
+  const [signalBusy, setSignalBusy] = useState(false);
+  const [sentSignal, setSentSignal] = useState<{ cityName: string; message: string } | null>(null);
 
   // Future check-in editor modal.
   const [checkinModalOpen, setCheckinModalOpen] = useState(false);
@@ -90,9 +113,14 @@ export default function MapPage() {
     setLoading(true);
     setStatus("");
     try {
-      const [summaryRes, checkins] = await Promise.all([getMemorySummary(), listFutureCheckins()]);
+      const [summaryRes, checkins, signalData] = await Promise.all([
+        getMemorySummary(),
+        listFutureCheckins(),
+        getRelationshipSignals().catch(() => null),
+      ]);
       setSummary(summaryRes.summary || {});
       setFutureCheckins(checkins);
+      if (signalData) setSignals(signalData.signals || []);
     } catch {
       setStatus("暂时没有同步到足迹，请检查网络后再试。");
     } finally {
@@ -150,6 +178,41 @@ export default function MapPage() {
 
   const latestWeather = latestCity && weather?.cityId === latestCity.id ? weather : null;
 
+  const signalCityOptions = useMemo(
+    () => getCitiesByProvince(provinces[signalProvinceIndex]?.id ?? ""),
+    [signalProvinceIndex],
+  );
+
+  useEffect(() => {
+    if (!signalModalOpen || signalLocationInitialized || loading) return;
+    if (latestCity) {
+      const provinceIndex = provinces.findIndex((province) => province.id === latestCity.provinceId);
+      if (provinceIndex >= 0) {
+        const cityOptions = getCitiesByProvince(latestCity.provinceId);
+        const cityIndex = cityOptions.findIndex((city) => city.id === latestCity.id);
+        setSignalProvinceIndex(provinceIndex);
+        setSignalCityIndex(Math.max(0, cityIndex));
+      }
+    }
+    setSignalLocationInitialized(true);
+  }, [latestCity, loading, signalLocationInitialized, signalModalOpen]);
+
+  useEffect(() => {
+    if (signals.length === 0) {
+      if (activeSignalId) setActiveSignalId("");
+      return;
+    }
+    if (!signals.some((signal) => signal.id === activeSignalId)) {
+      setActiveSignalId(signals[0].id);
+    }
+  }, [activeSignalId, signals]);
+
+  const activeSignal = useMemo(
+    () => signals.find((signal) => signal.id === activeSignalId) || signals[0],
+    [activeSignalId, signals],
+  );
+  const activeSignalCity = activeSignal ? cityById.get(activeSignal.cityId) : undefined;
+
   const futureMarkers = useMemo(() => {
     const byCity = new Map<string, FutureCheckin>();
     futureCheckins.forEach((checkin) => {
@@ -157,6 +220,16 @@ export default function MapPage() {
     });
     return [...byCity.values()];
   }, [futureCheckins]);
+
+  const signalMarkers = useMemo(() => {
+    const seenCities = new Set<string>();
+    return signals.flatMap((signal) => {
+      const city = cityById.get(signal.cityId);
+      if (!city || seenCities.has(city.id)) return [];
+      seenCities.add(city.id);
+      return [{ signal, city }];
+    });
+  }, [signals]);
 
   const provincePolygons = useMemo(
     () => buildNativeProvincePolygons(litProvinceIds),
@@ -235,8 +308,36 @@ export default function MapPage() {
         },
       });
     });
+
+    signalMarkers.forEach(({ signal, city }, index) => {
+      markers.push({
+        id: SIGNAL_MARKER_ID_START + index,
+        ...toNativeMapPoint(city.lng, city.lat),
+        iconPath: heartIcon,
+        width: mapNativeMetrics.signalMarkerWidth,
+        height: mapNativeMetrics.signalMarkerHeight,
+        zIndex: 10,
+        anchor: { x: 0.5, y: 0.5 },
+        ...(signal.id === activeSignal?.id ? {
+          callout: {
+            content: `${city.name} · TA 想你`,
+            color: mapNativeColors.signalText,
+            fontSize: mapNativeMetrics.calloutFontSize,
+            anchorX: 0,
+            anchorY: -4,
+            borderRadius: mapNativeMetrics.calloutRadius,
+            borderWidth: 1,
+            borderColor: mapNativeColors.signalBorder,
+            bgColor: mapNativeColors.signalBackground,
+            padding: mapNativeMetrics.calloutPadding,
+            display: "ALWAYS",
+            textAlign: "center",
+          },
+        } : {}),
+      });
+    });
     return markers;
-  }, [futureMarkers, latestCity, latestWeather, routePoints, showCharacters]);
+  }, [activeSignal?.id, futureMarkers, latestCity, latestWeather, routePoints, showCharacters, signalMarkers]);
 
   const selectedProvince = selectedProvinceId ? provinceById.get(selectedProvinceId) : undefined;
   const selectedCities = useMemo(() => {
@@ -261,6 +362,14 @@ export default function MapPage() {
     [selectedCities],
   );
 
+  const focusSignal = useCallback((signal: RelationshipSignal) => {
+    const city = cityById.get(signal.cityId);
+    if (!city) return;
+    setActiveSignalId(signal.id);
+    setMapCenter(toNativeMapPoint(city.lng, city.lat));
+    setMapScale(7);
+  }, []);
+
   const handleMapTap = useCallback(
     (event: { detail?: { longitude?: number; latitude?: number } }) => {
       const longitude = event.detail?.longitude;
@@ -280,15 +389,22 @@ export default function MapPage() {
         if (latestStop) setSelectedProvinceId(latestStop.provinceId);
         return;
       }
+      const signalMarker = signalMarkers[markerId - SIGNAL_MARKER_ID_START];
+      if (signalMarker) {
+        focusSignal(signalMarker.signal);
+        return;
+      }
       const checkin = futureMarkers[markerId - FUTURE_MARKER_ID_START];
       if (checkin) {
         Taro.showToast({ title: futureCheckinLabel(checkin), icon: "none" });
       }
     },
-    [futureMarkers, routePoints],
+    [focusSignal, futureMarkers, routePoints, signalMarkers],
   );
 
   const fitChina = useCallback(() => {
+    setMapCenter(MAP_CENTER);
+    setMapScale(4);
     void Taro.createMapContext(MAP_ID)
       .includePoints({ points: nativeChinaBounds, padding: [32] })
       .catch(() => Taro.showToast({ title: "地图视野重置失败", icon: "none" }));
@@ -302,6 +418,37 @@ export default function MapPage() {
   const recordFirstMemory = () => {
     setSelectedProvinceId(null);
     Taro.navigateTo({ url: "/pages/memory-editor/index" });
+  };
+
+  const openSignalComposer = () => {
+    setSignalLocationInitialized(false);
+    setSignalModalOpen(true);
+  };
+
+  const sendSignal = async () => {
+    const city = signalCityOptions[signalCityIndex];
+    if (!city || signalBusy) return;
+    const message = signalMessage.trim() || "想你了";
+    setSignalBusy(true);
+    try {
+      await createRelationshipSignal(city.id, message);
+      setSentSignal({ cityName: city.name, message });
+      setMapCenter(toNativeMapPoint(city.lng, city.lat));
+      setMapScale(7);
+      setSignalModalOpen(false);
+      setSignalLocationInitialized(false);
+      Taro.showToast({ title: "心意已经送达", icon: "success" });
+    } catch {
+      Taro.showToast({ title: "信号暂时没送达", icon: "none" });
+    } finally {
+      setSignalBusy(false);
+    }
+  };
+
+  const showNextSignal = () => {
+    if (signals.length < 2 || !activeSignal) return;
+    const index = signals.findIndex((signal) => signal.id === activeSignal.id);
+    focusSignal(signals[(index + 1) % signals.length]);
   };
 
   // --- Future check-in editor ---
@@ -363,10 +510,43 @@ export default function MapPage() {
             已点亮 {litCount} / {provinces.length} 个省份 · {routePoints.length} 座城市
           </Text>
         </View>
-        <Button className="btn-secondary map-checkin-open" onClick={() => setCheckinModalOpen(true)}>
-          想去的地方{futureCheckins.length > 0 ? ` · ${futureCheckins.length}` : ""}
-        </Button>
       </View>
+
+      {activeSignal && activeSignalCity ? (
+        <View className="map-signal-card received">
+          <View className="map-signal-card__icon-shell">
+            <Image className="map-signal-card__icon" src={heartIcon} mode="aspectFit" />
+          </View>
+          <View className="map-signal-card__copy">
+            <Text className="map-signal-card__kicker">TA 的心意 · {notificationTime(activeSignal.createdAt)}</Text>
+            <Text className="map-signal-card__title">TA 在{activeSignalCity.name}想到了你</Text>
+            <Text className="map-signal-card__message">{activeSignal.message || "有些想念，不用说很多。"}</Text>
+          </View>
+          <View className="map-signal-card__actions">
+            <Button className="map-signal-card__action" onClick={() => focusSignal(activeSignal)}>
+              看这里
+            </Button>
+            {signals.length > 1 ? (
+              <Button className="map-signal-card__action muted" onClick={showNextSignal}>
+                下一个 · {signals.length}
+              </Button>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+
+      {sentSignal ? (
+        <View className="map-signal-card sent">
+          <View className="map-signal-card__icon-shell">
+            <Image className="map-signal-card__icon" src={heartIcon} mode="aspectFit" />
+          </View>
+          <View className="map-signal-card__copy">
+            <Text className="map-signal-card__kicker">刚刚送出</Text>
+            <Text className="map-signal-card__title">心意停在{sentSignal.cityName}</Text>
+            <Text className="map-signal-card__message">“{sentSignal.message}” · TA 会在 24 小时内看见</Text>
+          </View>
+        </View>
+      ) : null}
 
       {status ? <ErrorBanner copy={status} onRetry={() => void loadData()} /> : null}
       {loading && Object.keys(summary).length === 0 ? <LoadingState /> : null}
@@ -375,9 +555,9 @@ export default function MapPage() {
         <TaroMap
           id={MAP_ID}
           className="memory-native-map"
-          longitude={MAP_CENTER.longitude}
-          latitude={MAP_CENTER.latitude}
-          scale={4}
+          longitude={mapCenter.longitude}
+          latitude={mapCenter.latitude}
+          scale={mapScale}
           minScale={3}
           maxScale={18}
           includePoints={nativeChinaBounds}
@@ -407,6 +587,16 @@ export default function MapPage() {
         />
         <Button className="map-fit-button" onClick={fitChina}>
           全图
+        </Button>
+      </View>
+
+      <View className="map-actions">
+        <Button className="map-signal-open" onClick={openSignalComposer}>
+          <Image className="map-action-icon" src={heartIcon} mode="aspectFit" />
+          <Text>送个心动信号</Text>
+        </Button>
+        <Button className="btn-secondary map-checkin-open" onClick={() => setCheckinModalOpen(true)}>
+          想去的地方{futureCheckins.length > 0 ? ` · ${futureCheckins.length}` : ""}
         </Button>
       </View>
 
@@ -533,6 +723,97 @@ export default function MapPage() {
                 : recordFirstMemory()}
             >
               {selectedStats.latest ? "读最近的一封" : "记录第一段回忆"}
+            </Button>
+          </View>
+        </View>
+      ) : null}
+
+      {/* 24-hour relationship signal composer */}
+      {signalModalOpen ? (
+        <View
+          className="map-modal"
+          onClick={() => {
+            setSignalModalOpen(false);
+            setSignalLocationInitialized(false);
+          }}
+        >
+          <View className="map-modal__card map-signal-composer" onClick={(event) => event.stopPropagation()}>
+            <View className="map-modal__heading">
+              <View className="map-signal-composer__heading-copy">
+                <Text className="map-signal-composer__eyebrow">24 小时心意</Text>
+                <Text className="map-modal__title">把想念留在一座城市</Text>
+              </View>
+              <Button
+                className="map-modal__close"
+                aria-label="关闭心动信号"
+                onClick={() => {
+                  setSignalModalOpen(false);
+                  setSignalLocationInitialized(false);
+                }}
+              >
+                ×
+              </Button>
+            </View>
+
+            <View className="map-signal-composer__intro">
+              <Image className="map-signal-composer__heart" src={heartIcon} mode="aspectFit" />
+              <Text className="map-signal-composer__intro-copy">TA 会在地图上看到这颗心，24 小时后它会安静消失。</Text>
+            </View>
+
+            <Text className="map-signal-composer__label">留在哪里</Text>
+            <View className="map-checkin__row">
+              <Picker
+                className="map-checkin__picker"
+                mode="selector"
+                range={provinces.map((province) => province.name)}
+                value={signalProvinceIndex}
+                onChange={(event) => {
+                  setSignalProvinceIndex(Number(event.detail.value));
+                  setSignalCityIndex(0);
+                  setSignalLocationInitialized(true);
+                }}
+              >
+                <View className="field">{provinces[signalProvinceIndex]?.name || "选择省份"}</View>
+              </Picker>
+              <Picker
+                className="map-checkin__picker"
+                mode="selector"
+                range={signalCityOptions.map((city) => city.name)}
+                value={signalCityIndex}
+                onChange={(event) => {
+                  setSignalCityIndex(Number(event.detail.value));
+                  setSignalLocationInitialized(true);
+                }}
+              >
+                <View className="field">{signalCityOptions[signalCityIndex]?.name || "选择城市"}</View>
+              </Picker>
+            </View>
+
+            <Text className="map-signal-composer__label">想告诉 TA</Text>
+            <View className="map-signal-presets">
+              {signalMessages.map((message) => (
+                <Button
+                  className={signalMessage === message ? "map-signal-preset active" : "map-signal-preset"}
+                  key={message}
+                  onClick={() => setSignalMessage(message)}
+                >
+                  {message}
+                </Button>
+              ))}
+            </View>
+            <View className="map-signal-input-wrap">
+              <Input
+                className="map-signal-input"
+                maxlength={80}
+                placeholder="也可以写一句自己的话"
+                value={signalMessage}
+                onInput={(event) => setSignalMessage(event.detail.value)}
+              />
+              <Text className="map-signal-input-count">{signalMessage.length}/80</Text>
+            </View>
+
+            <Button className="btn map-signal-submit" disabled={signalBusy} onClick={() => void sendSignal()}>
+              {signalBusy ? "正在送出" : "让这颗心出发"}
             </Button>
           </View>
         </View>

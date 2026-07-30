@@ -33,9 +33,14 @@ func CreateSignal(c *gin.Context) {
 	}
 
 	cityID := strings.TrimSpace(req.CityID)
+	if cityID == "" {
+		utils.Error(c, 400, "City is required")
+		return
+	}
 	message := strings.TrimSpace(req.Message)
-	if len(message) > 80 {
-		message = message[:80]
+	messageRunes := []rune(message)
+	if len(messageRunes) > 80 {
+		message = string(messageRunes[:80])
 	}
 
 	now := time.Now().UTC()

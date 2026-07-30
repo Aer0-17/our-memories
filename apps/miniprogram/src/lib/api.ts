@@ -54,6 +54,16 @@ export type NotificationItem = {
   createdAt: string;
 };
 
+export type RelationshipSignal = {
+  id: string;
+  spaceId: string;
+  senderUserId: string;
+  cityId: string;
+  message: string;
+  createdAt: string;
+  expiresAt: string;
+};
+
 export type TripCheckpoint = {
   id: string;
   name: string;
@@ -340,6 +350,17 @@ export function markNotificationRead(notificationId: string) {
 
 export function markAllNotificationsRead() {
   return request<{ ok: true }>("/notifications/read-all", { method: "PATCH" });
+}
+
+export function getRelationshipSignals() {
+  return request<{ signals: RelationshipSignal[] }>("/signals");
+}
+
+export function createRelationshipSignal(cityId: string, message: string) {
+  return request<{ id: string }>("/signals", {
+    method: "POST",
+    data: { cityId, message },
+  });
 }
 
 function sessionFromLogin(payload: LoginPayload): Session {

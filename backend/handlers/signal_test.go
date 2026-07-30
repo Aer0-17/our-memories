@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/glebarez/sqlite"
@@ -96,5 +97,61 @@ func TestCreateSignalPersistsAndPublishesEvent(t *testing.T) {
 	}
 	if len(recorder.items) != 1 || recorder.items[0].Type != events.SignalCreated {
 		t.Fatalf("expected signal.created event, got %#v", recorder.items)
+	}
+}
+
+func TestCreateSignalRejectsBlankCity(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupSignalHandlerTestDB(t)
+	recorder := &signalEventRecorder{}
+	SetEventPublisher(recorder)
+
+	body, err := json.Marshal(gin.H{"cityId": "   ", "message": "想你"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/signals", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("spaceID", "space-1")
+	c.Set("userID", "user-1")
+
+	CreateSignal(c)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected blank city to be rejected, got %d: %s", w.Code, w.Body.String())
+	}
+	if len(recorder.items) != 0 {
+		t.Fatalf("expected no event for rejected signal, got %#v", recorder.items)
+	}
+}
+
+func TestCreateSignalTruncatesUnicodeByCharacters(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	setupSignalHandlerTestDB(t)
+
+	body, err := json.Marshal(gin.H{"cityId": "hangzhou", "message": strings.Repeat("想", 81)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/api/v1/signals", bytes.NewReader(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+	c.Set("spaceID", "space-1")
+	c.Set("userID", "user-1")
+
+	CreateSignal(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected unicode signal to succeed, got %d: %s", w.Code, w.Body.String())
+	}
+	var message string
+	if err := db.DB.QueryRow(`SELECT message FROM relationship_signals WHERE space_id = 'space-1'`).Scan(&message); err != nil {
+		t.Fatal(err)
+	}
+	if !utf8.ValidString(message) || utf8.RuneCountInString(message) != 80 {
+		t.Fatalf("expected 80 valid unicode characters, got runes=%d valid=%v", utf8.RuneCountInString(message), utf8.ValidString(message))
 	}
 }

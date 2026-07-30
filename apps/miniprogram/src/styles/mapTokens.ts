@@ -12,6 +12,9 @@ export const mapNativeColors = {
   futureText: "#8f5f26",
   futureBorder: "#c99756",
   futureBackground: "#fff8ea",
+  signalText: "#9e4144",
+  signalBorder: "#e8b8c2",
+  signalBackground: "#fff5f2",
 } as const;
 
 export const mapNativeMetrics = {
@@ -22,6 +25,8 @@ export const mapNativeMetrics = {
   coupleMarkerHeight: 48,
   futureMarkerWidth: 28,
   futureMarkerHeight: 28,
+  signalMarkerWidth: 32,
+  signalMarkerHeight: 32,
   calloutFontSize: 12,
   calloutPadding: 8,
   calloutRadius: 4,

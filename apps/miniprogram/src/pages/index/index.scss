@@ -278,16 +278,10 @@
   flex-direction: column;
   gap: $space-4;
   margin-top: $space-4;
-  border: 1px solid var(--color-blue-soft);
+  border: 1px solid var(--color-accent-soft);
   border-radius: $radius-md;
-  background: var(--color-blue-soft);
+  background: var(--color-surface-warm);
   padding: $space-4;
-  transition: background $duration-fast ease, border-color $duration-fast ease;
-}
-
-.signal-panel.sent {
-  border-color: var(--color-green-soft);
-  background: var(--color-green-soft);
 }
 
 .signal-heading {
@@ -337,20 +331,12 @@
 .signal-action {
   min-height: 44px;
   border-radius: $radius-md;
-  background: var(--color-blue);
+  background: var(--color-accent);
   color: var(--color-white);
   font-size: $text-sm;
   font-weight: 600;
   line-height: 44px;
   padding: 0 $space-4;
-}
-
-.signal-panel.sent .signal-action {
-  background: var(--color-green);
-}
-
-.signal-action[disabled] {
-  opacity: 0.52;
 }
 
 .presence-section {
