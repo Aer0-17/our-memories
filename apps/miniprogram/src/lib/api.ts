@@ -77,6 +77,37 @@ export type BackupImportResult = {
   reloginRequired: boolean;
 };
 
+export type FullBackupInfo = {
+  createdAt: string;
+  verifiedAt: string;
+  fileName: string;
+  size: number;
+  databaseBytes: number;
+  mediaFiles: number;
+  mediaBytes: number;
+  remoteObjectStorageExcluded: boolean;
+};
+
+export type FullBackupStatus = {
+  enabled: boolean;
+  encryptionConfigured: boolean;
+  encryption: string;
+  running: boolean;
+  intervalSeconds: number;
+  retentionCount: number;
+  lastAttemptAt?: string;
+  lastErrorAt?: string;
+  lastError?: string;
+  lastSuccess?: FullBackupInfo;
+  nextRunAt?: string;
+};
+
+export type FullBackupCreateResult = {
+  backup: FullBackupInfo;
+  removedFiles: number;
+  warning?: string;
+};
+
 export type NotificationItem = {
   id: string;
   type: string;
@@ -488,6 +519,14 @@ export function importBackup(payload: BackupPayload) {
     method: "POST",
     data: payload,
   });
+}
+
+export function getFullBackupStatus() {
+  return request<FullBackupStatus>("/backup/full/status");
+}
+
+export function createFullBackup() {
+  return request<FullBackupCreateResult>("/backup/full", { method: "POST" });
 }
 
 export function getMemories() {

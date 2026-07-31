@@ -4,9 +4,12 @@ import Taro, { useDidShow } from "@tarojs/taro";
 import { AppHeader } from "../../components/AppHeader";
 import {
   clearSession,
+  createFullBackup,
   exportBackup,
+  getFullBackupStatus,
   importBackup,
   readSession,
+  type FullBackupStatus,
   type Session,
 } from "../../lib/api";
 import {
@@ -25,7 +28,7 @@ import {
 import shieldIcon from "../../assets/lucide/shield-check.svg";
 import "./index.scss";
 
-type WorkingState = "" | "export" | "choose" | "share" | "delete" | "restore";
+type WorkingState = "" | "fullBackup" | "export" | "choose" | "share" | "delete" | "restore";
 
 function formatDateTime(value: string) {
   const date = new Date(value);
@@ -43,6 +46,22 @@ export default function DataVaultPage() {
   const [confirmation, setConfirmation] = useState("");
   const [status, setStatus] = useState("");
   const [working, setWorking] = useState<WorkingState>("");
+  const [fullBackup, setFullBackup] = useState<FullBackupStatus | null>(null);
+  const [fullBackupLoading, setFullBackupLoading] = useState(true);
+  const [fullBackupUnavailable, setFullBackupUnavailable] = useState(false);
+
+  const loadFullBackupStatus = async () => {
+    setFullBackupLoading(true);
+    try {
+      setFullBackup(await getFullBackupStatus());
+      setFullBackupUnavailable(false);
+    } catch {
+      setFullBackup(null);
+      setFullBackupUnavailable(true);
+    } finally {
+      setFullBackupLoading(false);
+    }
+  };
 
   useDidShow(() => {
     const current = readSession();
@@ -52,7 +71,34 @@ export default function DataVaultPage() {
     }
     setSession(current);
     setLastBackup(readStoredBackup(current));
+    void loadFullBackupStatus();
   });
+
+  const createEncryptedFullBackup = async () => {
+    if (!fullBackup?.enabled || fullBackup.running || working) return;
+    const check = await Taro.showModal({
+      title: "创建加密完整备份",
+      content: "服务器会把数据库、照片和语音打包并使用 AES-256 加密。密钥不会返回小程序。现在开始吗？",
+      confirmText: "开始备份",
+      confirmColor: "#477A69",
+    });
+    if (!check.confirm) return;
+
+    setWorking("fullBackup");
+    setStatus("");
+    setFullBackup((current) => current ? { ...current, running: true } : current);
+    try {
+      const result = await createFullBackup();
+      await loadFullBackupStatus();
+      Taro.showToast({ title: "加密备份已完成", icon: "success" });
+      if (result.warning) setStatus(result.warning);
+    } catch {
+      await loadFullBackupStatus();
+      setStatus("未能确认本次完整备份结果，请查看下方最近状态或服务器日志后再试。");
+    } finally {
+      setWorking("");
+    }
+  };
 
   const exportCurrent = async () => {
     if (!session || working) return;
@@ -271,11 +317,115 @@ export default function DataVaultPage() {
         </View>
       ) : null}
 
+      <View className={`vault-full-backup card${fullBackup?.lastError ? " vault-full-backup-error" : ""}`}>
+        <View className="vault-full-heading">
+          <View className="vault-full-heading-copy">
+            <Text className="vault-panel-kicker">服务器保护</Text>
+            <Text className="vault-panel-title">加密完整备份</Text>
+            <Text className="vault-panel-copy">数据库、照片和语音一起保存，适合服务器故障后的完整恢复。</Text>
+          </View>
+          <Text className={`vault-full-badge${fullBackup?.enabled ? "" : " vault-full-badge-muted"}`}>
+            {fullBackupLoading
+              ? "读取中"
+              : fullBackupUnavailable
+                ? "不可用"
+              : fullBackup?.running
+                ? "备份中"
+                : fullBackup?.enabled
+                  ? fullBackup.lastError
+                    ? "需检查"
+                    : "已保护"
+                  : "未启用"}
+          </Text>
+        </View>
+
+        <View className="vault-encryption-strip">
+          <View className="vault-encryption-mark">AES</View>
+          <View className="vault-encryption-copy">
+            <Text className="vault-encryption-title">AES-256-GCM 分块加密</Text>
+            <Text className="vault-encryption-detail">服务器加密后落盘，密钥不返回小程序</Text>
+          </View>
+        </View>
+
+        {fullBackup?.enabled ? (
+          <>
+            <View className="vault-full-metrics">
+              <View className="vault-full-metric">
+                <Text className="vault-full-metric-label">最近成功</Text>
+                <Text className="vault-full-metric-value">
+                  {fullBackup.lastSuccess ? formatDateTime(fullBackup.lastSuccess.createdAt) : "等待首次备份"}
+                </Text>
+              </View>
+              <View className="vault-full-metric">
+                <Text className="vault-full-metric-label">完整包大小</Text>
+                <Text className="vault-full-metric-value">
+                  {fullBackup.lastSuccess ? formatFileSize(fullBackup.lastSuccess.size) : "--"}
+                </Text>
+              </View>
+              <View className="vault-full-metric">
+                <Text className="vault-full-metric-label">照片与语音</Text>
+                <Text className="vault-full-metric-value">
+                  {fullBackup.lastSuccess
+                    ? `${fullBackup.lastSuccess.mediaFiles} 个 · ${formatFileSize(fullBackup.lastSuccess.mediaBytes)}`
+                    : "--"}
+                </Text>
+              </View>
+              <View className="vault-full-metric">
+                <Text className="vault-full-metric-label">自动留存</Text>
+                <Text className="vault-full-metric-value">最近 {fullBackup.retentionCount} 份</Text>
+              </View>
+            </View>
+
+            <View className="vault-full-schedule">
+              <Text className="vault-full-schedule-label">下次自动执行</Text>
+              <Text className="vault-full-schedule-value">
+                {fullBackup.nextRunAt ? formatDateTime(fullBackup.nextRunAt) : "等待调度"}
+              </Text>
+            </View>
+
+            {fullBackup.lastError ? (
+              <Text className="vault-full-message vault-full-message-error">{fullBackup.lastError}</Text>
+            ) : null}
+            {fullBackup.lastSuccess?.remoteObjectStorageExcluded ? (
+              <Text className="vault-full-message">
+                对象存储中的远端原文件不在此包内；本机图片目录中的文件已包含。
+              </Text>
+            ) : null}
+
+            <Button
+              className="btn vault-full-action"
+              disabled={Boolean(working) || fullBackup.running}
+              loading={working === "fullBackup" || fullBackup.running}
+              onClick={() => void createEncryptedFullBackup()}
+            >
+              {fullBackup.running ? "正在创建加密备份" : "立即创建加密完整备份"}
+            </Button>
+          </>
+        ) : (
+          <View className="vault-full-unavailable">
+            <Text className="vault-full-unavailable-title">
+              {fullBackupLoading
+                ? "正在读取服务器保护状态"
+                : fullBackupUnavailable
+                  ? "暂时无法读取服务器保护状态"
+                  : "服务器尚未启用加密完整备份"}
+            </Text>
+            <Text className="vault-full-unavailable-copy">
+              {fullBackupLoading
+                ? "请稍候。"
+                : fullBackupUnavailable
+                  ? "请检查网络后重新进入页面；现有备份不会因此被删除。"
+                  : "启用部署配置并重启服务后，这里会自动显示备份状态。"}
+            </Text>
+          </View>
+        )}
+      </View>
+
       <View className="vault-layout">
         <View className="vault-panel card vault-export-panel">
           <View className="vault-panel-heading">
             <View>
-              <Text className="vault-panel-kicker">推荐先做</Text>
+              <Text className="vault-panel-kicker">便携副本</Text>
               <Text className="vault-panel-title">生成数据库 JSON 文本备份</Text>
             </View>
             <Text className="vault-format">备份 v1</Text>

@@ -7,8 +7,10 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
+	"our-memories-backend/securebackup"
 )
 
 type Config struct {
@@ -40,6 +42,11 @@ type Config struct {
 	S3ObjectACL                string
 	LocalImageDir              string
 	PhotoSyncInterval          string
+	FullBackupEnabled          bool
+	FullBackupDir              string
+	FullBackupInterval         string
+	FullBackupRetention        int
+	FullBackupEncryptionKey    string
 	JPushAppKey                string
 	JPushMasterSecret          string
 }
@@ -78,6 +85,11 @@ func Load() {
 		S3ObjectACL:                getEnv("S3_OBJECT_ACL", ""),
 		LocalImageDir:              getEnv("LOCAL_IMAGE_DIR", "./data/images"),
 		PhotoSyncInterval:          getEnv("PHOTO_SYNC_INTERVAL", "10m"),
+		FullBackupEnabled:          getEnv("FULL_BACKUP_ENABLED", "false") == "true",
+		FullBackupDir:              getEnv("FULL_BACKUP_DIR", "./backups"),
+		FullBackupInterval:         getEnv("FULL_BACKUP_INTERVAL", "24h"),
+		FullBackupRetention:        getEnvInt("FULL_BACKUP_RETENTION", 30),
+		FullBackupEncryptionKey:    getEnv("FULL_BACKUP_ENCRYPTION_KEY", ""),
 		JPushAppKey:                getEnv("JPUSH_APP_KEY", ""),
 		JPushMasterSecret:          getEnv("JPUSH_MASTER_SECRET", ""),
 	}
@@ -125,6 +137,22 @@ func Validate(cfg *Config) error {
 		}
 		if len(cfg.AdminPassword) < 12 || cfg.AdminPassword == "admin123456" {
 			return fmt.Errorf("ADMIN_PASSWORD must be at least 12 characters and changed from the example value")
+		}
+	}
+
+	if cfg.FullBackupEnabled {
+		if _, err := securebackup.ParseEncryptionKey(cfg.FullBackupEncryptionKey); err != nil {
+			return fmt.Errorf("FULL_BACKUP_ENCRYPTION_KEY: %w", err)
+		}
+		interval, err := time.ParseDuration(cfg.FullBackupInterval)
+		if err != nil || interval < time.Hour {
+			return fmt.Errorf("FULL_BACKUP_INTERVAL must be a valid duration of at least 1h")
+		}
+		if cfg.FullBackupRetention < 2 || cfg.FullBackupRetention > 365 {
+			return fmt.Errorf("FULL_BACKUP_RETENTION must be between 2 and 365")
+		}
+		if strings.TrimSpace(cfg.FullBackupDir) == "" {
+			return fmt.Errorf("FULL_BACKUP_DIR must not be empty")
 		}
 	}
 

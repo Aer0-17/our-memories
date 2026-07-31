@@ -5,6 +5,7 @@ import type {
   BackupRow,
   Session,
 } from "./api";
+import { replaceTextFileAtomically } from "./atomic-file";
 
 export const backupFormat = "our-memories-backup";
 export const backupVersion = 1;
@@ -12,6 +13,7 @@ export const backupMaxBytes = 8 * 1024 * 1024;
 
 const storedBackupKey = "our-memories:last-local-backup";
 const managedBackupFileName = "our-memories-latest.json.txt";
+const managedBackupPartialFileName = "our-memories-latest.json.txt.partial";
 const legacyManagedBackupFileName = "our-memories-latest.json";
 const temporaryShareFileName = "our-memories-share.json.txt";
 
@@ -196,6 +198,17 @@ function writeTextFile(filePath: string, data: string) {
   });
 }
 
+function renameFile(oldPath: string, newPath: string) {
+  return new Promise<void>((resolve, reject) => {
+    Taro.getFileSystemManager().rename({
+      oldPath,
+      newPath,
+      success: () => resolve(),
+      fail: reject,
+    });
+  });
+}
+
 function rawErrorMessage(error: unknown) {
   if (isObject(error) && typeof error.errMsg === "string") return error.errMsg;
   if (error instanceof Error) return error.message;
@@ -358,10 +371,22 @@ export async function writeBackupFile(payload: BackupPayload, kind: StoredBackup
   const fileName = `our-memories-${safeFilePart(payload.source.spaceCode)}-${suffix}${backupTimestamp(payload.exportedAt)}.json.txt`;
   const userDataPath = Taro.env.USER_DATA_PATH;
   if (!userDataPath) throw new BackupFileError("当前微信环境无法保存备份文件。");
-  // A fixed managed path means a new export replaces the previous local copy
-  // instead of leaving invisible, unencrypted backup files behind.
+  // Publish through a sibling temporary file so an interrupted write cannot
+  // truncate the previous valid backup. Metadata is updated only afterwards.
   const filePath = `${userDataPath}/${managedBackupFileName}`;
-  await writeTextFile(filePath, data);
+  const partialPath = `${userDataPath}/${managedBackupPartialFileName}`;
+  await replaceTextFileAtomically(
+    filePath,
+    partialPath,
+    data,
+    {
+      remove: unlinkManagedFile,
+      write: writeTextFile,
+      read: readTextFile,
+      rename: renameFile,
+    },
+    () => new BackupFileError("本机备份写入不完整，上一份有效备份仍已保留。"),
+  );
 
   // 0.32.0 used a .json-only managed path. Remove it after the compatible file
   // has been written so upgrades still keep only one unencrypted local backup.
@@ -497,5 +522,6 @@ export function backupErrorMessage(error: unknown, fallback: string) {
 export function formatFileSize(bytes: number) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

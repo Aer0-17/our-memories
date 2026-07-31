@@ -33,19 +33,21 @@ COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
 COPY backend/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/our-memories-api ./main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/our-memories-api ./main.go \
+  && CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/our-memories-backupctl ./cmd/backupctl
 
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates tzdata \
   && addgroup -S app \
   && adduser -S app -G app \
-  && mkdir -p /app/data \
+  && mkdir -p /app/data /app/backups \
   && chown -R app:app /app
 
 WORKDIR /app
 
 COPY --from=builder /out/our-memories-api ./our-memories-api
+COPY --from=builder /out/our-memories-backupctl ./our-memories-backupctl
 COPY --from=web-builder /src/apps/web/out ./public/web
 COPY --from=admin-builder /src/apps/admin/out ./public/admin
 
@@ -58,11 +60,15 @@ ENV PORT=8080 \
   DEFAULT_USER_TA_DISPLAY_NAME=TA \
   DEFAULT_ANNIVERSARY_DATE= \
   DEFAULT_ANNIVERSARY_LABEL= \
+  FULL_BACKUP_ENABLED=false \
+  FULL_BACKUP_DIR=/app/backups \
+  FULL_BACKUP_INTERVAL=24h \
+  FULL_BACKUP_RETENTION=30 \
   AUTO_SEED=false
 
 USER app
 
 EXPOSE 8080
-VOLUME ["/app/data"]
+VOLUME ["/app/data", "/app/backups"]
 
 CMD ["sh", "-c", "umask 077 && exec ./our-memories-api"]

@@ -17,6 +17,7 @@ import (
 	"our-memories-backend/jobs"
 	"our-memories-backend/middleware"
 	"our-memories-backend/repositories"
+	"our-memories-backend/securebackup"
 	"our-memories-backend/services"
 	"our-memories-backend/storage"
 )
@@ -26,6 +27,32 @@ func main() {
 	db.Init()
 	db.EnsureAdminFromEnv()
 	storage.InitS3()
+	fullBackupInterval, err := time.ParseDuration(config.Get().FullBackupInterval)
+	if err != nil {
+		fullBackupInterval = 24 * time.Hour
+	}
+	fullBackupKey := []byte(nil)
+	if config.Get().FullBackupEnabled {
+		fullBackupKey, err = securebackup.ParseEncryptionKey(config.Get().FullBackupEncryptionKey)
+		if err != nil {
+			log.Fatal("Failed to parse full backup encryption key:", err)
+		}
+	}
+	fullBackupService, err := securebackup.NewService(securebackup.ServiceConfig{
+		Enabled:                       config.Get().FullBackupEnabled,
+		Database:                      db.DB,
+		DatabasePath:                  config.Get().DatabasePath,
+		MediaDirectory:                config.Get().LocalImageDir,
+		BackupDirectory:               config.Get().FullBackupDir,
+		EncryptionKey:                 fullBackupKey,
+		RetentionCount:                config.Get().FullBackupRetention,
+		Interval:                      fullBackupInterval,
+		RemoteObjectStorageConfigured: config.Get().S3Endpoint != "",
+	})
+	if err != nil {
+		log.Fatal("Failed to initialize encrypted full backup:", err)
+	}
+	handlers.SetFullBackupService(fullBackupService)
 	accountRepo := repositories.NewAccountRepository(db.Gorm)
 	pushService := services.NewPushService(repositories.NewPushRepository(db.Gorm))
 	hub := events.NewConnectionHub()
@@ -39,6 +66,7 @@ func main() {
 	jobs.StartPhotoSync()
 	jobs.StartPhotoCleanup()
 	jobs.StartScheduler(db.Gorm, dispatcher)
+	jobs.StartFullBackup(fullBackupService, fullBackupInterval)
 
 	r := gin.Default()
 	if err := r.SetTrustedProxies(config.Get().TrustedProxies); err != nil {
@@ -53,6 +81,7 @@ func main() {
 	authBurstLimiter := middleware.RateLimit(15*time.Minute, 10)
 	authHourlyLimiter := middleware.RateLimit(time.Hour, 60)
 	refreshLimiter := middleware.RateLimit(time.Minute, 60)
+	fullBackupLimiter := middleware.RateLimit(time.Hour, 3)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"ok": true})
@@ -150,6 +179,8 @@ func main() {
 
 			auth.POST("/backup/import", handlers.ImportBackup)
 			auth.GET("/backup/export", handlers.ExportBackup)
+			auth.GET("/backup/full/status", handlers.GetFullBackupStatus)
+			auth.POST("/backup/full", fullBackupLimiter, handlers.CreateFullBackup)
 
 			auth.GET("/trip-guides", handlers.GetTripGuides)
 			auth.POST("/trip-guides", handlers.CreateTripGuide)

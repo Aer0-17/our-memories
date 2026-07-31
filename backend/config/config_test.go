@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"encoding/base64"
+	"testing"
+)
 
 func TestLoadReadsDefaultPublicRuntimeConfig(t *testing.T) {
 	t.Setenv("JWT_SECRET", "0123456789abcdef0123456789abcdef")
@@ -108,6 +111,45 @@ func TestValidateRejectsInvalidLoginPasscodeLength(t *testing.T) {
 
 	if err := Validate(cfg); err == nil {
 		t.Fatal("expected short login passcode length to fail")
+	}
+}
+
+func TestValidateAllowsEncryptedFullBackup(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.FullBackupEnabled = true
+	cfg.FullBackupDir = "/app/backups"
+	cfg.FullBackupInterval = "24h"
+	cfg.FullBackupRetention = 30
+	cfg.FullBackupEncryptionKey = base64.StdEncoding.EncodeToString(make([]byte, 32))
+
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("expected encrypted full backup config to pass, got %v", err)
+	}
+}
+
+func TestValidateRejectsWeakFullBackupKey(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.FullBackupEnabled = true
+	cfg.FullBackupDir = "/app/backups"
+	cfg.FullBackupInterval = "24h"
+	cfg.FullBackupRetention = 30
+	cfg.FullBackupEncryptionKey = "shared-password"
+
+	if err := Validate(cfg); err == nil {
+		t.Fatal("expected weak full backup key to fail")
+	}
+}
+
+func TestValidateRejectsUnsafeFullBackupSchedule(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.FullBackupEnabled = true
+	cfg.FullBackupDir = "/app/backups"
+	cfg.FullBackupInterval = "5m"
+	cfg.FullBackupRetention = 1
+	cfg.FullBackupEncryptionKey = base64.StdEncoding.EncodeToString(make([]byte, 32))
+
+	if err := Validate(cfg); err == nil {
+		t.Fatal("expected unsafe full backup schedule to fail")
 	}
 }
 

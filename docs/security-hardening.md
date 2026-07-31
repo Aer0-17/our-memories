@@ -16,6 +16,7 @@ EXPOSE_LOGIN_PERSONALIZATION=false
 - `TRUSTED_PROXIES` 不得填写 `0.0.0.0/0` 或 `::/0`。如果 Lucky 和应用不经过反向代理头传递真实客户端 IP，保持为空更安全。
 - 未登录的 `/public/config` 默认只返回通用登录标签，不返回真实空间名、成员姓名或纪念日；除非明确设置 `EXPOSE_LOGIN_PERSONALIZATION=true`。
 - `.env` 包含 JWT、管理员密码和对象存储密钥，权限应设为 `600`，不要提交到 Git。
+- `FULL_BACKUP_ENCRYPTION_KEY` 必须使用 `openssl rand -base64 32` 单独生成，不得复用 JWT、空间密码或管理员密码；必须在 NAS 之外离线保存一份。
 - `JWT_SECRET` 轮换后所有现有会话都会失效，需要重新登录。
 - 当前数据库如果仍使用四位密码，先登录并把空间密码改成至少 8 位，再把 `LOGIN_PASSCODE_LENGTH` 改为实际长度。只改该变量不会修改数据库密码。
 
@@ -40,7 +41,11 @@ EXPOSE_LOGIN_PERSONALIZATION=false
 - 数据目录定期快照
 - 一份不在同一块磁盘上的加密离线备份
 
-在线备份 SQLite 时不要直接复制单个 `.db` 文件，WAL 模式下可能漏掉尚未合并的数据。当前使用 bind mount `./data:/app/data` 时，可以执行：
+推荐启用内置加密完整备份。它通过 SQLite `VACUUM INTO` 创建一致性快照，将数据库与本地照片、语音流式写入 AES-256-GCM 分块认证包，并在原子发布前完成解密和哈希校验。配置、验证和恢复命令见 [backup-and-migration.md](./backup-and-migration.md)。
+
+备份目录不要放在 `data/images` 内，也不要与数据库目录重叠。宿主机 `backups` 应为容器用户所有并设为 `0700`；`.ombak` 文件默认是 `0600`。加密包与密钥必须分开保存，否则同盘损坏或密钥泄露仍会导致不可恢复或隐私泄露。
+
+未启用内置完整备份时，在线备份 SQLite 不要直接复制单个 `.db` 文件，WAL 模式下可能漏掉尚未合并的数据。当前使用 bind mount `./data:/app/data` 时，可以执行：
 
 ```bash
 mkdir -p backups

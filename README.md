@@ -88,6 +88,7 @@ npm run dev
 - [SAME_PORT_DEPLOYMENT.md](./SAME_PORT_DEPLOYMENT.md) - 同端口部署指南（前后端同域）
 - [DEPLOY_IP.md](./DEPLOY_IP.md) - 裸 IP 部署
 - [docs/security-hardening.md](./docs/security-hardening.md) - 私人部署安全与备份
+- [docs/backup-and-migration.md](./docs/backup-and-migration.md) - 加密完整备份、验证与灾难恢复
 - [docs/miniprogram.md](./docs/miniprogram.md) - 微信小程序构建与域名配置
 - [SUMMARY.md](./SUMMARY.md) - 项目修复与升级总结
 - [计划文档](./.claude/plans/elegant-giggling-flame.md) - 实现计划
@@ -182,6 +183,10 @@ ALLOWED_ORIGINS=http://localhost:3002,http://localhost:3003
 TRUSTED_PROXIES=
 LOGIN_PASSCODE_LENGTH=4
 EXPOSE_LOGIN_PERSONALIZATION=false
+FULL_BACKUP_ENABLED=false
+FULL_BACKUP_ENCRYPTION_KEY=<openssl rand -base64 32>
+FULL_BACKUP_INTERVAL=24h
+FULL_BACKUP_RETENTION=30
 ```
 
 ### 可选配置

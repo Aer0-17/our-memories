@@ -40,11 +40,17 @@ services:
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-}
       S3_OBJECT_ACL: ${S3_OBJECT_ACL:-}
       LOCAL_IMAGE_DIR: /app/data/images
+      FULL_BACKUP_ENABLED: ${FULL_BACKUP_ENABLED:-false}
+      FULL_BACKUP_DIR: /app/backups
+      FULL_BACKUP_INTERVAL: ${FULL_BACKUP_INTERVAL:-24h}
+      FULL_BACKUP_RETENTION: ${FULL_BACKUP_RETENTION:-30}
+      FULL_BACKUP_ENCRYPTION_KEY: ${FULL_BACKUP_ENCRYPTION_KEY:-}
     volumes:
       - ${DATA_DIR:-./data}:/app/data
+      - ${BACKUP_HOST_DIR:-./backups}:/app/backups
     read_only: true
     tmpfs:
-      - /tmp:size=16m,mode=1777
+      - /tmp:size=${BACKUP_TMPFS_SIZE:-512m},mode=1777
     cap_drop:
       - ALL
     pids_limit: 256

@@ -1,12 +1,13 @@
 {
   "name": "@map-of-us/miniprogram",
-  "version": "0.32.1",
+  "version": "0.33.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "node ../../scripts/build-miniprogram.mjs",
     "build:weapp:raw": "taro build --type weapp",
+    "test:unit": "node --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
