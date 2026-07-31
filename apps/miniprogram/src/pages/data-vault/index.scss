@@ -1,0 +1,454 @@
+@use "../../styles/tokens" as *;
+
+.data-vault-page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-5;
+}
+
+.vault-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-4;
+  border-radius: $radius-md;
+  background: var(--color-green-soft);
+  padding: $space-5 $space-4;
+}
+
+.vault-hero-icon {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.vault-hero-icon-image {
+  width: 24px;
+  height: 24px;
+}
+
+.vault-hero-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.vault-kicker,
+.vault-panel-kicker {
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.vault-title {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.vault-subtitle,
+.vault-panel-copy {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+
+.vault-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  border: 1px solid var(--color-accent-soft);
+  border-radius: $radius-md;
+  background: var(--color-surface-warm);
+  padding: $space-3;
+}
+
+.vault-status-copy {
+  min-width: 0;
+  flex: 1;
+  color: var(--color-accent-deep);
+  font-size: $text-sm;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.vault-status-close {
+  min-width: 64px;
+  min-height: 44px;
+  flex-shrink: 0;
+  background: var(--color-transparent);
+  color: var(--color-accent-deep);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-2;
+}
+
+.vault-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: $space-4;
+}
+
+.vault-panel {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-4;
+  padding: $space-4;
+}
+
+.vault-panel-heading,
+.vault-last-heading,
+.vault-preview-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.vault-panel-heading > view:first-child {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.vault-panel-title {
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.vault-format,
+.vault-restore-step,
+.vault-badge {
+  flex-shrink: 0;
+  border-radius: $radius-sm;
+  background: var(--color-green-soft);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+  padding: 0 $space-2;
+}
+
+.vault-panel-kicker-danger {
+  color: var(--color-accent-deep);
+}
+
+.vault-restore-step,
+.vault-badge-gold {
+  background: var(--color-gold-soft);
+  color: var(--color-ink-soft);
+}
+
+.vault-primary-action {
+  background: var(--color-green);
+  box-shadow: none;
+}
+
+.vault-secondary-action,
+.vault-share-action,
+.vault-delete-action,
+.vault-danger-action {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-md;
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 48px;
+  padding: 0 $space-3;
+}
+
+.vault-secondary-action,
+.vault-share-action,
+.vault-delete-action {
+  border: 1px solid var(--color-line);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.vault-secondary-action[disabled],
+.vault-share-action[disabled],
+.vault-delete-action[disabled],
+.vault-danger-action[disabled] {
+  opacity: 0.44;
+}
+
+.vault-last {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-3;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.vault-last-label,
+.vault-confirm-label,
+.vault-scope-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.vault-last-copy,
+.vault-preview-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.vault-last-name,
+.vault-preview-name {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+  word-break: break-all;
+}
+
+.vault-last-meta,
+.vault-preview-meta,
+.vault-last-empty,
+.vault-restore-empty-copy,
+.vault-check-copy,
+.vault-count-label {
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.vault-share-action {
+  min-height: 44px;
+  background: var(--color-surface-soft);
+  color: var(--color-green);
+  line-height: 44px;
+}
+
+.vault-file-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.vault-delete-action {
+  min-height: 44px;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  line-height: 44px;
+}
+
+.vault-last-policy {
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.vault-restore-empty {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.vault-restore-empty-title {
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.vault-preview {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-4;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.vault-clear-action {
+  min-width: 56px;
+  min-height: 44px;
+  flex-shrink: 0;
+  background: var(--color-transparent);
+  color: var(--color-accent-deep);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 44px;
+  padding: 0 $space-2;
+}
+
+.vault-check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  background: var(--color-green-soft);
+  padding: $space-3;
+}
+
+.vault-check-mark,
+.vault-scope-mark {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-sm;
+  background: var(--color-surface);
+  color: var(--color-green);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.vault-check-row > view {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.vault-check-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.vault-count-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-2;
+}
+
+.vault-count-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-1;
+  background: var(--color-surface-soft);
+  padding: $space-3;
+}
+
+.vault-count-value {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.vault-risk-note {
+  display: flex;
+  flex-direction: column;
+  gap: $space-1;
+  background: var(--color-accent-soft);
+  padding: $space-3;
+}
+
+.vault-risk-title {
+  color: var(--color-danger);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.vault-risk-copy {
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  line-height: 20px;
+}
+
+.vault-confirm-group {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2;
+}
+
+.vault-confirm-input {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: $text-md;
+  line-height: 48px;
+  padding: 0 $space-3;
+}
+
+.vault-confirm-input:focus {
+  border-color: var(--color-accent);
+}
+
+.vault-danger-action {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.vault-scope {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.vault-scope-list {
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+}
+
+.vault-scope-row {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-3;
+  min-height: 64px;
+  border-bottom: 1px solid var(--color-line);
+  padding: $space-3 $space-4;
+}
+
+.vault-scope-row:last-child {
+  border-bottom: 0;
+}
+
+.vault-scope-mark-green {
+  background: var(--color-green-soft);
+  color: var(--color-green);
+}
+
+.vault-scope-mark-gold {
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
+.vault-scope-copy {
+  min-width: 0;
+  flex: 1;
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 24px;
+}
+

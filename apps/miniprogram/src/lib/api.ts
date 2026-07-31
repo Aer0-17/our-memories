@@ -43,6 +43,40 @@ export type PublicConfig = {
   users: Array<{ username: string; displayName: string }>;
 };
 
+export type BackupRow = Record<string, unknown>;
+
+export type BackupSource = {
+  spaceId: string;
+  spaceCode: string;
+  name: string;
+};
+
+export type BackupMediaReference = {
+  kind: string;
+  parentId?: string;
+  id?: string;
+  key?: string;
+  url?: string;
+  mimeType?: string;
+};
+
+export type BackupPayload = {
+  format: string;
+  version: number;
+  exportedAt: string;
+  source: BackupSource;
+  space: BackupRow;
+  tables: Record<string, BackupRow[]>;
+  media: BackupMediaReference[];
+};
+
+export type BackupImportResult = {
+  ok: boolean;
+  spaceId: string;
+  spaceCode: string;
+  reloginRequired: boolean;
+};
+
 export type NotificationItem = {
   id: string;
   type: string;
@@ -443,6 +477,17 @@ export async function login(input: { spaceCode: string; userId: string; password
 export async function logout() {
   await request<{ ok: true }>("/auth/logout", { method: "POST" }, true).catch(() => undefined);
   clearSession();
+}
+
+export function exportBackup() {
+  return request<BackupPayload>("/backup/export");
+}
+
+export function importBackup(payload: BackupPayload) {
+  return request<BackupImportResult>("/backup/import", {
+    method: "POST",
+    data: payload,
+  });
 }
 
 export function getMemories() {

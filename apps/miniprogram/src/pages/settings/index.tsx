@@ -10,6 +10,7 @@ import diaryIcon from "../../assets/lucide/calendar-days.svg";
 import imagesIcon from "../../assets/lucide/images.svg";
 import wishesIcon from "../../assets/lucide/list-checks.svg";
 import questionsIcon from "../../assets/lucide/message-circle.svg";
+import shieldIcon from "../../assets/lucide/shield-check.svg";
 import trashIcon from "../../assets/lucide/trash-2.svg";
 import logoutIcon from "../../assets/illustrations/icon-log-out.png";
 import "./index.scss";
@@ -174,6 +175,16 @@ export default function SettingsPage() {
       <View className="settings-section">
         <Text className="settings-section-title">数据保护</Text>
         <View className="action-list">
+          <Button className="settings-action" onClick={() => openPage("/pages/data-vault/index")}>
+            <View className="action-icon-box action-icon-green">
+              <Image className="action-icon" src={shieldIcon} mode="aspectFit" />
+            </View>
+            <View className="action-copy">
+              <Text className="action-title">数据保险箱</Text>
+              <Text className="action-subtitle">导出备份，也能安全恢复当前空间</Text>
+            </View>
+            <Text className="action-arrow">›</Text>
+          </Button>
           <Button className="settings-action" onClick={() => openPage("/pages/memory-trash/index")}>
             <View className="action-icon-box action-icon-red">
               <Image className="action-icon" src={trashIcon} mode="aspectFit" />
