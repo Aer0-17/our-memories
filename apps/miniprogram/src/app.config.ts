@@ -3,6 +3,7 @@ export default defineAppConfig({
     "pages/index/index",
     "pages/notifications/index",
     "pages/memories/index",
+    "pages/memory-search/index",
     "pages/memory-editor/index",
     "pages/memory-detail/index",
     "pages/memory-trash/index",

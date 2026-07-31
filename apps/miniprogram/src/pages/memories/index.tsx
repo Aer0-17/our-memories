@@ -287,6 +287,10 @@ export default function MemoriesPage() {
     Taro.navigateTo({ url: `/pages/memory-detail/index?id=${encodeURIComponent(memoryId)}` });
   };
 
+  const openMemoryFinder = () => {
+    Taro.navigateTo({ url: "/pages/memory-search/index" });
+  };
+
   const toggleFavorite = async (memory: Memory) => {
     if (favoriteWorkingId) return;
     const records = favoriteRecords.filter((favorite) => favorite.memoryId === memory.id);
@@ -438,6 +442,15 @@ export default function MemoriesPage() {
       </View>
 
       <View className="memory-search card">
+        <View className="memory-search-heading">
+          <View className="memory-search-heading-copy">
+            <Text className="memory-search-title">找到一段回忆</Text>
+            <Text className="memory-search-subtitle">精确筛选，或用一句话描述线索。</Text>
+          </View>
+          <Button className="memory-language-search" onClick={openMemoryFinder}>
+            说句话找 ›
+          </Button>
+        </View>
         <View className="memory-search-input-row">
           <Input
             className="memory-search-input"

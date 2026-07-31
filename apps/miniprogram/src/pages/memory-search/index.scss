@@ -1,0 +1,296 @@
+@use "../../styles/tokens" as *;
+
+.memory-finder-page {
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+
+.finder-intro {
+  padding-bottom: $space-5;
+}
+
+.finder-panel {
+  padding: $space-4;
+}
+
+.finder-label,
+.finder-suggestions-label,
+.finder-intent-label {
+  display: block;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.finder-input {
+  width: 100%;
+  height: 52px;
+  margin-top: $space-2;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-size: $text-md;
+  line-height: 52px;
+  padding: 0 $space-4;
+}
+
+.finder-input:focus {
+  border-color: var(--color-accent);
+}
+
+.finder-submit {
+  width: 100%;
+  margin-top: $space-3;
+}
+
+.finder-suggestions {
+  margin-top: $space-4;
+  padding-top: $space-3;
+  border-top: 1px solid var(--color-line);
+}
+
+.finder-suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  margin-top: $space-2;
+}
+
+.finder-suggestion {
+  min-height: 44px;
+  margin: 0;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: $text-sm;
+  line-height: 44px;
+  padding: 0 $space-3;
+}
+
+.finder-history,
+.finder-results,
+.finder-prompt,
+.finder-loading {
+  margin-top: $space-5;
+}
+
+.finder-section-heading,
+.finder-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  margin-bottom: $space-3;
+}
+
+.finder-section-title {
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.finder-section-action {
+  min-width: 48px;
+  min-height: 44px;
+  margin: 0;
+  background: var(--color-transparent);
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 44px;
+  padding: 0 $space-2;
+}
+
+.finder-history-list,
+.finder-result-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3;
+}
+
+.finder-history-item {
+  display: flex;
+  min-height: 52px;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-3;
+  margin: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-transparent);
+  color: var(--color-ink);
+  font-size: $text-sm;
+  line-height: 24px;
+  padding: $space-2 0;
+  text-align: left;
+}
+
+.finder-history-copy {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.finder-history-arrow,
+.finder-result-arrow {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  font-size: $text-xl;
+  line-height: 32px;
+}
+
+.finder-result-heading-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.finder-result-subtitle {
+  display: block;
+  margin-top: $space-1;
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.finder-result-count {
+  flex-shrink: 0;
+  color: var(--color-accent-deep);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.finder-intent {
+  margin-bottom: $space-4;
+  border-radius: $radius-md;
+  background: var(--color-green-soft);
+  padding: $space-3 $space-4;
+}
+
+.finder-intent-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2;
+  margin-top: $space-2;
+}
+
+.finder-intent-chip {
+  border-radius: $radius-sm;
+  background: var(--color-surface);
+  color: var(--color-green);
+  font-size: $text-sm;
+  font-weight: 600;
+  line-height: 28px;
+  padding: 0 $space-2;
+  overflow-wrap: anywhere;
+}
+
+.finder-result-card {
+  display: flex;
+  min-height: 112px;
+  width: 100%;
+  align-items: center;
+  gap: $space-3;
+  margin: 0;
+  border: 1px solid var(--color-line);
+  border-radius: $radius-md;
+  background: var(--color-surface);
+  box-shadow: $shadow-card;
+  color: var(--color-ink);
+  line-height: normal;
+  padding: $space-3;
+  text-align: left;
+}
+
+.finder-result-cover {
+  width: 88px;
+  height: 88px;
+  flex-shrink: 0;
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+}
+
+.finder-result-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-green);
+  font-size: $text-xl;
+  font-weight: 700;
+}
+
+.finder-result-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.finder-result-date {
+  display: block;
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.finder-result-title {
+  display: block;
+  margin-top: $space-1;
+  color: var(--color-ink);
+  font-size: $text-md;
+  font-weight: 700;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+}
+
+.finder-result-meta,
+.finder-result-copy {
+  display: block;
+  margin-top: $space-1;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: $text-xs;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finder-result-copy {
+  display: -webkit-box;
+  color: var(--color-ink-soft);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+}
+
+.finder-prompt {
+  border-top: 1px solid var(--color-line);
+  padding: $space-5 0;
+}
+
+.finder-prompt-kicker {
+  display: block;
+  color: var(--color-accent-deep);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.finder-prompt-title {
+  display: block;
+  margin-top: $space-2;
+  color: var(--color-ink);
+  font-size: $text-lg;
+  font-weight: 700;
+  line-height: 28px;
+}
+
+.finder-prompt-copy {
+  display: block;
+  margin-top: $space-2;
+  color: var(--color-muted);
+  font-size: $text-sm;
+  line-height: 24px;
+}

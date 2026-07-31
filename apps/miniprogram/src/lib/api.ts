@@ -1,5 +1,5 @@
 import Taro from "@tarojs/taro";
-import type { LocalMemoryStore } from "@map-of-us/shared";
+import type { LocalMemoryStore, Memory } from "@map-of-us/shared";
 import type { VoiceDraft } from "./voice";
 export { resolveAssetUrl } from "./assetUrl";
 
@@ -273,6 +273,48 @@ export type TrashedMemory = {
   deletedAt: string;
 };
 
+export type MemorySearchIntent = {
+  query?: string;
+  cityId?: string;
+  tags?: string[];
+  mood?: string;
+  source?: Record<string, string>;
+};
+
+export type MemoryIntentSearchResult = {
+  intent: MemorySearchIntent;
+  items: Memory[];
+  nextCursor?: string;
+  hasMore: boolean;
+};
+
+type ApiMemoryPhoto = string | {
+  url?: string;
+  mimeType?: string;
+  mediaType?: string;
+};
+
+type ApiMemory = Omit<Memory, "image" | "photos"> & {
+  image?: string;
+  photos?: ApiMemoryPhoto[];
+};
+
+function normalizeApiMemory(memory: ApiMemory): Memory {
+  const photos = (memory.photos || []).flatMap((photo) => {
+    if (typeof photo === "string") return photo ? [photo] : [];
+    const mediaType = photo.mediaType?.toLowerCase();
+    const mimeType = photo.mimeType?.toLowerCase();
+    if (mediaType === "audio" || mimeType?.startsWith("audio/")) return [];
+    return photo.url ? [photo.url] : [];
+  });
+
+  return {
+    ...memory,
+    image: memory.image || photos[0] || "",
+    photos,
+  };
+}
+
 export function readSession() {
   return Taro.getStorageSync<Session | "">(sessionKey) || null;
 }
@@ -405,6 +447,18 @@ export async function logout() {
 
 export function getMemories() {
   return request<{ memories: LocalMemoryStore }>("/memories");
+}
+
+export async function searchMemoriesByIntent(query: string, limit = 20) {
+  const normalizedLimit = Math.max(1, Math.min(50, Math.round(limit) || 20));
+  const data = await request<Omit<MemoryIntentSearchResult, "items"> & { items: ApiMemory[] }>(
+    "/ai/memory-search",
+    {
+      method: "POST",
+      data: { q: query.trim(), limit: normalizedLimit },
+    },
+  );
+  return { ...data, items: data.items.map(normalizeApiMemory) };
 }
 
 export function createMemory(input: MemoryInput) {
