@@ -29,12 +29,106 @@ import shieldIcon from "../../assets/lucide/shield-check.svg";
 import "./index.scss";
 
 type WorkingState = "" | "fullBackup" | "export" | "choose" | "share" | "delete" | "restore";
+type ReplicaTone = "muted" | "waiting" | "success" | "warning" | "error";
+
+type ReplicaPresentation = {
+  tone: ReplicaTone;
+  badge: string;
+  title: string;
+  detail: string;
+  policy: string;
+};
 
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "时间未知";
   const pad = (part: number) => String(part).padStart(2, "0");
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function replicaPresentation(fullBackup: FullBackupStatus): ReplicaPresentation {
+  const replica = fullBackup.replica;
+  if (!replica?.enabled) {
+    return {
+      tone: "muted",
+      badge: "未启用",
+      title: "当前只有本机加密备份",
+      detail: "第二存储副本尚未启用。",
+      policy: "加密密钥不会写入备份包",
+    };
+  }
+
+  const lastReplica = replica.lastSuccess
+    ? `${formatDateTime(replica.lastSuccess.createdAt)} · ${formatFileSize(replica.lastSuccess.size)}`
+    : "尚无已确认副本";
+  if (!replica.connected || replica.lastError) {
+    return {
+      tone: "error",
+      badge: "需检查",
+      title: replica.lastError || "第二存储暂时未连接",
+      detail: replica.lastSuccess ? `上次成功 ${lastReplica}` : lastReplica,
+      policy: "本机加密备份仍可使用",
+    };
+  }
+  if (fullBackup.running) {
+    return {
+      tone: "waiting",
+      badge: "同步中",
+      title: "正在复制并校验最新加密包",
+      detail: replica.lastSuccess ? `上次成功 ${lastReplica}` : "首次副本正在生成",
+      policy: "发布前会重新读取并核对 SHA-256",
+    };
+  }
+  if (!replica.independentStorage) {
+    return {
+      tone: "warning",
+      badge: "同盘存放",
+      title: "副本与本机备份位于同一文件系统",
+      detail: replica.lastSuccess ? `最近副本 ${lastReplica}` : "等待首次副本",
+      policy: "可防误删，但不能防整盘故障",
+    };
+  }
+  if (!replica.lastSuccess) {
+    return {
+      tone: "waiting",
+      badge: "等待同步",
+      title: "第二存储已连接",
+      detail: "下一次完整备份会自动生成加密副本。",
+      policy: `独立留存最近 ${replica.retentionCount} 份`,
+    };
+  }
+  if (fullBackup.lastSuccess?.fileName !== replica.lastSuccess.fileName) {
+    return {
+      tone: "warning",
+      badge: "待同步",
+      title: "最新完整备份尚未复制到第二存储",
+      detail: `上次成功 ${lastReplica}`,
+      policy: "本机加密备份仍可使用",
+    };
+  }
+  return {
+    tone: "success",
+    badge: "已同步",
+    title: "最新加密包已有第二存储副本",
+    detail: lastReplica,
+    policy: `独立存储 · 留存最近 ${replica.retentionCount} 份 · 密钥未复制`,
+  };
+}
+
+function fullBackupBadge(fullBackup: FullBackupStatus | null) {
+  if (!fullBackup) return "未启用";
+  if (fullBackup.running) return "备份中";
+  if (!fullBackup.enabled) return "未启用";
+  if (fullBackup.lastError) return "需检查";
+  if (!fullBackup.lastSuccess) return "等待备份";
+
+  const replica = fullBackup.replica;
+  if (!replica?.enabled) return "已保护";
+  if (!replica.connected || replica.lastError) return "需检查";
+  if (!replica.independentStorage || replica.lastSuccess?.fileName !== fullBackup.lastSuccess.fileName) {
+    return "部分保护";
+  }
+  return "已保护";
 }
 
 export default function DataVaultPage() {
@@ -49,6 +143,20 @@ export default function DataVaultPage() {
   const [fullBackup, setFullBackup] = useState<FullBackupStatus | null>(null);
   const [fullBackupLoading, setFullBackupLoading] = useState(true);
   const [fullBackupUnavailable, setFullBackupUnavailable] = useState(false);
+  const replica = fullBackup?.enabled ? replicaPresentation(fullBackup) : null;
+  const fullBackupBadgeLabel = fullBackupBadge(fullBackup);
+  const fullBackupHasError = Boolean(
+    fullBackup?.lastError ||
+      (fullBackup?.replica?.enabled &&
+        (!fullBackup.replica.connected || fullBackup.replica.lastError)),
+  );
+  const fullBackupHasLimitedProtection = Boolean(
+    !fullBackupHasError &&
+      fullBackup?.replica?.enabled &&
+      (!fullBackup.replica.independentStorage ||
+        (fullBackup.lastSuccess &&
+          fullBackup.replica.lastSuccess?.fileName !== fullBackup.lastSuccess.fileName)),
+  );
 
   const loadFullBackupStatus = async () => {
     setFullBackupLoading(true);
@@ -317,25 +425,39 @@ export default function DataVaultPage() {
         </View>
       ) : null}
 
-      <View className={`vault-full-backup card${fullBackup?.lastError ? " vault-full-backup-error" : ""}`}>
+      <View
+        className={`vault-full-backup card${
+          fullBackupHasError
+            ? " vault-full-backup-error"
+            : fullBackupHasLimitedProtection
+              ? " vault-full-backup-warning"
+              : ""
+        }`}
+      >
         <View className="vault-full-heading">
           <View className="vault-full-heading-copy">
             <Text className="vault-panel-kicker">服务器保护</Text>
             <Text className="vault-panel-title">加密完整备份</Text>
             <Text className="vault-panel-copy">数据库、照片和语音一起保存，适合服务器故障后的完整恢复。</Text>
           </View>
-          <Text className={`vault-full-badge${fullBackup?.enabled ? "" : " vault-full-badge-muted"}`}>
+          <Text
+            className={`vault-full-badge${
+              !fullBackup?.enabled
+                ? " vault-full-badge-muted"
+                : fullBackupBadgeLabel === "需检查"
+                  ? " vault-full-badge-error"
+                  : fullBackupBadgeLabel === "部分保护"
+                    ? " vault-full-badge-warning"
+                    : fullBackupBadgeLabel === "等待备份"
+                      ? " vault-full-badge-waiting"
+                      : ""
+            }`}
+          >
             {fullBackupLoading
               ? "读取中"
               : fullBackupUnavailable
                 ? "不可用"
-              : fullBackup?.running
-                ? "备份中"
-                : fullBackup?.enabled
-                  ? fullBackup.lastError
-                    ? "需检查"
-                    : "已保护"
-                  : "未启用"}
+                : fullBackupBadgeLabel}
           </Text>
         </View>
 
@@ -382,6 +504,23 @@ export default function DataVaultPage() {
                 {fullBackup.nextRunAt ? formatDateTime(fullBackup.nextRunAt) : "等待调度"}
               </Text>
             </View>
+
+            {replica ? (
+              <View className={`vault-replica vault-replica-${replica.tone}`}>
+                <View className="vault-replica-heading">
+                  <View className="vault-replica-heading-copy">
+                    <Text className="vault-replica-kicker">第二存储</Text>
+                    <Text className="vault-replica-title">加密副本</Text>
+                  </View>
+                  <Text className="vault-replica-badge">{replica.badge}</Text>
+                </View>
+                <View className="vault-replica-summary">
+                  <Text className="vault-replica-summary-title">{replica.title}</Text>
+                  <Text className="vault-replica-summary-detail">{replica.detail}</Text>
+                </View>
+                <Text className="vault-replica-policy">{replica.policy}</Text>
+              </View>
+            ) : null}
 
             {fullBackup.lastError ? (
               <Text className="vault-full-message vault-full-message-error">{fullBackup.lastError}</Text>

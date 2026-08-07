@@ -41,7 +41,7 @@ FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata \
   && addgroup -S app \
   && adduser -S app -G app \
-  && mkdir -p /app/data /app/backups \
+  && mkdir -p /app/data /app/backups /app/backup-replica \
   && chown -R app:app /app
 
 WORKDIR /app
@@ -64,11 +64,14 @@ ENV PORT=8080 \
   FULL_BACKUP_DIR=/app/backups \
   FULL_BACKUP_INTERVAL=24h \
   FULL_BACKUP_RETENTION=30 \
+  FULL_BACKUP_REPLICA_ENABLED=false \
+  FULL_BACKUP_REPLICA_DIR=/app/backup-replica \
+  FULL_BACKUP_REPLICA_RETENTION=30 \
   AUTO_SEED=false
 
 USER app
 
 EXPOSE 8080
-VOLUME ["/app/data", "/app/backups"]
+VOLUME ["/app/data", "/app/backups", "/app/backup-replica"]
 
 CMD ["sh", "-c", "umask 077 && exec ./our-memories-api"]

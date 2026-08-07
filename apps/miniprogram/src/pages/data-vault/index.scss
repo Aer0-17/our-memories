@@ -106,6 +106,10 @@
   border-color: var(--color-accent-soft);
 }
 
+.vault-full-backup-warning {
+  border-color: var(--color-gold-soft);
+}
+
 .vault-full-heading {
   display: flex;
   min-width: 0;
@@ -138,6 +142,21 @@
 .vault-full-badge-muted {
   background: var(--color-surface-soft);
   color: var(--color-ink-soft);
+}
+
+.vault-full-badge-waiting {
+  background: var(--color-blue-soft);
+  color: var(--color-blue);
+}
+
+.vault-full-badge-warning {
+  background: var(--color-gold-soft);
+  color: var(--color-gold);
+}
+
+.vault-full-badge-error {
+  background: var(--color-accent-soft);
+  color: var(--color-danger);
 }
 
 .vault-encryption-strip {
@@ -245,6 +264,146 @@
 .vault-full-message-error {
   background: var(--color-accent-soft);
   color: var(--color-danger);
+}
+
+.vault-replica {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-3;
+  border-top: 1px solid var(--color-line);
+  padding-top: $space-4;
+}
+
+.vault-replica-heading {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-3;
+}
+
+.vault-replica-heading-copy,
+.vault-replica-summary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-1;
+}
+
+.vault-replica-heading-copy {
+  flex: 1;
+}
+
+.vault-replica-kicker,
+.vault-replica-summary-detail,
+.vault-replica-policy {
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.vault-replica-kicker {
+  font-weight: 700;
+}
+
+.vault-replica-title,
+.vault-replica-summary-title {
+  color: var(--color-ink);
+  font-size: $text-sm;
+  font-weight: 700;
+  line-height: 20px;
+  word-break: break-word;
+}
+
+.vault-replica-badge {
+  min-height: 32px;
+  flex-shrink: 0;
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+  color: var(--color-ink-soft);
+  font-size: $text-xs;
+  font-weight: 700;
+  line-height: 32px;
+  padding: 0 $space-3;
+}
+
+.vault-replica-summary {
+  border-radius: $radius-sm;
+  background: var(--color-surface-soft);
+  padding: $space-3;
+}
+
+.vault-replica-policy {
+  display: block;
+  min-height: 24px;
+  padding-left: $space-4;
+  position: relative;
+}
+
+.vault-replica-policy::before {
+  width: 8px;
+  height: 8px;
+  border-radius: $radius-sm;
+  background: var(--color-muted);
+  content: "";
+  left: 0;
+  position: absolute;
+  top: 8px;
+}
+
+.vault-replica-success .vault-replica-badge,
+.vault-replica-success .vault-replica-summary {
+  background: var(--color-green-soft);
+}
+
+.vault-replica-success .vault-replica-badge {
+  color: var(--color-green);
+}
+
+.vault-replica-success .vault-replica-policy::before {
+  background: var(--color-green);
+}
+
+.vault-replica-waiting .vault-replica-badge,
+.vault-replica-waiting .vault-replica-summary {
+  background: var(--color-blue-soft);
+}
+
+.vault-replica-waiting .vault-replica-badge {
+  color: var(--color-blue);
+}
+
+.vault-replica-waiting .vault-replica-policy::before {
+  background: var(--color-blue);
+}
+
+.vault-replica-warning .vault-replica-badge,
+.vault-replica-warning .vault-replica-summary {
+  background: var(--color-gold-soft);
+}
+
+.vault-replica-warning .vault-replica-badge {
+  color: var(--color-gold);
+}
+
+.vault-replica-warning .vault-replica-policy::before {
+  background: var(--color-gold);
+}
+
+.vault-replica-error .vault-replica-badge,
+.vault-replica-error .vault-replica-summary {
+  background: var(--color-accent-soft);
+}
+
+.vault-replica-error .vault-replica-badge,
+.vault-replica-error .vault-replica-summary-title {
+  color: var(--color-danger);
+}
+
+.vault-replica-error .vault-replica-policy::before {
+  background: var(--color-danger);
 }
 
 .vault-full-action {

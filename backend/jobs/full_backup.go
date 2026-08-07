@@ -22,6 +22,15 @@ func StartFullBackup(service *securebackup.Service, interval time.Duration) {
 		interval,
 		service.Status().RetentionCount,
 	)
+	replica := service.Status().Replica
+	if replica.Enabled {
+		log.Printf(
+			"encrypted backup replica configured: connected=%t independent_storage=%t retention=%d",
+			replica.Connected,
+			replica.IndependentStorage,
+			replica.RetentionCount,
+		)
+	}
 
 	go func() {
 		time.Sleep(30 * time.Second)
@@ -54,5 +63,8 @@ func runDueFullBackup(service *securebackup.Service) {
 	)
 	if result.Warning != "" {
 		log.Printf("encrypted full backup maintenance warning: %s", result.Warning)
+	}
+	if result.ReplicaError != "" {
+		log.Printf("encrypted full backup replica detail: %s", result.ReplicaError)
 	}
 }

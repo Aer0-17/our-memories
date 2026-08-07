@@ -1,11 +1,13 @@
 package securebackup
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -230,5 +232,256 @@ func TestRetentionAlwaysKeepsCurrentBackup(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(backupDirectory, current)); err != nil {
 		t.Fatalf("current backup must be retained: %v", err)
+	}
+}
+
+func TestServiceCopiesVerifiedBackupToReplicaAndEnforcesReplicaRetention(t *testing.T) {
+	root := t.TempDir()
+	dataDirectory := filepath.Join(root, "data")
+	mediaDirectory := filepath.Join(dataDirectory, "images")
+	backupDirectory := filepath.Join(root, "backups")
+	replicaDirectory := filepath.Join(root, "replica")
+	for _, directory := range []string{mediaDirectory, replicaDirectory} {
+		if err := os.MkdirAll(directory, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(replicaDirectory, replicaSentinelName), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	databasePath := filepath.Join(dataDirectory, "ourMemories.db")
+	database, err := sql.Open("sqlite", databasePath+"?_journal_mode=WAL&_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = database.Close() })
+	if _, err := database.Exec(`CREATE TABLE memories (id TEXT PRIMARY KEY, text TEXT NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+
+	now := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+	key := testEncryptionKey(t)
+	service, err := NewService(ServiceConfig{
+		Enabled:               true,
+		Database:              database,
+		DatabasePath:          databasePath,
+		MediaDirectory:        mediaDirectory,
+		BackupDirectory:       backupDirectory,
+		ReplicaEnabled:        true,
+		ReplicaDirectory:      replicaDirectory,
+		ReplicaRetentionCount: 2,
+		EncryptionKey:         key,
+		RetentionCount:        3,
+		Interval:              time.Hour,
+		Now:                   func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var latest CreateResult
+	for index := 0; index < 3; index++ {
+		latest, err = service.Create(context.Background(), "test")
+		if err != nil {
+			t.Fatal(err)
+		}
+		now = now.Add(time.Second)
+	}
+	if latest.Replica == nil || latest.Replica.FileName != latest.Backup.FileName {
+		t.Fatalf("expected latest backup to have a verified replica: %#v", latest)
+	}
+	if latest.RemovedReplicaFiles != 1 {
+		t.Fatalf("expected replica retention to remove one file, got %#v", latest)
+	}
+	if !strings.Contains(latest.Warning, "同一文件系统") {
+		t.Fatalf("same-filesystem replica must not be presented as independent: %#v", latest)
+	}
+
+	localBytes, err := os.ReadFile(filepath.Join(backupDirectory, latest.Backup.FileName))
+	if err != nil {
+		t.Fatal(err)
+	}
+	replicaPath := filepath.Join(replicaDirectory, latest.Backup.FileName)
+	replicaBytes, err := os.ReadFile(replicaPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(localBytes, replicaBytes) {
+		t.Fatal("replica must be byte-identical to the verified local backup")
+	}
+	replicaFile, err := os.Open(replicaPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, verifyErr := VerifyEncryptedArchive(replicaFile, key)
+	_ = replicaFile.Close()
+	if verifyErr != nil {
+		t.Fatalf("replica archive must verify: %v", verifyErr)
+	}
+
+	replicaFiles := 0
+	entries, err := os.ReadDir(replicaDirectory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if validBackupFileName(entry.Name()) {
+			replicaFiles++
+		}
+		if strings.HasSuffix(entry.Name(), ".partial") {
+			t.Fatalf("published replica directory contains partial file: %s", entry.Name())
+		}
+	}
+	if replicaFiles != 2 {
+		t.Fatalf("expected two retained replica files, got %d", replicaFiles)
+	}
+
+	status := service.Status()
+	if !status.Replica.Enabled || !status.Replica.Connected || status.Replica.IndependentStorage {
+		t.Fatalf("unexpected replica target status: %#v", status.Replica)
+	}
+	if status.Replica.LastSuccess == nil || status.Replica.LastSuccess.FileName != latest.Backup.FileName {
+		t.Fatalf("unexpected replica success status: %#v", status.Replica)
+	}
+
+	reloaded, err := NewService(ServiceConfig{
+		Enabled:               true,
+		Database:              database,
+		DatabasePath:          databasePath,
+		MediaDirectory:        mediaDirectory,
+		BackupDirectory:       backupDirectory,
+		ReplicaEnabled:        true,
+		ReplicaDirectory:      replicaDirectory,
+		ReplicaRetentionCount: 2,
+		EncryptionKey:         key,
+		RetentionCount:        3,
+		Interval:              time.Hour,
+		Now:                   func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reloadedStatus := reloaded.Status()
+	if reloadedStatus.LastSuccess == nil || reloadedStatus.LastSuccess.FileName != latest.Backup.FileName {
+		t.Fatalf("reloaded service lost local backup status: %#v", reloadedStatus)
+	}
+	if reloadedStatus.Replica.LastSuccess == nil || reloadedStatus.Replica.LastSuccess.FileName != latest.Backup.FileName {
+		t.Fatalf("reloaded service lost replica status: %#v", reloadedStatus.Replica)
+	}
+
+	if err := os.Remove(replicaPath); err != nil {
+		t.Fatal(err)
+	}
+	reloadedMissingReplica, err := NewService(ServiceConfig{
+		Enabled:               true,
+		Database:              database,
+		DatabasePath:          databasePath,
+		MediaDirectory:        mediaDirectory,
+		BackupDirectory:       backupDirectory,
+		ReplicaEnabled:        true,
+		ReplicaDirectory:      replicaDirectory,
+		ReplicaRetentionCount: 2,
+		EncryptionKey:         key,
+		RetentionCount:        3,
+		Interval:              time.Hour,
+		Now:                   func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	missingReplicaStatus := reloadedMissingReplica.Status()
+	if missingReplicaStatus.LastSuccess == nil {
+		t.Fatalf("missing replica must not discard local backup status: %#v", missingReplicaStatus)
+	}
+	if missingReplicaStatus.Replica.LastSuccess != nil || missingReplicaStatus.Replica.LastError == "" {
+		t.Fatalf("missing indexed replica must be reported as degraded: %#v", missingReplicaStatus.Replica)
+	}
+}
+
+func TestReplicaFailureKeepsLocalBackupSuccessful(t *testing.T) {
+	root := t.TempDir()
+	dataDirectory := filepath.Join(root, "data")
+	mediaDirectory := filepath.Join(dataDirectory, "images")
+	backupDirectory := filepath.Join(root, "backups")
+	replicaDirectory := filepath.Join(root, "replica")
+	for _, directory := range []string{mediaDirectory, replicaDirectory} {
+		if err := os.MkdirAll(directory, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	databasePath := filepath.Join(dataDirectory, "ourMemories.db")
+	database, err := sql.Open("sqlite", databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	if _, err := database.Exec(`CREATE TABLE test (id INTEGER)`); err != nil {
+		t.Fatal(err)
+	}
+
+	service, err := NewService(ServiceConfig{
+		Enabled:               true,
+		Database:              database,
+		DatabasePath:          databasePath,
+		MediaDirectory:        mediaDirectory,
+		BackupDirectory:       backupDirectory,
+		ReplicaEnabled:        true,
+		ReplicaDirectory:      replicaDirectory,
+		ReplicaRetentionCount: 2,
+		EncryptionKey:         testEncryptionKey(t),
+		RetentionCount:        2,
+		Interval:              time.Hour,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := service.Create(context.Background(), "test")
+	if err != nil {
+		t.Fatalf("replica outage must not fail the local backup: %v", err)
+	}
+	if result.Replica != nil || result.ReplicaError == "" || !strings.Contains(result.Warning, "异地副本同步失败") {
+		t.Fatalf("unexpected degraded replica result: %#v", result)
+	}
+	if _, err := os.Stat(filepath.Join(backupDirectory, result.Backup.FileName)); err != nil {
+		t.Fatalf("local backup must remain published: %v", err)
+	}
+	status := service.Status()
+	if status.LastSuccess == nil || status.Replica.Connected || status.Replica.LastError == "" {
+		t.Fatalf("local success and replica failure must both be visible: %#v", status)
+	}
+}
+
+func TestServiceRejectsOverlappingReplicaDirectory(t *testing.T) {
+	root := t.TempDir()
+	databasePath := filepath.Join(root, "data", "ourMemories.db")
+	if err := os.MkdirAll(filepath.Dir(databasePath), 0700); err != nil {
+		t.Fatal(err)
+	}
+	database, err := sql.Open("sqlite", databasePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	if _, err := database.Exec(`CREATE TABLE test (id INTEGER)`); err != nil {
+		t.Fatal(err)
+	}
+	backupDirectory := filepath.Join(root, "backups")
+	_, err = NewService(ServiceConfig{
+		Enabled:               true,
+		Database:              database,
+		DatabasePath:          databasePath,
+		MediaDirectory:        filepath.Join(root, "media"),
+		BackupDirectory:       backupDirectory,
+		ReplicaEnabled:        true,
+		ReplicaDirectory:      filepath.Join(backupDirectory, "replica"),
+		ReplicaRetentionCount: 2,
+		EncryptionKey:         testEncryptionKey(t),
+		RetentionCount:        2,
+		Interval:              time.Hour,
+	})
+	if err == nil {
+		t.Fatal("expected overlapping local and replica directories to be rejected")
 	}
 }

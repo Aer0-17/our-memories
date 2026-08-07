@@ -61,6 +61,58 @@ If S3-compatible storage is configured, the package still contains the local
 `LOCAL_IMAGE_DIR` only. Remote objects must be protected with bucket versioning
 or a separate object-storage backup policy.
 
+### Second Storage Encrypted Replica
+
+The optional replica copies each already verified `.ombak` package to another
+disk or a mounted SMB/NFS/rclone target. It never copies
+`FULL_BACKUP_ENCRYPTION_KEY`. A replica failure is reported separately and does
+not make the local encrypted backup fail.
+
+Mount the second storage on the host first. The example path below must resolve
+to the mounted target, not to an ordinary directory on the same disk:
+
+```bash
+REPLICA_HOST=/absolute/path/to/second-storage/our-memories
+mkdir -p "$REPLICA_HOST"
+findmnt -T "$REPLICA_HOST"
+touch "$REPLICA_HOST/.our-memories-replica"
+chown -R 100:101 "$REPLICA_HOST"
+chmod 700 "$REPLICA_HOST"
+chmod 600 "$REPLICA_HOST/.our-memories-replica"
+```
+
+For SMB/NFS mounts that do not allow `chown`, configure the mount itself with
+UID `100`, GID `101`, directory mode `0700`, and file mode `0600`. Create the
+`.our-memories-replica` marker only after the intended storage is mounted. If
+the mount is missing and the marker cannot be found, the application refuses to
+write a replica into the fallback directory.
+
+Add these values to `.env`:
+
+```env
+FULL_BACKUP_REPLICA_ENABLED=true
+FULL_BACKUP_REPLICA_RETENTION=30
+BACKUP_REPLICA_HOST_DIR=/absolute/path/to/second-storage/our-memories
+```
+
+Recreate the container and confirm both paths are visible. Different device IDs
+indicate distinct filesystems; equal IDs are shown as limited protection in the
+mini program because they cannot protect against a whole-disk failure.
+
+```bash
+docker compose up -d
+docker compose exec our-memories sh -lc '
+  test -f /app/backup-replica/.our-memories-replica
+  stat -c "%d %n" /app/backups /app/backup-replica
+'
+```
+
+Either member can now create a full backup from Data Vault. The server copies
+the encrypted package to a random `.partial` file, rereads it, compares SHA-256,
+and atomically renames it only after verification. Local and replica retention
+counts are independent. The status API and mini program expose health and file
+metadata but never expose either host or container filesystem path.
+
 ### Verify And Extract
 
 List the newest package and verify its authentication tags, archive structure,
@@ -100,7 +152,8 @@ has succeeded.
 ### Disaster Recovery
 
 1. Stop the application and preserve the damaged `data` directory unchanged.
-2. Verify and extract the selected `.ombak` package with the same encryption key.
+2. Copy the selected `.ombak` from local backups or the second storage to a
+   trusted restore host, then verify and extract it with the same encryption key.
 3. Copy `database/ourMemories.db` to the new `data/ourMemories.db`.
 4. Copy the contents of `media/` to the new `data/images/`.
 5. Set ownership to `100:101`, directories to `0700`, and files to `0600`.

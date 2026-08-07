@@ -45,9 +45,13 @@ services:
       FULL_BACKUP_INTERVAL: ${FULL_BACKUP_INTERVAL:-24h}
       FULL_BACKUP_RETENTION: ${FULL_BACKUP_RETENTION:-30}
       FULL_BACKUP_ENCRYPTION_KEY: ${FULL_BACKUP_ENCRYPTION_KEY:-}
+      FULL_BACKUP_REPLICA_ENABLED: ${FULL_BACKUP_REPLICA_ENABLED:-false}
+      FULL_BACKUP_REPLICA_DIR: /app/backup-replica
+      FULL_BACKUP_REPLICA_RETENTION: ${FULL_BACKUP_REPLICA_RETENTION:-30}
     volumes:
       - ${DATA_DIR:-./data}:/app/data
       - ${BACKUP_HOST_DIR:-./backups}:/app/backups
+      - ${BACKUP_REPLICA_HOST_DIR:-./backup-replica}:/app/backup-replica
     read_only: true
     tmpfs:
       - /tmp:size=${BACKUP_TMPFS_SIZE:-512m},mode=1777

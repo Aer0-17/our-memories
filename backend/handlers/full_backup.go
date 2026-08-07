@@ -64,5 +64,13 @@ func CreateFullBackup(c *gin.Context) {
 		utils.Error(c, http.StatusInternalServerError, "Failed to create encrypted full backup")
 		return
 	}
+	if result.ReplicaError != "" {
+		log.Printf(
+			"manual encrypted backup replica warning (space=%s user=%s): %s",
+			c.GetString("spaceID"),
+			c.GetString("userID"),
+			result.ReplicaError,
+		)
+	}
 	c.JSON(http.StatusCreated, result)
 }

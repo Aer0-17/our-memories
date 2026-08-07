@@ -187,7 +187,12 @@ FULL_BACKUP_ENABLED=false
 FULL_BACKUP_ENCRYPTION_KEY=<openssl rand -base64 32>
 FULL_BACKUP_INTERVAL=24h
 FULL_BACKUP_RETENTION=30
+FULL_BACKUP_REPLICA_ENABLED=false
+FULL_BACKUP_REPLICA_RETENTION=30
+BACKUP_REPLICA_HOST_DIR=/absolute/path/to/second-storage
 ```
+
+第二存储副本只复制已加密的 `.ombak`，不会复制加密密钥。启用前必须先挂载另一块磁盘或 SMB/NFS/rclone 目标并创建安全标记，完整步骤见 [backup-and-migration.md](./docs/backup-and-migration.md#second-storage-encrypted-replica)。
 
 ### 可选配置
 ```bash

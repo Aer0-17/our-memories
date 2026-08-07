@@ -153,6 +153,49 @@ func TestValidateRejectsUnsafeFullBackupSchedule(t *testing.T) {
 	}
 }
 
+func TestValidateAllowsFullBackupReplica(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.FullBackupEnabled = true
+	cfg.FullBackupDir = "/app/backups"
+	cfg.FullBackupInterval = "24h"
+	cfg.FullBackupRetention = 30
+	cfg.FullBackupEncryptionKey = base64.StdEncoding.EncodeToString(make([]byte, 32))
+	cfg.FullBackupReplicaEnabled = true
+	cfg.FullBackupReplicaDir = "/app/backup-replica"
+	cfg.FullBackupReplicaRetention = 30
+
+	if err := Validate(cfg); err != nil {
+		t.Fatalf("expected replica config to pass, got %v", err)
+	}
+}
+
+func TestValidateRejectsReplicaWithoutFullBackup(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.FullBackupReplicaEnabled = true
+	cfg.FullBackupReplicaDir = "/app/backup-replica"
+	cfg.FullBackupReplicaRetention = 30
+
+	if err := Validate(cfg); err == nil {
+		t.Fatal("expected replica without encrypted full backup to fail")
+	}
+}
+
+func TestValidateRejectsUnsafeReplicaRetention(t *testing.T) {
+	cfg := secureTestConfig()
+	cfg.FullBackupEnabled = true
+	cfg.FullBackupDir = "/app/backups"
+	cfg.FullBackupInterval = "24h"
+	cfg.FullBackupRetention = 30
+	cfg.FullBackupEncryptionKey = base64.StdEncoding.EncodeToString(make([]byte, 32))
+	cfg.FullBackupReplicaEnabled = true
+	cfg.FullBackupReplicaDir = "/app/backup-replica"
+	cfg.FullBackupReplicaRetention = 1
+
+	if err := Validate(cfg); err == nil {
+		t.Fatal("expected unsafe replica retention to fail")
+	}
+}
+
 func secureTestConfig() *Config {
 	return &Config{
 		JWTSecret:           "0123456789abcdef0123456789abcdef",

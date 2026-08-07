@@ -88,6 +88,23 @@ export type FullBackupInfo = {
   remoteObjectStorageExcluded: boolean;
 };
 
+export type FullBackupReplicaInfo = {
+  createdAt: string;
+  verifiedAt: string;
+  fileName: string;
+  size: number;
+};
+
+export type FullBackupReplicaStatus = {
+  enabled: boolean;
+  connected: boolean;
+  independentStorage: boolean;
+  retentionCount: number;
+  lastErrorAt?: string;
+  lastError?: string;
+  lastSuccess?: FullBackupReplicaInfo;
+};
+
 export type FullBackupStatus = {
   enabled: boolean;
   encryptionConfigured: boolean;
@@ -100,11 +117,14 @@ export type FullBackupStatus = {
   lastError?: string;
   lastSuccess?: FullBackupInfo;
   nextRunAt?: string;
+  replica?: FullBackupReplicaStatus;
 };
 
 export type FullBackupCreateResult = {
   backup: FullBackupInfo;
+  replica?: FullBackupReplicaInfo;
   removedFiles: number;
+  removedReplicaFiles: number;
   warning?: string;
 };
 

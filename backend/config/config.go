@@ -47,6 +47,9 @@ type Config struct {
 	FullBackupInterval         string
 	FullBackupRetention        int
 	FullBackupEncryptionKey    string
+	FullBackupReplicaEnabled   bool
+	FullBackupReplicaDir       string
+	FullBackupReplicaRetention int
 	JPushAppKey                string
 	JPushMasterSecret          string
 }
@@ -90,6 +93,9 @@ func Load() {
 		FullBackupInterval:         getEnv("FULL_BACKUP_INTERVAL", "24h"),
 		FullBackupRetention:        getEnvInt("FULL_BACKUP_RETENTION", 30),
 		FullBackupEncryptionKey:    getEnv("FULL_BACKUP_ENCRYPTION_KEY", ""),
+		FullBackupReplicaEnabled:   getEnv("FULL_BACKUP_REPLICA_ENABLED", "false") == "true",
+		FullBackupReplicaDir:       getEnv("FULL_BACKUP_REPLICA_DIR", "./backup-replica"),
+		FullBackupReplicaRetention: getEnvInt("FULL_BACKUP_REPLICA_RETENTION", 30),
 		JPushAppKey:                getEnv("JPUSH_APP_KEY", ""),
 		JPushMasterSecret:          getEnv("JPUSH_MASTER_SECRET", ""),
 	}
@@ -153,6 +159,17 @@ func Validate(cfg *Config) error {
 		}
 		if strings.TrimSpace(cfg.FullBackupDir) == "" {
 			return fmt.Errorf("FULL_BACKUP_DIR must not be empty")
+		}
+	}
+	if cfg.FullBackupReplicaEnabled {
+		if !cfg.FullBackupEnabled {
+			return fmt.Errorf("FULL_BACKUP_REPLICA_ENABLED requires FULL_BACKUP_ENABLED=true")
+		}
+		if strings.TrimSpace(cfg.FullBackupReplicaDir) == "" {
+			return fmt.Errorf("FULL_BACKUP_REPLICA_DIR must not be empty")
+		}
+		if cfg.FullBackupReplicaRetention < 2 || cfg.FullBackupReplicaRetention > 365 {
+			return fmt.Errorf("FULL_BACKUP_REPLICA_RETENTION must be between 2 and 365")
 		}
 	}
 

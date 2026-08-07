@@ -45,6 +45,8 @@ EXPOSE_LOGIN_PERSONALIZATION=false
 
 备份目录不要放在 `data/images` 内，也不要与数据库目录重叠。宿主机 `backups` 应为容器用户所有并设为 `0700`；`.ombak` 文件默认是 `0600`。加密包与密钥必须分开保存，否则同盘损坏或密钥泄露仍会导致不可恢复或隐私泄露。
 
+建议把已加密的 `.ombak` 再复制到独立磁盘或已挂载的 SMB/NFS/rclone 目标。内置第二存储副本要求目标根目录存在 `.our-memories-replica` 标记，复制完成后会重新读取文件并核对 SHA-256，再原子发布；标记缺失或挂载掉线时只报告副本失败，本机备份仍然成功。不要把 `FULL_BACKUP_ENCRYPTION_KEY` 放进第二存储，也不要在未确认挂载成功前创建安全标记。若小程序显示“同盘存放”，该副本只能防误删，不能防整盘损坏。配置步骤见 [backup-and-migration.md](./backup-and-migration.md#second-storage-encrypted-replica)。
+
 未启用内置完整备份时，在线备份 SQLite 不要直接复制单个 `.db` 文件，WAL 模式下可能漏掉尚未合并的数据。当前使用 bind mount `./data:/app/data` 时，可以执行：
 
 ```bash
